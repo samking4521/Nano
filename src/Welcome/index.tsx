@@ -6,11 +6,14 @@ import OnBoardingSwipes from './components/onBoardingSwipes';
 import { labelData } from './types';
 import { useRef, useState } from 'react';
 import { Colors } from '../constants/colors';
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootAuthStackParamList } from '../Navigation/auth';
 
-
-export default function Home() {
+type WelcomeScreenNavigationProp = NativeStackNavigationProp<RootAuthStackParamList, "Welcome">;
+export default function Welcome() {
     const [currentIndex, setCurrentIndex] = useState(0);
-
+    const navigation = useNavigation<WelcomeScreenNavigationProp>();
     const viewabilityConfig = useRef({
   itemVisiblePercentThreshold: 50,
 }).current;
@@ -27,6 +30,10 @@ export default function Home() {
         return (
            <OnBoardingSwipes item={item}/>
         )
+    }
+
+    const goToAuthScreen = ()=>{
+        navigation.navigate("SignUp");
     }
 
     return (
@@ -52,7 +59,7 @@ export default function Home() {
                         <View style={{ ...styles.sliderBox, width: currentIndex == 1? 20: 10, backgroundColor: currentIndex == 1? "#F46C03" : "#fff" }} />
                         <View style={{ ...styles.sliderBox, width: currentIndex == 2? 20: 10, backgroundColor: currentIndex == 2? "#F46C03" : "#fff" }} />
                     </View>
-                    <Pressable style={styles.goToSignUp}>
+                    <Pressable onPress={goToAuthScreen} style={styles.goToSignUp}>
                         <View style={styles.truckBtnIconCont}>
                             <Feather name="truck" size={24} color="#fff" />
                         </View>
@@ -63,7 +70,6 @@ export default function Home() {
                             <MaterialIcons name="arrow-forward-ios" size={20} color="#B6B6B6" style={styles.arrowIcon} />
                         </View>
                     </Pressable>
-                    <Text style={styles.footerText}>Already have an account? <Text style={styles.innerFooterText}>Sign In</Text></Text>
 
 
                 </View>
@@ -130,11 +136,6 @@ const styles = StyleSheet.create({
     arrowIconsCont: {
         flexDirection: "row",
         alignItems: "center"
-    },
-    footerText: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: Colors.text.primary,
     },
     innerFooterText: {
         fontSize: 14,

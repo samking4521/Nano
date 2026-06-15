@@ -2,6 +2,7 @@
   "expo": {
     "name": "Nano",
     "slug": "Nano",
+     "scheme": "nano",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "",
@@ -13,7 +14,8 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.samabidoye.Nano"
     },
     "android": {
       "adaptiveIcon": {
@@ -21,10 +23,16 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.samabidoye.Nano"
     },
     "web": {
       "favicon": ""
-    }
+    },
+    "plugins": [
+      "expo-font",
+      "expo-web-browser",
+      "@react-native-google-signin/google-signin"
+    ]
   }
 }

@@ -1,11 +1,17 @@
-import { StyleSheet, Text, View } from 'react-native';
-import Home from './src/Welcome';
-
+import { StyleSheet } from 'react-native';
+import SignUp from './src/Authentication/screens/signUp';
+import { AuthContextProvider } from './src/Authentication/context/AuthContextProvider';
+import { AuthUserNavigation } from './src/Navigation/AuthUserNavigation';
+import { NavigationContainer } from "@react-navigation/native";
 export default function App() {
   return (
-       <View style={styles.container}>
-            <Home/>
-       </View>
+    <AuthContextProvider>
+      <NavigationContainer>
+        <AuthUserNavigation />
+      </NavigationContainer>
+
+    </AuthContextProvider>
+
   );
 }
 
