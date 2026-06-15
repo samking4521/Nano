@@ -24,7 +24,7 @@ type RoleSelectionNavigationProp = NativeStackNavigationProp<RootAuthStackParamL
 type roleType = "Merchant" | "Driver"
 
 export default function RoleSelection({ route }: Props) {
-    const { mobileNo, email } = route.params;
+    const { mobileNo, email, country, countryCode, callingCode } = route.params;
     const [role, setRole] = useState<roleType>("Merchant");
     const navigation = useNavigation<RoleSelectionNavigationProp>();
 
@@ -34,12 +34,18 @@ export default function RoleSelection({ route }: Props) {
     }
 
     const navigateToUserDetailsScreen = () => {
+        const phone_number = !mobileNo || !callingCode? mobileNo : mobileNo.slice(callingCode.length)
         navigation.navigate("MerchantInfo", {
-            mobileNo: mobileNo,
+            mobileNo: phone_number,
             email: email,
-            role: role
+            role: role,
+            country: country,
+            countryCode: countryCode,
+            callingCode: callingCode
+            
         })
     }
+    
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.body}>

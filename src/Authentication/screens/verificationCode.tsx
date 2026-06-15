@@ -30,7 +30,7 @@ WebBrowser.maybeCompleteAuthSession();
 type otpErrorType = "emptyOtp" | "invalidOtpLength";
 
 export default function VerificationCode({ route }: Props) {
-    const { mobileNo } = route.params;
+    const { mobileNo, country, countryCode, callingCode } = route.params;
     const [otp, setOtp] = useState("");
     const [resendCode, setResendCode] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -115,8 +115,12 @@ export default function VerificationCode({ route }: Props) {
         setLoading(false);
         requestAnimationFrame(() => {
             navigation.navigate("RoleSelection", {
-                mobileNo,
+                mobileNo: mobileNo,
                 email: null,
+                country: country,
+                countryCode: countryCode,
+                callingCode: callingCode
+
             });
         });
 

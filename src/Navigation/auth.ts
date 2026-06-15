@@ -2,20 +2,31 @@ export type RootAuthStackParamList = {
   Welcome: undefined;
   SignUp: undefined;
   RoleSelection: {
-     mobileNo: string | null,
-       email: string | null,
+    mobileNo: string | null,
+    email: string | null,
+    country: string | null,
+    countryCode: string | null,
+    callingCode: string | null
   };
   MerchantInfo: {
-     mobileNo: string | null,
-       email: string | null,
-       role: "Merchant" | "Driver"
+    mobileNo: string | null,
+    email: string | null,
+    role: "Merchant" | "Driver",
+    country: string | null,
+    countryCode: string | null,
+    callingCode: string | null
   };
-  VerificationCode: {mobileNo: string};
+  VerificationCode: {
+    mobileNo: string,
+    country: string,
+    countryCode: string,
+    callingCode: string
+  };
 
 };
 
 export type RootUserStackParamList = {
   Home: undefined;
-  
+
 };
 

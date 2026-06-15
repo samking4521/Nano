@@ -8,7 +8,7 @@ import { useNavigation } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootAuthStackParamList } from '../../Navigation/auth';
 import * as WebBrowser from "expo-web-browser";
-import CountryPicker, { CountryCode, Country } from 'react-native-country-picker-modal'
+import CountryPicker, { Country } from 'react-native-country-picker-modal'
 
 const countryPickerProps = {
     withFilter: true,
@@ -29,15 +29,21 @@ export default function SignUp() {
     const [mobileNo, setMobileNo] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<errorType | null>(null);
-    const navigation = useNavigation<SignUpScreenNavigationProp>()
-    const [countryCode, setCountryCode] = useState<CountryCode>('NG')
-    const [callingCode, setCallingCode] = useState<string>("234");
+    const navigation = useNavigation<SignUpScreenNavigationProp>();
+    const [country, setCountry] = useState<Country>();
     const [inputFocus, setInputFocus] = useState(false);
 
+
+    const callingCode = country?.callingCode[0] ?? "234";
+    const countryCode = country?.cca2 ?? 'NG';
+    const countryName = typeof country?.name === 'string'
+        ? country.name
+        : country?.name?.common ?? 'Nigeria'
+
     const onSelect = (country: Country) => {
-        console.log("country: ", country)
-        setCallingCode(country.callingCode[0])
-        setCountryCode(country.cca2)
+        console.log("country: ", country);
+        setCountry(country);
+       
     }
 
     const signUpWithMobileNumber = async () => {
@@ -71,7 +77,10 @@ export default function SignUp() {
         setLoading(false);
         const formatedPhoneNumber = removePlus(phone_number);
         navigation.navigate("VerificationCode", {
-            mobileNo: formatedPhoneNumber
+            mobileNo: formatedPhoneNumber,
+            country: countryName,
+            countryCode: countryCode,
+            callingCode: callingCode
         })
 
 
@@ -156,7 +165,9 @@ export default function SignUp() {
             navigation.navigate("RoleSelection", {
                  mobileNo: null,
                 email: sessionData.session?.user?.email || null,
-               
+                country: null,
+                countryCode: null,
+                callingCode: null
             })
 
 
