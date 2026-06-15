@@ -6,6 +6,16 @@ import { Feather } from '@expo/vector-icons'
 import { useNavigation } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootAuthStackParamList } from '../../Navigation/auth';
+import { RouteProp } from "@react-navigation/native";
+
+type RoleSelectionRouteProp = RouteProp<
+    RootAuthStackParamList,
+    "RoleSelection"
+>;
+
+type Props = {
+    route: RoleSelectionRouteProp;
+};
 
 
 type RoleSelectionNavigationProp = NativeStackNavigationProp<RootAuthStackParamList, "RoleSelection">;
@@ -13,7 +23,8 @@ type RoleSelectionNavigationProp = NativeStackNavigationProp<RootAuthStackParamL
 
 type roleType = "Merchant" | "Driver"
 
-export default function RoleSelection() {
+export default function RoleSelection({route}: Props) {
+    const {mobileNo, email} = route.params;
     const [role, setRole] = useState<roleType>("Merchant");
     const navigation = useNavigation<RoleSelectionNavigationProp>();
 
@@ -145,7 +156,7 @@ const styles = StyleSheet.create({
         marginTop: 20
     },
     nextText: {
-        color: Colors.text.primary,
+        color: Colors.text.white,
         fontWeight: "bold",
         fontSize: 16
     },

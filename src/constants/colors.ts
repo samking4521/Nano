@@ -1,16 +1,21 @@
 export const Colors = {
   primary: "#F46C03",
-  secondary: "#27AE60",
+  
 
-  background: "#030303",
-  surface: "#111827",
-
+  background: "#FAFAFA",
+  borderColor: "#E5E7EB",
+  borderBackground: "#F3F4F6",
+  backBtnGray: "#E5E7EB",
+  
   text: {
-    primary: "#FFFFFF",
-    secondary: "#94A3B8",
-    muted: "#64748B",
+    white: "#FFFFFF",
+    black: "#111827",
+    gray: "#4B5563"
+    
   },
 
  
-  error: "#EF4444",
+  error: "#E53935",
+  errorBackground: "#FDECEC"
+  
 };

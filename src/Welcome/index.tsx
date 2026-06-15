@@ -55,13 +55,13 @@ export default function Welcome() {
                 
                 <View style={styles.infoCont}>
                     <View style={styles.sliderContainer}>
-                        <View style={{...styles.sliderBox, width: currentIndex == 0? 20: 10, backgroundColor: currentIndex == 0? "#F46C03" : "#fff"}} />
-                        <View style={{ ...styles.sliderBox, width: currentIndex == 1? 20: 10, backgroundColor: currentIndex == 1? "#F46C03" : "#fff" }} />
-                        <View style={{ ...styles.sliderBox, width: currentIndex == 2? 20: 10, backgroundColor: currentIndex == 2? "#F46C03" : "#fff" }} />
+                        <View style={{...styles.sliderBox, width: currentIndex == 0? 20: 10, backgroundColor: currentIndex == 0? Colors.primary : Colors.text.white}} />
+                        <View style={{ ...styles.sliderBox, width: currentIndex == 1? 20: 10, backgroundColor: currentIndex == 1? Colors.primary : Colors.text.white }} />
+                        <View style={{ ...styles.sliderBox, width: currentIndex == 2? 20: 10, backgroundColor: currentIndex == 2? Colors.primary : Colors.text.white }} />
                     </View>
                     <Pressable onPress={goToAuthScreen} style={styles.goToSignUp}>
                         <View style={styles.truckBtnIconCont}>
-                            <Feather name="truck" size={24} color="#fff" />
+                            <Feather name="truck" size={24} color={Colors.text.white} />
                         </View>
                         <Text style={styles.startedText}>Get Started</Text>
                         <View style={styles.arrowIconsCont}>
@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
     },
     body: {
         flex: 1,
-        backgroundColor: Colors.background
+        backgroundColor: "#030303",
     },
 
      infoCont: {
@@ -123,13 +123,13 @@ const styles = StyleSheet.create({
         height: 50,
         borderRadius: 50,
         backgroundColor: "#333333",
-        color: Colors.text.primary,
+        color: Colors.text.white,
         marginTop: 20,
         marginBottom: 10,
         padding: 5
     },
     startedText: {
-        color: Colors.text.primary,
+        color: Colors.text.white,
         fontWeight: "600",
         fontSize: 14
     },

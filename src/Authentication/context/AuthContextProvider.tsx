@@ -1,21 +1,23 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import SplashLoadingScreen from "../components/splashLoadingScreen";
+import {
+  AuthUserContext,
+  AuthSessionContext,
+  AuthLoadingContext,
+} from "../../Context/AuthContext";
+import { Session, User } from "@supabase/supabase-js";
 
-type AuthContextType = {
-  user: any;
-  session: any;
-  loading: boolean;
-};
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthContextProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<any>(null);
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  
+
   useEffect(() => {
+    
     // 1. Get initial session
     const getSession = async () => {
       const { data } = await supabase.auth.getSession();
@@ -29,7 +31,11 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
       setLoading(false);
     };
 
-    getSession();
+    const timer = setTimeout(()=>{
+       getSession();
+    }, 2000);
+
+   
 
     // 2. Listen for auth changes
     const { data: listener } = supabase.auth.onAuthStateChange(
@@ -40,6 +46,7 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
     );
 
     return () => {
+      clearTimeout(timer);
       listener.subscription.unsubscribe();
     };
   }, []);
@@ -48,15 +55,22 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
       return <SplashLoadingScreen/>
   }
 
+
+  
+
   return (
-    <AuthContext.Provider value={{ user, session, loading }}>
-      {children}
-    </AuthContext.Provider>
+    <AuthSessionContext.Provider value={session}>
+      <AuthUserContext.Provider value={user}>
+        <AuthLoadingContext.Provider value={loading}>
+          {children}
+        </AuthLoadingContext.Provider>
+      </AuthUserContext.Provider>
+    </AuthSessionContext.Provider>
   );
 };
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error("useAuth must be used inside AuthProvider");
-  return context;
-};
+export const useAuthUser = () => useContext(AuthUserContext);
+
+export const useAuthSession = () => useContext(AuthSessionContext);
+
+export const useAuthLoading = () => useContext(AuthLoadingContext);

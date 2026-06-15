@@ -1,69 +1,55 @@
-import { Pressable, StyleSheet, Text, TextInput, View, Image, StatusBar, ScrollView, ActivityIndicator, Alert, TouchableOpacity } from 'react-native'
-import React, { useEffect, useRef, useState } from 'react'
+import { Pressable, StyleSheet, Text, TextInput, View, Image, StatusBar, ScrollView, ActivityIndicator, Alert, Platform, KeyboardAvoidingView } from 'react-native'
+import React, { useEffect, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Feather, Foundation } from '@expo/vector-icons'
+import { Feather } from '@expo/vector-icons'
 import { Colors } from '../../constants/colors'
 import { supabase } from '../../lib/supabase'
-import Animated, { SlideInLeft, SlideInRight, SlideOutRight } from 'react-native-reanimated';
 import { useNavigation } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootAuthStackParamList } from '../../Navigation/auth';
 import * as WebBrowser from "expo-web-browser";
-import * as AuthSession from "expo-web-browser"
+import CountryPicker, { CountryCode, Country } from 'react-native-country-picker-modal'
+
+const countryPickerProps = {
+    withFilter: true,
+    withFlag: true,
+    withCountryNameButton: false,
+    withAlphaFilter: true,
+    withCallingCode: true,
+    withEmoji: true,
+};
 
 WebBrowser.maybeCompleteAuthSession();
 
 type SignUpScreenNavigationProp = NativeStackNavigationProp<RootAuthStackParamList, "SignUp">;
-
+type errorType = "emptyMobileNo";
 const googleIcon = require("../../../assets/googleicon.png")
 
 export default function SignUp() {
     const [mobileNo, setMobileNo] = useState("");
-
-    const [otp, setOtp] = useState("");
-    const [verifyCode, setVerifyCode] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<errorType | null>(null);
     const navigation = useNavigation<SignUpScreenNavigationProp>()
-    const [countDownTime, setCountDownTime] = useState(60);
-    const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const [countryCode, setCountryCode] = useState<CountryCode>('NG')
+    const [callingCode, setCallingCode] = useState<string>("234");
+    const [inputFocus, setInputFocus] = useState(false);
 
-    const clearTimer = () => {
-        if (timerRef.current) {
-            clearInterval(timerRef.current);
-            timerRef.current = null;
-        }
-    };
-
-    const startTimer = () => {
-        clearTimer(); // clear any existing timer before starting
-        setCountDownTime(60);
-
-        timerRef.current = setInterval(() => {
-            setCountDownTime((prev) => {
-                if (prev <= 1) {
-                    clearTimer();
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
-    };
-
-    // cleanup on unmount
-    useEffect(() => () => clearTimer(), []);
-
-
-
-    const formatTime = (seconds: number) => {
-        const m = Math.floor(seconds / 60);
-        const s = seconds % 60;
-        return `${m}:${s.toString().padStart(2, "0")}`;
-    };
+    const onSelect = (country: Country) => {
+        console.log("country: ", country)
+        setCallingCode(country.callingCode[0])
+        setCountryCode(country.cca2)
+    }
 
     const signUpWithMobileNumber = async () => {
-        if (loading) {
+         if (loading) {
             return;
         }
+        
+        if (mobileNo.length == 0) {
+            setError("emptyMobileNo");
+            return;
+        }
+       
         const phone_number = formatNigerianPhone(mobileNo);
         console.log("phone_number: ", phone_number);
         setLoading(true)
@@ -74,49 +60,23 @@ export default function SignUp() {
             console.log("OTP send error:", error.message);
             Alert.alert(
                 "Unable to Continue",
-                "We couldn't verify your phone number. Please check the number and your internet connection, then try again."
+                "We couldn't verify your phone number. Please check the number or your internet connection, then try again."
             );
             setLoading(false);
             return;
         }
 
         console.log("OTP sent successfully:", data);
-        setVerifyCode(true);
+
         setLoading(false);
-        startTimer();
-
-    }
-
-    const verifyOtp = async (otp: string, mobileNo: string) => {
-        setLoading(true);
-        const number = formatNigerianPhone(mobileNo);
-        const phoneNumber = removePlus(number);
-        console.log("edit phonenumber : ", phoneNumber);
-        const {
-            data: { session },
-            error,
-        } = await supabase.auth.verifyOtp({
-            phone: phoneNumber,
-            token: otp,
-            type: 'sms',
+        const formatedPhoneNumber = removePlus(phone_number);
+        navigation.navigate("VerificationCode", {
+            mobileNo: formatedPhoneNumber
         })
 
-        if (error) {
-            console.log("Error verifying otp", error.code, error.cause, error.message, error.name);
-            Alert.alert(
-                "Verification Failed",
-                "Enter a valid verification code or check your internet connection."
-            );
-            setLoading(false);
-            return
-        }
-
-        console.log("session", session)
-        console.log("user logged in successfully")
-        setLoading(false);
-
 
     }
+
 
 
 
@@ -135,8 +95,8 @@ export default function SignUp() {
             phone = phone.slice(1);
         }
 
-        // if already starts with 234 → don't double add
-        if (phone.startsWith("234")) {
+        // if already starts with callingCode → don't double add
+        if (phone.startsWith(callingCode)) {
             return `+${phone}`;
         }
 
@@ -145,69 +105,21 @@ export default function SignUp() {
             return phone;
         }
 
-        // default case → add +234
-        return `+234${phone}`;
+        // default case → add +callingCode
+        return `+${callingCode}${phone}`;
     }
 
     const goToPreviousScreen = () => {
-        if (verifyCode) {
-            setVerifyCode(false);
-            setLoading(false); // this is because it shares loading state with Create account view
-            setCountDownTime(60);
-            clearTimer();
-            return
-        }
         navigation.goBack()
-    }
-
-    const validateOtp = (otp: string) => {
-        if (loading) {
-            return;
-        }
-        if (otp.length < 6) {
-            Alert.alert(
-                "Invalid Code",
-                "Please enter all 6 digits of the verification code."
-            );
-            return;
-        }
-        verifyOtp(otp, mobileNo);
-    }
-
-
-    const resendVerificationCode = async () => {
-        if (countDownTime > 0) {
-            return
-        }
-        const phone_number = formatNigerianPhone(mobileNo);
-        console.log("phone_number: ", phone_number);
-
-        const { data, error } = await supabase.auth.signInWithOtp({
-            phone: phone_number,
-        })
-        if (error) {
-            console.log("OTP send error:", error.message);
-            Alert.alert(
-                "Unable to Resend",
-                "Please check your internet connection, then try again."
-            );
-
-            return;
-        }
-
-        console.log("OTP sent successfully:", data);
-        Alert.alert("Success", "A new verification code has been sent.");
-        startTimer();
     }
 
 
 
     const signInWithGoogle = async () => {
+        if (loading) return;
 
         try {
-            if (loading) {
-                return
-            }
+            
             const { data, error } = await supabase.auth.signInWithOAuth({
                 provider: "google",
                 options: {
@@ -241,116 +153,116 @@ export default function SignUp() {
             if (sessionError) throw sessionError;
 
             console.log("Signed in:", sessionData.session?.user?.email);
-            // TODO: navigate to authenticated screen, e.g. router.replace("/home")
+            navigation.navigate("RoleSelection", {
+                 mobileNo: null,
+                email: sessionData.session?.user?.email || null,
+               
+            })
 
 
         } catch (err) {
-            console.error("Google sign-in failed:", err);
-            // TODO: show user-facing error toast/alert
+            console.error("Google sign-in failed:", err);    
+                 Alert.alert(
+                "Google Sign-In Failed",
+                "Something went wrong while signing in with Google. Check your connection and try again."
+                  );
         }
     };
 
+
+   
+
+    useEffect(()=>{
+         if (error == "emptyMobileNo" && mobileNo.length == 1) {
+        setError(null);
+    }
+    }, [error, mobileNo])
+
+
     return (
         <SafeAreaView style={styles.container}>
-            <ScrollView style={styles.body}>
+            <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+            >
+                <ScrollView
+                    contentContainerStyle={{ flexGrow: 1 }}
+                    keyboardShouldPersistTaps="handled"
+                    style={styles.body}>
 
 
-                <Pressable onPress={goToPreviousScreen} style={styles.backBtn}>
-                    <Feather name="arrow-left" size={22} color="#111827" />
-                </Pressable>
+                    <Pressable onPress={goToPreviousScreen} style={styles.backBtn}>
+                        <Feather name="arrow-left" size={22} color={Colors.text.black} />
+                    </Pressable>
 
-                <View>
-                    {
-                        verifyCode ?
-                            <Animated.View key={"me"} entering={SlideInRight} exiting={SlideOutRight.duration(1000)}>
-                                <View style={styles.headerLabel}>
-                                    <Text style={styles.headerText}>Enter Verification Code</Text>
-                                    <Text style={styles.headerDesc}>Enter the 6-digit verification code sent to your phone number to proceed to login</Text>
-                                </View>
+                    <View>
 
-                                <View style={styles.infoCont}>
-                                    <Text style={styles.mobileLabel}>Enter Code</Text>
-                                    <View style={styles.mobileTextInputContainer}>
+                        <View>
+                            <View style={styles.headerLabel}>
+                                <Text style={styles.headerText}>Create an Account</Text>
+                                <Text style={styles.headerDesc}>Get access to Trusted truck drivers, transparent pricing, live tracking, reliable deliveries.</Text>
+                            </View>
 
-                                        <TextInput
-                                            value={otp}
-                                            onChangeText={setOtp}
-                                            placeholder='Enter 6 digit code'
-                                            keyboardType="phone-pad"
-                                            style={styles.mobileTextInput}
-                                            maxLength={6}
+                            <View style={styles.infoCont}>
+                                <Text style={styles.mobileLabel}>Mobile Number</Text>
+                                <View style={{ ...styles.mobileTextInputContainer, borderColor: error == "emptyMobileNo" ? Colors.error : inputFocus ? Colors.primary : Colors.borderColor }}>
+                                    <View style={{ ...styles.mobileCodeCont, borderRightColor: error == "emptyMobileNo" ? Colors.error : inputFocus ? Colors.primary : Colors.borderColor }}>
+                                        <CountryPicker
+                                            {...countryPickerProps}
+                                            countryCode={countryCode}
+                                            onSelect={onSelect}
 
                                         />
                                     </View>
-                                </View>
-
-                                <Pressable onPress={() => validateOtp(otp)} style={styles.nextBtn}>
-                                    {loading ? <ActivityIndicator size={'large'} color={"#ffffff"} /> : <Text style={styles.continueText}>Verify</Text>}
-                                </Pressable>
-                                {/* {(error && otp.length < 6) && <Text style={styles.errorText}>Verification code must be 6 digits.</Text>}
-                                {error && <Text style={styles.errorText}>Unable to verify code, check your internet connection and try again.</Text>} */}
-                            </Animated.View>
-                            :
-                            <View>
-                                <View style={styles.headerLabel}>
-                                    <Text style={styles.headerText}>Create an Account</Text>
-                                    <Text style={styles.headerDesc}>Get access to Trusted truck drivers, transparent pricing, live tracking, reliable deliveries.</Text>
-                                </View>
-
-                                <View style={styles.infoCont}>
-                                    <Text style={styles.mobileLabel}>Mobile Number</Text>
-                                    <View style={styles.mobileTextInputContainer}>
-                                        <View style={styles.mobileCodeCont}>
-                                            <Text style={styles.mobileCodeText}>(NG) +234</Text>
-                                        </View>
+                                    <View style={styles.mobileInputCont}>
+                                        <Text style={styles.mobileCodeText}>+{callingCode}</Text>
                                         <TextInput
                                             value={mobileNo}
                                             onChangeText={setMobileNo}
+                                            placeholder='Enter number here'
                                             keyboardType="phone-pad"
                                             style={styles.mobileTextInput}
+                                            onFocus={() => setInputFocus(true)}
+                                            onBlur={() => setInputFocus(false)}
 
                                         />
                                     </View>
+
                                 </View>
-
-                                <Pressable onPress={signUpWithMobileNumber} style={styles.nextBtn}>
-                                    {loading ? <ActivityIndicator size={'large'} color={"#ffffff"} /> : <Text style={styles.continueText}>Continue</Text>}
-                                </Pressable>
-
+                                {error == "emptyMobileNo" && <View style={styles.errorBox}>
+                                    <Text style={styles.errorText}>Mobile number cannot be empty</Text>
+                                </View>}
                             </View>
 
-                    }
+                            <Pressable onPress={signUpWithMobileNumber} style={styles.nextBtn}>
+                                {loading ? <ActivityIndicator size={'large'} color={Colors.text.white} /> : <Text style={styles.continueText}>Continue</Text>}
+                            </Pressable>
 
-                </View>
-                {!verifyCode && <View>
-                    <View style={styles.horizontalLineCont}>
-                        <View style={styles.horizontalLine} />
-                        <Text style={styles.orText}>or continue with</Text>
-                        <View style={styles.horizontalLine} />
+                        </View>
+
+
+
                     </View>
-
                     <View>
-                        <Pressable onPress={signInWithGoogle} style={styles.actionBtnCont}>
-                            <Image source={googleIcon} style={styles.googleIcon} />
-                            <Text style={styles.actionBtnText}>Continue with Google</Text>
-                        </Pressable>
+                        <View style={styles.horizontalLineCont}>
+                            <View style={styles.horizontalLine} />
+                            <Text style={styles.orText}>or continue with</Text>
+                            <View style={styles.horizontalLine} />
+                        </View>
+
+                        <View>
+                            <Pressable onPress={signInWithGoogle} style={styles.actionBtnCont}>
+                                <Image source={googleIcon} style={styles.googleIcon} />
+                                <Text style={styles.actionBtnText}>Continue with Google</Text>
+                            </Pressable>
+                        </View>
                     </View>
-                </View>}
-                {
-                    verifyCode && <View style={styles.footerCont}>
-                        <Text style={styles.footerText}>Didn't receive code? </Text>
-                        <TouchableOpacity onPress={resendVerificationCode}>
-                            <Text style={{ ...styles.resendText, color: countDownTime <= 0 ? Colors.primary : "#4B5563" }}>Resend Code {countDownTime <= 0 ? "" : "in "}</Text>
-                        </TouchableOpacity>
-                        {countDownTime > 0 && <Text style={{ color: Colors.primary, fontWeight: "600" }}>{formatTime(countDownTime)}</Text>}
-                    </View>
-                }
 
 
 
-            </ScrollView>
+                </ScrollView>
 
-
+            </KeyboardAvoidingView>
 
         </SafeAreaView>
     )
@@ -359,48 +271,50 @@ export default function SignUp() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: Colors.background,
     },
     body: {
         flex: 1,
-        backgroundColor: "#FAFAFA",
         paddingHorizontal: 15,
-        paddingTop: StatusBar.currentHeight
+        paddingTop: Platform.OS == "ios" ? null : StatusBar.currentHeight
 
     },
     mobileTextInputContainer: {
         width: "100%",
         height: 50,
-        borderWidth: 0.5,
-        borderColor: "#4B5563",
+        borderWidth: 1,
+        backgroundColor: Colors.borderBackground,
         borderRadius: 12,
         flexDirection: "row",
         alignItems: "center",
-
     },
     mobileCodeCont: {
         height: 50,
-        borderRightWidth: 0.5,
-        borderRightColor: "#4B5563",
+        borderRightWidth: 1,
+        borderRightColor: Colors.borderColor,
         justifyContent: "center",
-        alignItems: "center"
+        alignItems: "center",
+        flexDirection: "row",
+        paddingHorizontal: 10
     },
     mobileCodeText: {
         fontSize: 12,
         fontWeight: "600",
-        color: "#4B5563",
+        color: Colors.text.gray,
         padding: 5
     },
     mobileTextInput: {
         flex: 1,
         height: 50,
-        paddingHorizontal: 16,
+        paddingHorizontal: 5,
+
 
     },
     backBtn: {
         width: 45,
         height: 45,
         borderRadius: 40,
-        backgroundColor: "#EAEAEA",
+        backgroundColor: Colors.backBtnGray,
         justifyContent: "center",
         alignItems: "center"
     },
@@ -410,38 +324,26 @@ const styles = StyleSheet.create({
     headerText: {
         fontSize: 25,
         fontWeight: "bold",
-        color: "#111827"
+        color: Colors.text.black
 
     },
     headerDesc: {
         fontSize: 14,
-        fontWeight: "600",
+        fontWeight: "500",
         marginTop: 10,
-        color: "#4B5563"
-    },
-    passCont: {
-        width: "100%",
-        height: 50,
-        borderWidth: 0.5,
-        borderColor: "#4B5563",
-        borderRadius: 12,
-        flexDirection: "row",
-        alignItems: "center"
+        color: Colors.text.gray
     },
     infoCont: {
         marginTop: 20
     },
+    mobileInputCont: {
+        flexDirection: "row", alignItems: "center"
+    },
     mobileLabel: {
         marginBottom: 10,
         fontSize: 16,
-        color: "#111827",
-        fontWeight: "bold"
-    },
-    passwordLabel: {
-        marginBottom: 10,
-        fontSize: 16,
-        color: "#111827",
-        fontWeight: "bold"
+        color: Colors.text.black,
+        fontWeight: "600"
     },
     nextBtn: {
         height: 50,
@@ -452,14 +354,14 @@ const styles = StyleSheet.create({
         marginTop: 20
     },
     continueText: {
-        color: Colors.text.primary,
-        fontWeight: "bold",
+        color: Colors.text.white,
+        fontWeight: "600",
         fontSize: 16
     },
     horizontalLine: {
         width: "20%",
         height: 1,
-        backgroundColor: "#4B5563"
+        backgroundColor: Colors.text.gray
     },
     horizontalLineCont: {
         flexDirection: "row",
@@ -470,8 +372,8 @@ const styles = StyleSheet.create({
     orText: {
         marginHorizontal: 10,
         fontSize: 14,
-        fontWeight: "600",
-        color: "#4B5563"
+        fontWeight: "500",
+        color: Colors.text.gray
     },
     googleIcon: {
         width: 30,
@@ -482,8 +384,8 @@ const styles = StyleSheet.create({
     actionBtnCont: {
         width: "100%",
         height: 50,
-        borderWidth: 0.5,
-        borderColor: "#4B5563",
+        borderWidth: 1,
+        borderColor: Colors.borderColor,
         borderRadius: 12,
         flexDirection: "row",
         justifyContent: "center",
@@ -493,32 +395,21 @@ const styles = StyleSheet.create({
     actionBtnText: {
         marginLeft: 10,
         fontSize: 14,
-        fontWeight: "600",
-        color: "#4B5563"
+        fontWeight: "500",
+        color: Colors.text.gray
     },
-    eyeIcon: {
-        flex: 1,
-        height: 50,
-        borderRadius: 12,
-        justifyContent: "center",
-        alignItems: "center"
+    errorBox: {
+        marginTop: 10,
+        width: "100%",
+        padding: 10,
+        backgroundColor: Colors.errorBackground,
+        borderRadius: 12
+
     },
-
-    footerText: {
-
-        fontSize: 14,
-
-        color: "#4B5563"
-    },
-    resendText: {
-
-        fontWeight: "600"
-    },
-    footerCont: {
-        flexDirection: "row",
-        alignItems: "center",
-        alignSelf: "center",
-        marginTop: 30
+    errorText: {
+        color: Colors.error,
+        fontSize: 12,
+        fontWeight: "500"
     }
 
 })
