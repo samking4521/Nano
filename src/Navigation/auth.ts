@@ -5,7 +5,11 @@ export type RootAuthStackParamList = {
      mobileNo: string | null,
        email: string | null,
   };
-  MerchantInfo: undefined;
+  MerchantInfo: {
+     mobileNo: string | null,
+       email: string | null,
+       role: "Merchant" | "Driver"
+  };
   VerificationCode: {mobileNo: string};
 
 };

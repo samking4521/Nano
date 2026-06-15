@@ -23,16 +23,23 @@ type RoleSelectionNavigationProp = NativeStackNavigationProp<RootAuthStackParamL
 
 type roleType = "Merchant" | "Driver"
 
-export default function RoleSelection({route}: Props) {
-    const {mobileNo, email} = route.params;
+export default function RoleSelection({ route }: Props) {
+    const { mobileNo, email } = route.params;
     const [role, setRole] = useState<roleType>("Merchant");
     const navigation = useNavigation<RoleSelectionNavigationProp>();
 
 
-    const goToPreviousScreen = ()=>{
+    const goToPreviousScreen = () => {
         navigation.goBack()
     }
 
+    const navigateToUserDetailsScreen = () => {
+        navigation.navigate("MerchantInfo", {
+            mobileNo: mobileNo,
+            email: email,
+            role: role
+        })
+    }
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.body}>
@@ -40,18 +47,18 @@ export default function RoleSelection({route}: Props) {
                     <Feather name="arrow-left" size={22} color="#111827" />
                 </Pressable>
 
-                <View style={{marginTop: 20}}>
+                <View style={{ marginTop: 20 }}>
                     <Text style={styles.headerText}>What are you using{"\n"} Nano for?</Text>
                     <Text style={styles.headerDesc}>Select your role to personalize your experience</Text>
                 </View>
 
-                <View> 
+                <View>
 
-                    <Pressable onPress={()=> setRole("Merchant")} style={{...styles.borderBox, borderColor: role == "Merchant"? Colors.primary : "gray", borderWidth: role == "Merchant"? 2 : 1}}>
+                    <Pressable onPress={() => setRole("Merchant")} style={{ ...styles.borderBox, borderColor: role == "Merchant" ? Colors.primary : "gray", borderWidth: role == "Merchant" ? 2 : 1 }}>
                         <View>
                             <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
-                                <View style={{ justifyContent: "center", alignItems: "center", width: 20, height: 20, backgroundColor: role == "Merchant"? Colors.primary : undefined, borderRadius: 20, marginRight: 10 }}>
-                                    <View style={{ width: 10, height: 10, backgroundColor: role == "Merchant"? "#ffffff" : undefined, borderRadius: 10 }}></View>
+                                <View style={{ justifyContent: "center", alignItems: "center", width: 20, height: 20, backgroundColor: role == "Merchant" ? Colors.primary : undefined, borderRadius: 20, marginRight: 10 }}>
+                                    <View style={{ width: 10, height: 10, backgroundColor: role == "Merchant" ? "#ffffff" : undefined, borderRadius: 10 }}></View>
                                 </View>
 
                                 <View>
@@ -72,20 +79,20 @@ export default function RoleSelection({route}: Props) {
                         </View>
                     </Pressable>
 
-                   
 
-                    <Pressable onPress={() => setRole("Driver")} style={{...styles.borderBox, borderColor: role == "Driver"? Colors.primary : "gray", borderWidth: role == "Driver"? 2 : 2}}>
+
+                    <Pressable onPress={() => setRole("Driver")} style={{ ...styles.borderBox, borderColor: role == "Driver" ? Colors.primary : "gray", borderWidth: role == "Driver" ? 2 : 2 }}>
                         <View >
                             <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
-                                <View style={{ justifyContent: "center", alignItems: "center", width: 20, height: 20, backgroundColor: role == "Driver"? Colors.primary : undefined, borderRadius: 20, marginRight: 10, borderColor: role == "Driver"? "#111827" : undefined,  borderWidth: role == "Driver"? 0 : 1 }}>
-                                    <View style={{ width: 10, height: 10, backgroundColor: role == "Driver"? "#ffffff" : undefined, borderRadius: 10 }}></View>
+                                <View style={{ justifyContent: "center", alignItems: "center", width: 20, height: 20, backgroundColor: role == "Driver" ? Colors.primary : undefined, borderRadius: 20, marginRight: 10, borderColor: role == "Driver" ? "#111827" : undefined, borderWidth: role == "Driver" ? 0 : 1 }}>
+                                    <View style={{ width: 10, height: 10, backgroundColor: role == "Driver" ? "#ffffff" : undefined, borderRadius: 10 }}></View>
                                 </View>
 
                                 <View>
                                     <Text style={{ fontWeight: "600", color: "#111827", fontSize: 15 }}>Driver</Text>
                                     <View>
                                         <Text style={styles.headerDesc}>
-                                              Receive delivery jobs on demand
+                                            Receive delivery jobs on demand
                                         </Text>
                                         <Text style={styles.headerDesc}>Reduce empty return trips</Text>
                                         <Text style={styles.headerDesc}>Manage availability in real time</Text>
@@ -98,14 +105,14 @@ export default function RoleSelection({route}: Props) {
 
                         </View>
                     </Pressable>
-                   
+
 
                 </View>
-                 <View style={{marginTop: 30}}>
-                           <Pressable style={styles.nextBtn}>
-                              <Text style={styles.nextText}>Next</Text>
-                           </Pressable>
-                    </View>
+                <View style={{ marginTop: 30 }}>
+                    <Pressable onPress={navigateToUserDetailsScreen} style={styles.nextBtn}>
+                        <Text style={styles.nextText}>Next</Text>
+                    </Pressable>
+                </View>
             </View>
         </SafeAreaView>
 
@@ -120,7 +127,7 @@ const styles = StyleSheet.create({
         flex: 1,
         padding: 15
     },
-     backBtn: {
+    backBtn: {
         width: 45,
         height: 45,
         borderRadius: 40,
@@ -146,7 +153,7 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: Colors.primary
     },
-     nextBtn: {
+    nextBtn: {
         width: "100%",
         height: 50,
         borderRadius: 12,
