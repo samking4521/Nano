@@ -1,5 +1,5 @@
 import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, KeyboardAvoidingView, TouchableOpacity } from 'react-native'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Feather, FontAwesome } from '@expo/vector-icons'
 import { RouteProp, useNavigation } from '@react-navigation/native'
@@ -43,6 +43,7 @@ export default function MerchantInfo({ route }: Props) {
     const [dob, setDob] = useState(new Date())
     const [open, setOpen] = useState(false)
     const [datePicked, setDatePicked] = useState(false);
+    const [clickedContinue, setClickedContinue] = useState(false);
     const [loading, setLoading] = useState(false);
 
     const [inputFocus, setInputFocus] = useState<inputFocusType | null>(null);
@@ -95,39 +96,42 @@ export default function MerchantInfo({ route }: Props) {
         navigation.goBack()
     }
 
+     const isValidEmail = (email: string): boolean => {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+};
+
+     const firstname_err = clickedContinue && ( firstname.length <= 0)? true : false;
+     const lastname_err = clickedContinue && ( lastname.length <= 0 )? true : false;
+      const phone = phone_number? phone_number : mobileNo;
+        const mail = emailVal? emailVal : email;
+        const isMailValid = isValidEmail(mail);
+          const mobile_no_err = clickedContinue && ( phone.length <= 0 )? true : false;
+        const email_length_err = clickedContinue && ( mail.length <= 0 )? true : false;
+        const email_valid_err = clickedContinue && !isMailValid? true : false;
+        const dob_err = clickedContinue && !datePicked? true : false;
+
+
     const continueToSignUp = ()=>{
         
-        const phone = phone_number? phone_number : mobileNo;
-        const mail = emailVal? emailVal : email;
-       if(firstname.length <= 0){
+        setClickedContinue(true);
+       if(firstname_err || lastname_err || mobile_no_err || email_length_err || email_valid_err || dob_err){
+                 
+        
+            return;
+       }
       
-           setError("empty_firstname");
-           return;
-       }
-        if(lastname.length <= 0){
-           setError("empty_lastname");
-           return;
-       }
-        if(phone.length <=0){
-            setError("emptyMobileNo");
-            return;
-        }
-          if(mail.length <=0){
-            setError("empty_email");
-            return;
-        }
-          if(businessName.length <=0){
-            setError("empty_business");
-            return;
-        }
-         if(!datePicked){
-            setError("empty_dob");
-            return;
-        }
+
 
 
     }
-    
+
+
+   
+
+   
+
+
+
     return (
         <SafeAreaView style={styles.container}>
             <KeyboardAvoidingView
@@ -153,8 +157,7 @@ export default function MerchantInfo({ route }: Props) {
                             <View style={styles.nameBoxContainer}>
                                 <View style={{ flex: 1, marginRight: 5, }}>
                                     <Text style={styles.mobileLabel}>First name</Text>
-                                    <View style={{ ...styles.inputBoxCont, flex: 1, borderColor: error == "empty_firstname" ? Colors.error : inputFocus == "first_name" ? Colors.primary : Colors.borderColor }}>
-
+                                    <View style={{ ...styles.inputBoxCont,  height: 50, borderColor: firstname_err ? Colors.error : inputFocus == "first_name" ? Colors.primary : Colors.borderColor }}>
                                         <TextInput
                                             value={firstname}
                                             onChangeText={setFirstName}
@@ -166,15 +169,15 @@ export default function MerchantInfo({ route }: Props) {
 
                                         />
                                     </View>
-                                    {error == "empty_firstname" && <View style={styles.errorBox}>
-                                        <Text style={styles.errorText}>Mobile number cannot be empty</Text>
+                                    {firstname_err && <View style={styles.errorBox}>
+                                        <Text style={styles.errorText}>First name cannot be empty</Text>
                                     </View>}
                                 </View>
 
 
                                 <View style={{ flex: 1, marginLeft: 5, }}>
                                     <Text style={styles.mobileLabel}>Last name</Text>
-                                    <View style={{ ...styles.inputBoxCont, flex: 1, borderColor: error == "empty_lastname" ? Colors.error : inputFocus == "last_name" ? Colors.primary : Colors.borderColor }}>
+                                    <View style={{ ...styles.inputBoxCont,  height: 50, borderColor: lastname_err ? Colors.error : inputFocus == "last_name" ? Colors.primary : Colors.borderColor }}>
 
                                         <TextInput
                                             value={lastname}
@@ -187,7 +190,7 @@ export default function MerchantInfo({ route }: Props) {
 
                                         />
                                     </View>
-                                    {error == "empty_lastname" && <View style={styles.errorBox}>
+                                    {lastname_err && <View style={styles.errorBox}>
                                         <Text style={styles.errorText}>Lastname cannot be empty</Text>
                                     </View>}
                                 </View>
@@ -197,8 +200,8 @@ export default function MerchantInfo({ route }: Props) {
 
                             <View style={styles.infoCont}>
                                 <Text style={styles.mobileLabel}>Mobile Number</Text>
-                                <View pointerEvents={phone_number ? "none" : "auto"} style={{ ...styles.mobileTextInputContainer, borderColor: error == "emptyMobileNo" ? Colors.error : inputFocus == "mobile_number" ? Colors.primary : Colors.borderColor }}>
-                                    <View style={{ ...styles.mobileCodeCont, borderRightColor: error == "emptyMobileNo" ? Colors.error : inputFocus == "mobile_number" ? Colors.primary : Colors.borderColor }}>
+                                <View pointerEvents={phone_number ? "none" : "auto"} style={{ ...styles.mobileTextInputContainer, borderColor: mobile_no_err ? Colors.error : inputFocus == "mobile_number" ? Colors.primary : Colors.borderColor }}>
+                                    <View style={{ ...styles.mobileCodeCont, borderRightColor: mobile_no_err ? Colors.error : inputFocus == "mobile_number" ? Colors.primary : Colors.borderColor }}>
                                         <CountryPicker
                                             {...countryPickerProps}
                                             countryCode={countryCodeVal as CountryCode ?? countryCode}
@@ -221,14 +224,14 @@ export default function MerchantInfo({ route }: Props) {
                                     </View>
 
                                 </View>
-                                {error == "emptyMobileNo" && <View style={styles.errorBox}>
+                                { mobile_no_err && <View style={styles.errorBox}>
                                     <Text style={styles.errorText}>Mobile number cannot be empty</Text>
                                 </View>}
                             </View>
 
                             <View style={styles.infoCont}>
                                 <Text style={styles.mobileLabel}>Email</Text>
-                                <View pointerEvents={emailVal ? "none" : "auto"} style={{ ...styles.inputBoxCont, borderColor: error == "empty_email" ? Colors.error : inputFocus == "email" ? Colors.primary : Colors.borderColor }}>
+                                <View pointerEvents={emailVal ? "none" : "auto"} style={{ ...styles.inputBoxCont, borderColor: (email_length_err || email_valid_err) ? Colors.error : inputFocus == "email" ? Colors.primary : Colors.borderColor }}>
                                     <TextInput
                                         value={emailVal ?? email}
                                         onChangeText={setEmail}
@@ -240,8 +243,8 @@ export default function MerchantInfo({ route }: Props) {
 
                                     />
                                 </View>
-                                {error == "empty_email" || error == "incorrect_email" && <View style={styles.errorBox}>
-                                    <Text style={styles.errorText}>{error == "incorrect_email" ? "Email not valid" : "Email cannot be empty"}</Text>
+                                {(email_length_err || email_valid_err) && <View style={styles.errorBox}>
+                                    <Text style={styles.errorText}>{email_length_err ? "Email cannot be empty" : "Email not valid"}</Text>
                                 </View>}
                             </View>
 
@@ -259,12 +262,12 @@ export default function MerchantInfo({ route }: Props) {
 
                                     />
                                 </View>
-
+                                   
                             </View>
 
                             <View style={styles.infoCont}>
                                 <Text style={styles.mobileLabel}>Birthday</Text>
-                                <TouchableOpacity onPress={() => setOpen(true)} style={{ ...styles.inputBoxCont, flexDirection: "row", alignItems: "center", borderColor: error == "empty_dob"? Colors.error :  Colors.borderColor, paddingHorizontal: 10 }}>
+                                <TouchableOpacity onPress={() => setOpen(true)} style={{ ...styles.inputBoxCont, flexDirection: "row", alignItems: "center", borderColor: dob_err? Colors.error :  Colors.borderColor, paddingHorizontal: 10 }}>
                                     <Text style={{ marginRight: "auto", fontSize: 14, fontWeight: "500", color: Colors.text.gray }}>{datePicked ? formatDate(dob) : "Enter your birthday"}</Text>
                                     <FontAwesome name="calendar" size={22} color={Colors.primary} />
                                     {
@@ -284,10 +287,10 @@ export default function MerchantInfo({ route }: Props) {
                                         />
                                     }
                                 </TouchableOpacity>
-                                {!error && <View style={styles.discountBox}>
+                                <View style={styles.discountBox}>
                                     <Text style={styles.discountText}>Enjoy free delivery on your birthday.</Text>
-                                </View>}
-                                {error == "empty_dob" && <View style={styles.errorBox}>
+                                </View>
+                                {dob_err && <View style={styles.errorBox}>
                                     <Text style={styles.errorText}>Birthday cannot be empty</Text>
                                 </View>}
                             </View>
@@ -390,7 +393,7 @@ const styles = StyleSheet.create({
         flexDirection: "row", alignItems: "center"
     },
     nameBoxContainer: {
-        flexDirection: "row", alignItems: "center"
+        flexDirection: "row", alignItems:"flex-start"
     },
     errorBox: {
         marginTop: 10,

@@ -2,11 +2,11 @@
   "expo": {
     "name": "Nano",
     "slug": "Nano",
-     "scheme": "nano",
+    "scheme": "nano",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
       "image": "",
