@@ -5,6 +5,7 @@ import { RootAuthStackParamList } from "./auth";
 import RoleSelection from "../Authentication/screens/roleSelection";
 import MerchantInfo from "../Authentication/screens/merchantInfo";
 import VerificationCode from "../Authentication/screens/verificationCode";
+import DriverInfo from "../Authentication/screens/driverInfo";
  
 const Stack = createNativeStackNavigator<RootAuthStackParamList>();
 
@@ -16,7 +17,7 @@ export function AuthUserNavigation() {
       <Stack.Screen name="RoleSelection" component={RoleSelection} />
             <Stack.Screen name="MerchantInfo" component={MerchantInfo} />
              <Stack.Screen name="VerificationCode" component={VerificationCode} />
-
+              <Stack.Screen name="DriverInfo" component={DriverInfo} />
     </Stack.Navigator>
   );
 }

@@ -3,8 +3,8 @@ export const Colors = {
   
 
   background: "#FAFAFA",
-  borderColor: "#E5E7EB",
-  borderBackground: "#F3F4F6",
+  borderColor: "#D1D5DB",
+  borderBackground: "#FFFFFF",
   backBtnGray: "#E5E7EB",
   
   text: {

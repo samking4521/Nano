@@ -35,7 +35,8 @@ export default function RoleSelection({ route }: Props) {
 
     const navigateToUserDetailsScreen = () => {
         const phone_number = !mobileNo || !callingCode? mobileNo : mobileNo.slice(callingCode.length)
-        navigation.navigate("MerchantInfo", {
+        if(role == "Merchant"){
+                 navigation.navigate("MerchantInfo", {
             mobileNo: phone_number,
             email: email,
             role: role,
@@ -44,13 +45,25 @@ export default function RoleSelection({ route }: Props) {
             callingCode: callingCode
             
         })
+        }else{
+             navigation.navigate("DriverInfo", {
+            mobileNo: phone_number,
+            email: email,
+            role: role,
+            country: country,
+            countryCode: countryCode,
+            callingCode: callingCode
+            
+        })
+        }
+       
     }
     
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.body}>
                 <Pressable onPress={goToPreviousScreen} style={styles.backBtn}>
-                    <Feather name="arrow-left" size={22} color="#111827" />
+                    <Feather name="arrow-left" size={22} color={Colors.text.black} />
                 </Pressable>
 
                 <View style={{ marginTop: 20 }}>
@@ -60,15 +73,15 @@ export default function RoleSelection({ route }: Props) {
 
                 <View>
 
-                    <Pressable onPress={() => setRole("Merchant")} style={{ ...styles.borderBox, borderColor: role == "Merchant" ? Colors.primary : "gray", borderWidth: role == "Merchant" ? 2 : 1 }}>
+                    <Pressable onPress={() => setRole("Merchant")} style={{ ...styles.borderBox, borderColor: role == "Merchant" ? Colors.primary : Colors.borderColor, borderWidth: role == "Merchant" ? 2 : 1 }}>
                         <View>
-                            <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
-                                <View style={{ justifyContent: "center", alignItems: "center", width: 20, height: 20, backgroundColor: role == "Merchant" ? Colors.primary : undefined, borderRadius: 20, marginRight: 10 }}>
-                                    <View style={{ width: 10, height: 10, backgroundColor: role == "Merchant" ? "#ffffff" : undefined, borderRadius: 10 }}></View>
+                            <View style={styles.roleContainer}>
+                                <View style={{ ...styles.roleRadioButton, backgroundColor: role == "Merchant" ? Colors.primary : undefined, borderColor: role == "Merchant" ? undefined : Colors.borderColor,  borderWidth: role == "Merchant" ? 0 : 1  }}>
+                                    <View style={{ ...styles.roleButtonInnerCont, backgroundColor: role == "Merchant" ? Colors.text.white : undefined }}></View>
                                 </View>
 
                                 <View>
-                                    <Text style={{ fontWeight: "600", color: "#111827", fontSize: 15 }}>Merchant</Text>
+                                    <Text style={styles.roleText}>Merchant</Text>
                                     <View>
                                         <Text style={styles.headerDesc}>
                                             Find available trucks on demand
@@ -87,15 +100,15 @@ export default function RoleSelection({ route }: Props) {
 
 
 
-                    <Pressable onPress={() => setRole("Driver")} style={{ ...styles.borderBox, borderColor: role == "Driver" ? Colors.primary : "gray", borderWidth: role == "Driver" ? 2 : 2 }}>
+                    <Pressable onPress={() => setRole("Driver")} style={{ ...styles.borderBox, borderColor: role == "Driver" ? Colors.primary : Colors.borderColor, borderWidth: role == "Driver" ? 2 : 1 }}>
                         <View >
-                            <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
-                                <View style={{ justifyContent: "center", alignItems: "center", width: 20, height: 20, backgroundColor: role == "Driver" ? Colors.primary : undefined, borderRadius: 20, marginRight: 10, borderColor: role == "Driver" ? "#111827" : undefined, borderWidth: role == "Driver" ? 0 : 1 }}>
-                                    <View style={{ width: 10, height: 10, backgroundColor: role == "Driver" ? "#ffffff" : undefined, borderRadius: 10 }}></View>
+                            <View style={styles.roleContainer}>
+                                <View style={{ ...styles.roleRadioButton, backgroundColor: role == "Driver" ? Colors.primary : undefined, borderRadius: 20, marginRight: 10, borderColor: role == "Driver" ? undefined : Colors.borderColor, borderWidth: role == "Driver" ? 0 : 1 }}>
+                                    <View style={{ ...styles.roleButtonInnerCont, backgroundColor: role == "Driver" ? Colors.text.white : undefined }}></View>
                                 </View>
 
                                 <View>
-                                    <Text style={{ fontWeight: "600", color: "#111827", fontSize: 15 }}>Driver</Text>
+                                    <Text style={styles.roleText}>Driver</Text>
                                     <View>
                                         <Text style={styles.headerDesc}>
                                             Receive delivery jobs on demand
@@ -137,27 +150,26 @@ const styles = StyleSheet.create({
         width: 45,
         height: 45,
         borderRadius: 40,
-        backgroundColor: "#EAEAEA",
+        backgroundColor: Colors.backBtnGray,
         justifyContent: "center",
         alignItems: "center"
     },
     headerText: {
         fontSize: 25,
         fontWeight: "bold",
-        color: "#111827"
+        color: Colors.text.black
     },
     headerDesc: {
         fontSize: 14,
         fontWeight: "600",
         marginTop: 10,
-        color: "#4B5563"
+        color: Colors.text.gray
     },
     borderBox: {
         marginTop: 20,
         padding: 10,
         borderRadius: 10,
-        borderWidth: 2,
-        borderColor: Colors.primary
+      
     },
     nextBtn: {
         width: "100%",
@@ -173,4 +185,16 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         fontSize: 16
     },
+    roleContainer: {
+        flexDirection: "row", alignItems: "flex-start"
+    },
+    roleRadioButton: {
+        justifyContent: "center", alignItems: "center", width: 20, height: 20, borderRadius: 20, marginRight: 10,
+    },
+    roleButtonInnerCont: {
+        width: 10, height: 10, borderRadius: 10,
+    },
+    roleText: {
+        fontWeight: "600", color: Colors.text.black, fontSize: 15
+    }
 })

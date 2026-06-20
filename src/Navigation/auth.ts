@@ -11,11 +11,19 @@ export type RootAuthStackParamList = {
   MerchantInfo: {
     mobileNo: string | null,
     email: string | null,
-    role: "Merchant" | "Driver",
+    role: "Merchant",
     country: string | null,
     countryCode: string | null,
     callingCode: string | null
   };
+  DriverInfo: {
+    mobileNo: string | null,
+    email: string | null,
+    role: "Driver",
+    country: string | null,
+    countryCode: string | null,
+    callingCode: string | null
+  },
   VerificationCode: {
     mobileNo: string,
     country: string,
