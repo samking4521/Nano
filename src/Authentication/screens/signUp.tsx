@@ -23,7 +23,7 @@ WebBrowser.maybeCompleteAuthSession();
 
 type SignUpScreenNavigationProp = NativeStackNavigationProp<RootAuthStackParamList, "SignUp">;
 type errorType = "emptyMobileNo";
-const googleIcon = require("../../../assets/googleicon.png")
+const googleIcon = require("../../../assets/google_icon.png");
 
 export default function SignUp() {
     const [mobileNo, setMobileNo] = useState("");
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
         height: 50,
         borderWidth: 1,
         backgroundColor: Colors.borderBackground,
-        borderRadius: 12,
+        borderRadius: 50,
         flexDirection: "row",
         alignItems: "center",
     },
@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
     },
     nextBtn: {
         height: 50,
-        borderRadius: 12,
+        borderRadius: 50,
         justifyContent: "center",
         alignItems: "center",
         backgroundColor: Colors.primary,
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
         height: 50,
         borderWidth: 1,
         borderColor: Colors.borderColor,
-        borderRadius: 12,
+        borderRadius: 50,
         flexDirection: "row",
         justifyContent: "center",
         alignItems: "center",

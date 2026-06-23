@@ -24,6 +24,12 @@ export type RootAuthStackParamList = {
     countryCode: string | null,
     callingCode: string | null
   },
+  VehicleInfo: {
+    mobileNo: string | null,
+    email: string | null,
+    role: "Driver",
+    country: string | null
+  },
   VerificationCode: {
     mobileNo: string,
     country: string,

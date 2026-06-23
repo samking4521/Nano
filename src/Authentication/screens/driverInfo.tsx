@@ -125,29 +125,87 @@ export default function DriverInfo({ route }: Props) {
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
     };
 
-    const firstname_err = clickedContinue && (firstname.length <= 0) ? true : false;
-    const lastname_err = clickedContinue && (lastname.length <= 0) ? true : false;
-    const phone = phone_number ? phone_number : mobileNo;
-    const mail = emailVal ? emailVal : email;
+    // const firstname_err = clickedContinue && (firstname.length <= 0) ? true : false;
+    // const lastname_err = clickedContinue && (lastname.length <= 0) ? true : false;
+    // const phone = phone_number ? phone_number : mobileNo;
+    // const mail = emailVal ? emailVal : email;
+    // const isMailValid = isValidEmail(mail);
+    // const mobile_no_err = clickedContinue && (phone.length <= 0) ? true : false;
+    // const email_length_err = clickedContinue && (mail.length <= 0) ? true : false;
+    // const email_valid_err = clickedContinue && !isMailValid ? true : false;
+    // const nin_empty = clickedContinue && (nin.length <= 0) ? true : false;
+    // const nin_length_err = clickedContinue && (nin.length < 11) ? true : false;
+    // const dob_err = clickedContinue && !datePicked ? true : false;
+    // const isAgeValid = isAtLeast18YearsOld(dob);
+    // const dob_err_less_18 = datePicked && !isAgeValid;
+    // const nin_image_empty = clickedContinue && (!ninImage) ? true : false;
+    // const driver_photo_empty = clickedContinue && (!driverImage) ? true : false;
+
+    // const continueToVehicleInfo = () => {
+
+    //     setClickedContinue(true);
+    //     if (firstname_err || lastname_err || mobile_no_err || email_length_err || email_valid_err || dob_err || dob_err_less_18 || nin_empty || nin_length_err || nin_image_empty || driver_photo_empty) {
+    //         return;
+    //     }
+
+    //     navigation.navigate("VehicleInfo", {
+    //         mobileNo: phone_number ?? mobileNo,
+    //         email: emailVal ?? email,
+    //         role: "Driver",
+    //         country: countryName ?? countryNameVal
+    //     })
+    
+    // }
+
+    const phone = phone_number || mobileNo;
+const mail = emailVal || email;
+const isMailValid = isValidEmail(mail);
+const isAgeValid = isAtLeast18YearsOld(dob);
+
+const firstname_err      = clickedContinue && firstname.trim() === "";
+const lastname_err       = clickedContinue && lastname.trim() === "";
+const mobile_no_err      = clickedContinue && phone.trim() === "";
+const email_length_err   = clickedContinue && mail.trim() === "";
+const email_valid_err    = clickedContinue && mail.length > 0 && !isMailValid;
+const nin_empty          = clickedContinue && nin.length === 0;
+const nin_length_err     = clickedContinue && nin.length > 0 && nin.length < 11;
+const dob_err            = clickedContinue && !datePicked;
+const dob_err_less_18    = datePicked && !isAgeValid;
+const nin_image_empty    = clickedContinue && !ninImage;
+const driver_photo_empty = clickedContinue && !driverImage;
+
+
+
+const continueToVehicleInfo = () => {
+    setClickedContinue(true);
+     const phone = phone_number || mobileNo;
+    const mail = emailVal || email;
     const isMailValid = isValidEmail(mail);
-    const mobile_no_err = clickedContinue && (phone.length <= 0) ? true : false;
-    const email_length_err = clickedContinue && (mail.length <= 0) ? true : false;
-    const email_valid_err = clickedContinue && !isMailValid ? true : false;
-    const nin_empty = clickedContinue && (nin.length <= 0) ? true : false;
-    const nin_length_err = clickedContinue && (nin.length < 11) ? true : false;
-    const dob_err = clickedContinue && !datePicked ? true : false;
     const isAgeValid = isAtLeast18YearsOld(dob);
-    const dob_err_less_18 = datePicked && !isAgeValid;
-    const nin_image_empty = clickedContinue && (!ninImage) ? true : false;
-    const driver_photo_empty = clickedContinue && (!driverImage) ? true : false;
 
-    const continueToSignUp = () => {
+    const hasErrors = [
+        firstname.trim() === "",
+        lastname.trim() === "",
+        phone.trim() === "",
+        mail.trim() === "",
+        mail.length > 0 && !isMailValid,
+        !datePicked,
+        datePicked && !isAgeValid,
+        nin.length === 0,
+        nin.length > 0 && nin.length < 11,
+        !ninImage,
+        !driverImage,
+    ].some(Boolean);
 
-        setClickedContinue(true);
-        if (firstname_err || lastname_err || mobile_no_err || email_length_err || email_valid_err || dob_err || dob_err_less_18 || nin_empty || nin_length_err || nin_image_empty || driver_photo_empty) {
-            return;
-        }
-    }
+    if (hasErrors) return;
+
+    navigation.navigate("VehicleInfo", {
+        mobileNo: phone_number ?? mobileNo,
+        email: emailVal ?? email,
+        role: "Driver",
+        country: countryName ?? countryNameVal,
+    });
+};
 
 
     const showNinBottomSheet = () => {
@@ -167,32 +225,7 @@ export default function DriverInfo({ route }: Props) {
     }
 
 
-    const pickmageFromGallery = async () => {
-        const { status, canAskAgain } = await ImagePicker.getMediaLibraryPermissionsAsync();
-        if (status != "granted") {
-
-        }
-        const permission =
-            await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-        if (!permission.granted) {
-            return null
-        }
-
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images'],
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.8,
-        });
-
-        if (result.canceled) {
-            return null;
-        }
-
-        return result.assets[0];
-    };
-
+    
     async function pickImageFromGallery() {
         if (Platform.OS === 'ios') {
             const { status, canAskAgain } = await ImagePicker.getMediaLibraryPermissionsAsync();
@@ -331,6 +364,7 @@ export default function DriverInfo({ route }: Props) {
             <KeyboardAvoidingView
                 style={{ flex: 1, paddingHorizontal: 15, }}
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
+                
             >
                 <View style={styles.headerContainer}>
                     <Pressable onPress={goToPreviousScreen} style={styles.backBtn}>
@@ -346,7 +380,7 @@ export default function DriverInfo({ route }: Props) {
 
                 <ScrollView
                     contentContainerStyle={{ flexGrow: 1 }}
-                    keyboardShouldPersistTaps="handled"
+                    keyboardShouldPersistTaps="never"
                     showsVerticalScrollIndicator={false}
                     style={styles.body}>
 
@@ -550,7 +584,7 @@ export default function DriverInfo({ route }: Props) {
                     </View>
 
 
-                    <Pressable onPress={continueToSignUp} style={styles.nextBtn}>
+                    <Pressable onPress={continueToVehicleInfo} style={styles.nextBtn}>
                         <Text style={styles.continueText}>Continue</Text>
                     </Pressable>
 
@@ -670,7 +704,7 @@ const styles = StyleSheet.create({
         height: 50,
         borderWidth: 1,
         backgroundColor: Colors.borderBackground,
-        borderRadius: 12,
+        borderRadius: 50,
     },
     mobileTextInput: {
         flex: 1,
@@ -701,7 +735,7 @@ const styles = StyleSheet.create({
         height: 50,
         borderWidth: 1,
         backgroundColor: Colors.borderBackground,
-        borderRadius: 12,
+        borderRadius: 50,
         flexDirection: "row",
         alignItems: "center",
     },
@@ -793,7 +827,7 @@ const styles = StyleSheet.create({
     },
     nextBtn: {
         height: 50,
-        borderRadius: 12,
+        borderRadius: 50,
         justifyContent: "center",
         alignItems: "center",
         backgroundColor: Colors.primary,
@@ -805,10 +839,12 @@ const styles = StyleSheet.create({
         fontSize: 16
     },
     bottomSheetCont: {
-        flex: 1,
+        
+         height: "100%",
     },
     bottomSheetViewCont: {
         flex: 1,
+       
         paddingHorizontal: 10,
         paddingTop: 20
     },

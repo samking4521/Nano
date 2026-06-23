@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
         height: 50,
         borderWidth: 1,
         backgroundColor: Colors.borderBackground,
-        borderRadius: 12,
+        borderRadius: 50,
         flexDirection: "row",
         alignItems: "center",
     },
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
     },
     nextBtn: {
         height: 50,
-        borderRadius: 12,
+        borderRadius: 50,
         justifyContent: "center",
         alignItems: "center",
         backgroundColor: Colors.primary,
