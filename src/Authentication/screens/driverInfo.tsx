@@ -125,43 +125,12 @@ export default function DriverInfo({ route }: Props) {
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
     };
 
-    // const firstname_err = clickedContinue && (firstname.length <= 0) ? true : false;
-    // const lastname_err = clickedContinue && (lastname.length <= 0) ? true : false;
-    // const phone = phone_number ? phone_number : mobileNo;
-    // const mail = emailVal ? emailVal : email;
-    // const isMailValid = isValidEmail(mail);
-    // const mobile_no_err = clickedContinue && (phone.length <= 0) ? true : false;
-    // const email_length_err = clickedContinue && (mail.length <= 0) ? true : false;
-    // const email_valid_err = clickedContinue && !isMailValid ? true : false;
-    // const nin_empty = clickedContinue && (nin.length <= 0) ? true : false;
-    // const nin_length_err = clickedContinue && (nin.length < 11) ? true : false;
-    // const dob_err = clickedContinue && !datePicked ? true : false;
-    // const isAgeValid = isAtLeast18YearsOld(dob);
-    // const dob_err_less_18 = datePicked && !isAgeValid;
-    // const nin_image_empty = clickedContinue && (!ninImage) ? true : false;
-    // const driver_photo_empty = clickedContinue && (!driverImage) ? true : false;
-
-    // const continueToVehicleInfo = () => {
-
-    //     setClickedContinue(true);
-    //     if (firstname_err || lastname_err || mobile_no_err || email_length_err || email_valid_err || dob_err || dob_err_less_18 || nin_empty || nin_length_err || nin_image_empty || driver_photo_empty) {
-    //         return;
-    //     }
-
-    //     navigation.navigate("VehicleInfo", {
-    //         mobileNo: phone_number ?? mobileNo,
-    //         email: emailVal ?? email,
-    //         role: "Driver",
-    //         country: countryName ?? countryNameVal
-    //     })
     
-    // }
 
     const phone = phone_number || mobileNo;
 const mail = emailVal || email;
 const isMailValid = isValidEmail(mail);
 const isAgeValid = isAtLeast18YearsOld(dob);
-
 const firstname_err      = clickedContinue && firstname.trim() === "";
 const lastname_err       = clickedContinue && lastname.trim() === "";
 const mobile_no_err      = clickedContinue && phone.trim() === "";

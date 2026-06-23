@@ -7,7 +7,7 @@ import { Colors } from '../../constants/colors'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootAuthStackParamList } from '../../Navigation/auth';
 import { RouteProp, useNavigation } from '@react-navigation/native'
-import BottomSheet, { BottomSheetFlatList, BottomSheetView } from '@gorhom/bottom-sheet'
+import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet'
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete'
 import * as ImagePicker from 'expo-image-picker';
 import * as Crypto from 'expo-crypto';
@@ -88,12 +88,13 @@ type vehiclePhotoType = {
 
 type vehicleType = "Pickup Truck" | "Flatbed Truck" | "Tipper Truck" | "Box Truck" | "Van Truck" | "Container Truck";
 
-export default function VehicleInfo() {
+export default function VehicleInfo({route}: Props) {
+    const { mobileNo, email, role, country } = route.params;
     const [plateNumber, setPlateNumber] = useState("");
     const [inputFocus, setInputFocus] = useState<"plate_number" | null>(null);
     const [openBottomSheet, setOpenBottomSheet] = useState<bottomSheetType | null>(null);
-    const [vehicleBaseCity, setVehicleBaseCity] = useState("Apapa");
-    const [vehicleBaseState, setVehicleBaseState] = useState("Lagos");
+    const [vehicleBaseCity, setVehicleBaseCity] = useState<string | null>("Oko oba");
+    const [vehicleBaseState, setVehicleBaseState] = useState<string | null>("Lagos");
     const [vehiclePhotos, setVehiclePhotos] = useState<vehiclePhotoType[]>([]);
     const [vehicleLicensePhotos, setVehicleLicensePhotos] = useState<ImagePicker.ImagePickerAsset | null>(null);
     const [modalVisible, setModalVisible] = useState(false);
@@ -101,6 +102,7 @@ export default function VehicleInfo() {
     const [editVehiclePhotos, setEditVehiclePhotos] = useState(false);
     const [preferredRegion, setPreferredRegion] = useState(initialPreferredRegion);
     const navigation = useNavigation<VehicleInfoNavigationProp>();
+     const [clickedContinue, setClickedContinue] = useState(false);
 
     const DATA_LEVEL = useRef(2);
     const DETAILS_LEVEL = DATA_LEVEL.current
@@ -338,11 +340,46 @@ export default function VehicleInfo() {
     const renderItem = ({ item, index }: { item: vehicleDataType, index: number }) => {
         return <VehicleType item={item} index={index} selectVehicleType={selectVehicleType} vehicleType={vehicleType} />
     }
+
+const base_location_err  = clickedContinue && (!vehicleBaseCity || !vehicleBaseState); 
+const preffered_region_err       = clickedContinue && (!preferredRegion.interCity && !preferredRegion.interState && !preferredRegion.withinCity && !preferredRegion.openToAnyRoute);
+const vehicle_type_err      = clickedContinue && !vehicleType;
+const vehicle_plate_no_err   = clickedContinue && plateNumber.trim() == "";
+const vehicle_photo_empty_err    = clickedContinue && vehiclePhotos.length == 0;
+const vehicle_photo_length_err         = clickedContinue && (vehiclePhotos.length < 4 || vehiclePhotos.length >4);
+const driver_license_photo_err     = clickedContinue && !vehicleLicensePhotos;
+
+
+
+const continueToPaymentInfo = () => {
+    setClickedContinue(true);
+   
+    const hasErrors = [
+       (!vehicleBaseCity || !vehicleBaseState),
+       (!preferredRegion.interCity && !preferredRegion.interState && !preferredRegion.withinCity && !preferredRegion.openToAnyRoute),
+        !vehicleType,
+        plateNumber.trim() == "",
+        vehiclePhotos.length == 0,
+        vehiclePhotos.length < 4,
+        !vehicleLicensePhotos
+    ].some(Boolean);
+
+    if (hasErrors) return;
+
+    navigation.navigate("PaymentInfo", {
+        mobileNo: mobileNo,
+        email: email,
+        role: role,
+        country: country,
+    });
+};
+
     return (
         <SafeAreaView style={styles.container}>
             <KeyboardAvoidingView
                 style={{ flex: 1, paddingHorizontal: 15, }}
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
+                
             >
                 <View style={styles.headerContainer}>
                     <Pressable onPress={goToPreviousScreen} style={styles.backBtn}>
@@ -356,7 +393,7 @@ export default function VehicleInfo() {
 
                 <ScrollView
                     contentContainerStyle={{ flexGrow: 1 }}
-                    keyboardShouldPersistTaps="handled"
+                    keyboardShouldPersistTaps="never"
                     showsVerticalScrollIndicator={false}
                     style={styles.body}>
 
@@ -369,33 +406,42 @@ export default function VehicleInfo() {
                     <View style={styles.infoCont}>
                         <Text style={styles.mobileLabel}>Base Location</Text>
                         <Text style={styles.headerDesc}>Where is this truck usually located and available for jobs?</Text>
-                        <Pressable onPress={() => setOpenBottomSheet("base_location")} style={styles.mobileTextInputContainer}>
+                        <Pressable onPress={() => setOpenBottomSheet("base_location")} style={{...styles.mobileTextInputContainer, borderColor: base_location_err? Colors.error : Colors.borderColor}}>
                             <Text style={styles.placeHolderText}>{(vehicleBaseCity || vehicleBaseState) ? `${vehicleBaseCity}, ${vehicleBaseState}` : "Select location"}</Text>
                             <MaterialIcons name="keyboard-arrow-down" size={24} color={Colors.text.gray} />
                         </Pressable>
+                        {base_location_err && <View style={styles.errorBox}>
+                                                    <Text style={styles.errorText}>Select your base location</Text>
+                                                </View>}
                     </View>
 
                     <View style={styles.infoCont}>
                         <Text style={styles.mobileLabel}>Preffered Region</Text>
                         <Text style={styles.headerDesc}>Enter your preferred operating areas to move goods. This helps us match you, but you may still get other available trips.</Text>
-                        <Pressable onPress={() => setModalVisible(true)} style={styles.mobileTextInputContainer}>
+                        <Pressable onPress={() => setModalVisible(true)} style={{...styles.mobileTextInputContainer, borderColor: preffered_region_err? Colors.error : Colors.borderColor}}>
                             <Text style={styles.placeHolderText}>{getPreferredRegionText()}</Text>
                             <MaterialIcons name="keyboard-arrow-down" size={24} color={Colors.text.gray} />
                         </Pressable>
+                         {preffered_region_err && <View style={styles.errorBox}>
+                                                    <Text style={styles.errorText}>Select your preffered region</Text>
+                                                </View>}
                     </View>
 
                     <View style={styles.infoCont}>
                         <Text style={styles.mobileLabel}>Vehicle Type</Text>
                         <Text style={styles.headerDesc}>Select the type of truck you use for deliveries.</Text>
-                        <Pressable onPress={() => setOpenBottomSheet("vehicle_type")} style={styles.mobileTextInputContainer}>
+                        <Pressable onPress={() => setOpenBottomSheet("vehicle_type")} style={{...styles.mobileTextInputContainer, borderColor: vehicle_type_err? Colors.error : Colors.borderColor}}>
                             <Text style={styles.placeHolderText}>{vehicleType ? vehicleType : "Select Truck"}</Text>
                             <MaterialIcons name="keyboard-arrow-down" size={24} color={Colors.text.gray} />
                         </Pressable>
+                         {vehicle_type_err && <View style={styles.errorBox}>
+                                                    <Text style={styles.errorText}>Select your vehicle type</Text>
+                                                </View>}
                     </View>
 
                     <View style={styles.infoCont}>
                         <Text style={styles.mobileLabel}>Vehicle Plate Number</Text>
-                        <View style={{ ...styles.mobileTextInputContainer, borderColor: inputFocus ? Colors.primary : Colors.borderColor }}>
+                        <View style={{ ...styles.mobileTextInputContainer, borderColor: vehicle_plate_no_err? Colors.error :  inputFocus ? Colors.primary : Colors.borderColor }}>
                             <TextInput
                                 value={plateNumber}
                                 onChangeText={setPlateNumber}
@@ -408,13 +454,16 @@ export default function VehicleInfo() {
 
                             />
                         </View>
+                         {vehicle_plate_no_err && <View style={styles.errorBox}>
+                                                    <Text style={styles.errorText}>Plate number cannot be empty</Text>
+                                                </View>}
                     </View>
 
 
 
                     <View>
-                        <Pressable onPress={selectVehiclePhotos} style={styles.pictureVehicleCont}>
-                            <View style={styles.pictureVehicleHeader}>
+                        <Pressable onPress={selectVehiclePhotos} style={{...styles.pictureVehicleCont, borderColor: (vehicle_photo_empty_err || vehicle_photo_length_err)? Colors.error : Colors.borderColor}}>
+                            <View style={{...styles.pictureVehicleHeader, borderBottomColor: (vehicle_photo_empty_err || vehicle_photo_length_err)? Colors.error : Colors.borderColor}}>
                                 <View style={styles.vehicleIcon}>
                                     <SimpleLineIcons name="picture" size={16} color={Colors.text.black} />
                                 </View>
@@ -450,7 +499,7 @@ export default function VehicleInfo() {
                                             }
                                             return (
                                                 <View style={{ width: "50%", height: 150, padding: 10 }}>
-                                                    <Pressable onPress={() => setOpenBottomSheet("photos")} style={{ flex: 1, justifyContent: "center", alignItems: "center", borderWidth: 1, borderStyle: "dashed", borderRadius: 10, backgroundColor: Colors.background, borderColor: Colors.text.gray }}>
+                                                    <Pressable onPress={() => setOpenBottomSheet("photos")} style={{ flex: 1, justifyContent: "center", alignItems: "center", borderWidth: 1, borderStyle: "dashed", borderRadius: 10, backgroundColor: Colors.background }}>
                                                         <View style={{
                                                             width: 70,
                                                             height: 70,
@@ -477,12 +526,16 @@ export default function VehicleInfo() {
                             </View>
                         </Pressable>
 
+                        {(vehicle_photo_empty_err || vehicle_photo_length_err) && <View style={styles.errorBox}>
+                                                    <Text style={styles.errorText}>{vehicle_photo_empty_err? "Enter your vehicle photos" : "Upload 4 photos of your vehicle"}</Text>
+                                                </View>}
+
                     </View>
 
 
                     <View>
-                        <Pressable onPress={selectDriverLicensePhoto} style={styles.pictureVehicleCont}>
-                            <View style={styles.pictureVehicleHeader}>
+                        <Pressable onPress={selectDriverLicensePhoto} style={{...styles.pictureVehicleCont, borderColor: driver_license_photo_err? Colors.error : Colors.borderColor}}>
+                            <View style={{...styles.pictureVehicleHeader, borderBottomColor: driver_license_photo_err? Colors.error : Colors.borderColor}}>
                                 <View style={styles.vehicleIcon}>
                                     <SimpleLineIcons name="picture" size={16} color={Colors.text.black} />
                                 </View>
@@ -504,12 +557,15 @@ export default function VehicleInfo() {
                             </View>
 
                         </Pressable>
+                              {driver_license_photo_err && <View style={styles.errorBox}>
+                                                    <Text style={styles.errorText}>Upload photo of your driver license</Text>
+                                                </View>}
 
                     </View>
 
 
 
-                    <Pressable style={styles.nextBtn}>
+                    <Pressable onPress={continueToPaymentInfo}  style={styles.nextBtn}>
                         <Text style={styles.continueText}>Continue</Text>
                     </Pressable>
 
@@ -884,6 +940,19 @@ const styles = StyleSheet.create({
         color: Colors.text.black,
         fontWeight: "600",
         fontSize: 16
+    },
+      errorBox: {
+        marginTop: 10,
+        width: "100%",
+        padding: 10,
+        backgroundColor: Colors.errorBackground,
+        borderRadius: 12
+
+    },
+    errorText: {
+        color: Colors.error,
+        fontSize: 12,
+        fontWeight: "500"
     },
 
 
