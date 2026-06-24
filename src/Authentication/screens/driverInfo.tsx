@@ -127,7 +127,7 @@ export default function DriverInfo({ route }: Props) {
 
     
 
-    const phone = phone_number || mobileNo;
+const phone = phone_number || mobileNo;
 const mail = emailVal || email;
 const isMailValid = isValidEmail(mail);
 const isAgeValid = isAtLeast18YearsOld(dob);

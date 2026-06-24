@@ -6,6 +6,7 @@ const gray = "#9FA1AC";
 
 
 export default function ProgressLevel({progressLevel}: {progressLevel: number}) {
+    
   return (
     <View style={styles.container}>
                        <View

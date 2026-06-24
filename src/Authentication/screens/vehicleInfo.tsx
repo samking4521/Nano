@@ -608,7 +608,7 @@ const continueToPaymentInfo = () => {
                                 console.log("Lng:", location?.lng);
                             }}
                             query={{
-                                key: "AIzaSyDHKtAMnx-yofvk_9eqEjX_djl6WDN18y4",
+                                key: "",
                                 language: "en",
 
                             }}
