@@ -41,7 +41,8 @@ export type RootAuthStackParamList = {
     email: string | null,
     role: "Driver",
     country: string | null
-  }
+  },
+   SubmitScreen: undefined
 
 };
 

@@ -1,7 +1,7 @@
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator } from 'react-native'
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { AntDesign, Entypo, Feather, MaterialIcons } from '@expo/vector-icons'
+import { AntDesign, Feather, MaterialIcons } from '@expo/vector-icons'
 import ProgressLevel from './components/progressLevel'
 import { Colors } from '../../constants/colors'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -146,9 +146,6 @@ export default function PaymentInfo({ route }: Props) {
 
 
 
-
-
-
     const bank_acc_number_err = clickedContinue && accountNo.trim() == "";
     const bank_name_err = clickedContinue && !selectedBank;
     const bank_acc_length_incomplete = clickedContinue && accountNo.length < 10;
@@ -165,22 +162,14 @@ export default function PaymentInfo({ route }: Props) {
             return;
         }
 
-        navigation.navigate("VehicleInfo", {
-            mobileNo: mobileNo,
-            email: email,
-            role: "Driver",
-            country: country
-        });
+        navigation.navigate("SubmitScreen");
     };
-
-
 
     return (
         <SafeAreaView style={styles.container}>
             <KeyboardAvoidingView
                 style={{ flex: 1, paddingHorizontal: 15, }}
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
-
             >
                 <View style={styles.headerContainer}>
                     <Pressable onPress={goToPreviousScreen} style={styles.backBtn}>

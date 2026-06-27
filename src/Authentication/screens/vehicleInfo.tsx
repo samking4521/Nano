@@ -88,13 +88,16 @@ type vehiclePhotoType = {
 
 type vehicleType = "Pickup Truck" | "Flatbed Truck" | "Tipper Truck" | "Box Truck" | "Van Truck" | "Container Truck";
 
+type inputFocusType = "vehicle_capacity" | "plate_number";
+
 export default function VehicleInfo({route}: Props) {
     const { mobileNo, email, role, country } = route.params;
     const [plateNumber, setPlateNumber] = useState("");
-    const [inputFocus, setInputFocus] = useState<"plate_number" | null>(null);
+    const [inputFocus, setInputFocus] = useState< inputFocusType |  null>(null);
     const [openBottomSheet, setOpenBottomSheet] = useState<bottomSheetType | null>(null);
     const [vehicleBaseCity, setVehicleBaseCity] = useState<string | null>("Oko oba");
     const [vehicleBaseState, setVehicleBaseState] = useState<string | null>("Lagos");
+    const [vehicleCapacity, setVehicleCapacity] = useState("");
     const [vehiclePhotos, setVehiclePhotos] = useState<vehiclePhotoType[]>([]);
     const [vehicleLicensePhotos, setVehicleLicensePhotos] = useState<ImagePicker.ImagePickerAsset | null>(null);
     const [modalVisible, setModalVisible] = useState(false);
@@ -345,6 +348,7 @@ const base_location_err  = clickedContinue && (!vehicleBaseCity || !vehicleBaseS
 const preffered_region_err       = clickedContinue && (!preferredRegion.interCity && !preferredRegion.interState && !preferredRegion.withinCity && !preferredRegion.openToAnyRoute);
 const vehicle_type_err      = clickedContinue && !vehicleType;
 const vehicle_plate_no_err   = clickedContinue && plateNumber.trim() == "";
+const vehicle_capacity_err = clickedContinue && vehicleCapacity.trim() == "";
 const vehicle_photo_empty_err    = clickedContinue && vehiclePhotos.length == 0;
 const vehicle_photo_length_err         = clickedContinue && (vehiclePhotos.length < 4 || vehiclePhotos.length >4);
 const driver_license_photo_err     = clickedContinue && !vehicleLicensePhotos;
@@ -359,6 +363,7 @@ const continueToPaymentInfo = () => {
        (!preferredRegion.interCity && !preferredRegion.interState && !preferredRegion.withinCity && !preferredRegion.openToAnyRoute),
         !vehicleType,
         plateNumber.trim() == "",
+        vehicleCapacity.trim() == "",
         vehiclePhotos.length == 0,
         vehiclePhotos.length < 4,
         !vehicleLicensePhotos
@@ -439,9 +444,31 @@ const continueToPaymentInfo = () => {
                                                 </View>}
                     </View>
 
+                     <View style={styles.infoCont}>
+                        <Text style={styles.mobileLabel}>Vehicle Load Capacity (tonnes)</Text>
+                        <View style={{ ...styles.mobileTextInputContainer, borderColor: vehicle_capacity_err? Colors.error :  inputFocus == "vehicle_capacity" ? Colors.primary : Colors.borderColor }}>
+                            <TextInput
+                                value={vehicleCapacity}
+                                onChangeText={setVehicleCapacity}
+
+                                placeholder='2 tonnes'
+                                keyboardType="decimal-pad"
+                                style={styles.mobileTextInput}
+                                onFocus={() => setInputFocus("vehicle_capacity")}
+                                onBlur={() => setInputFocus(null)}
+
+                            />
+                        </View>
+                         {vehicle_capacity_err && <View style={styles.errorBox}>
+                                                    <Text style={styles.errorText}>Enter vehicle load capacity</Text>
+                                                </View>}
+                    </View>
+
+
+
                     <View style={styles.infoCont}>
                         <Text style={styles.mobileLabel}>Vehicle Plate Number</Text>
-                        <View style={{ ...styles.mobileTextInputContainer, borderColor: vehicle_plate_no_err? Colors.error :  inputFocus ? Colors.primary : Colors.borderColor }}>
+                        <View style={{ ...styles.mobileTextInputContainer, borderColor: vehicle_plate_no_err? Colors.error :  inputFocus == "plate_number" ? Colors.primary : Colors.borderColor }}>
                             <TextInput
                                 value={plateNumber}
                                 onChangeText={setPlateNumber}

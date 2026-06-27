@@ -8,12 +8,13 @@ import VerificationCode from "../Authentication/screens/verificationCode";
 import DriverInfo from "../Authentication/screens/driverInfo";
 import VehicleInfo from "../Authentication/screens/vehicleInfo";
 import PaymentInfo from "../Authentication/screens/paymentInfo";
+import SubmitScreen from "../Authentication/screens/submitScreen";
 
 const Stack = createNativeStackNavigator<RootAuthStackParamList>();
 
 export function AuthUserNavigation() {
   return (
-    <Stack.Navigator initialRouteName="Welcome" screenOptions={{ headerShown: false }}>
+    <Stack.Navigator initialRouteName="SubmitScreen" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Welcome" component={Welcome} />
       <Stack.Screen name="SignUp" component={SignUp} />
       <Stack.Screen name="RoleSelection" component={RoleSelection} />
@@ -22,6 +23,7 @@ export function AuthUserNavigation() {
       <Stack.Screen name="DriverInfo" component={DriverInfo} />
       <Stack.Screen name="VehicleInfo" component={VehicleInfo} />
       <Stack.Screen name="PaymentInfo" component={PaymentInfo} />
+      <Stack.Screen name="SubmitScreen" component={SubmitScreen} />
 
     </Stack.Navigator>
   );
