@@ -119,7 +119,8 @@ export default function VerificationCode({ route }: Props) {
                 email: null,
                 country: country,
                 countryCode: countryCode,
-                callingCode: callingCode
+                callingCode: callingCode,
+                userId: ""
 
             });
         });

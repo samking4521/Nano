@@ -168,6 +168,8 @@ const continueToVehicleInfo = () => {
 
     if (hasErrors) return;
 
+    
+
     navigation.navigate("VehicleInfo", {
         mobileNo: phone_number ?? mobileNo,
         email: emailVal ?? email,

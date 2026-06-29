@@ -5,9 +5,7 @@ import Animated, {
   useSharedValue,
   useAnimatedProps,
   withTiming,
-  withDelay,
   withRepeat,
-  withSequence,
   Easing,
   cancelAnimation,
   useAnimatedStyle,
@@ -273,7 +271,7 @@ export default function SubmitScreen() {
         </View>
            <Button title="Start" onPress={()=> startAnimation("photos")} />
       <Button title="Stop" onPress={()=> stopAnimation("photos")} />
-        <Text style={[styles.headerDesc, { marginTop: "auto", marginBottom: 40 }]}>Please don't leave until the upload is complete.</Text>
+        <Text style={[styles.headerDesc, { marginTop: "auto", marginBottom: 40, color: Colors.primary }]}>Please don't leave until the upload is complete. This usually takes less than a minute.</Text>
       </View>
 
     </SafeAreaView>

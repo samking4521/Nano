@@ -14,7 +14,7 @@ const Stack = createNativeStackNavigator<RootAuthStackParamList>();
 
 export function AuthUserNavigation() {
   return (
-    <Stack.Navigator initialRouteName="SubmitScreen" screenOptions={{ headerShown: false }}>
+    <Stack.Navigator initialRouteName="Welcome" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Welcome" component={Welcome} />
       <Stack.Screen name="SignUp" component={SignUp} />
       <Stack.Screen name="RoleSelection" component={RoleSelection} />

@@ -167,7 +167,8 @@ export default function SignUp() {
                 email: sessionData.session?.user?.email || null,
                 country: null,
                 countryCode: null,
-                callingCode: null
+                callingCode: null,
+                userId: ""
             })
 
 
