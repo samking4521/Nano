@@ -7,7 +7,6 @@ export type RootAuthStackParamList = {
     country: string | null,
     countryCode: string | null,
     callingCode: string | null,
-    userId: string
   };
   MerchantInfo: {
     mobileNo: string | null,
@@ -16,7 +15,6 @@ export type RootAuthStackParamList = {
     country: string | null,
     countryCode: string | null,
     callingCode: string | null,
-    userId: string
   };
   DriverInfo: {
     mobileNo: string | null,
@@ -25,28 +23,15 @@ export type RootAuthStackParamList = {
     country: string | null,
     countryCode: string | null,
     callingCode: string | null,
-     userId: string
   };
-  VehicleInfo: {
-    mobileNo: string | null,
-    email: string | null,
-    role: "Driver",
-    country: string | null,
-    
-  };
+  VehicleInfo: undefined;
   VerificationCode: {
     mobileNo: string,
     country: string,
     countryCode: string,
     callingCode: string,
-   
   };
-  PaymentInfo: {
-     mobileNo: string | null,
-    email: string | null,
-    role: "Driver",
-    country: string | null
-  },
+  PaymentInfo: undefined,
    SubmitScreen: undefined
 };
 

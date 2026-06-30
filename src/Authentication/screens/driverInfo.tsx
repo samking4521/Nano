@@ -11,6 +11,7 @@ import ProgressLevel from './components/progressLevel'
 import DatePicker from 'react-native-date-picker'
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
 import * as ImagePicker from 'expo-image-picker';
+import { driverStorage } from '../../localStorage/driverStorage'
 
 type DriverInfoNavigationProp = NativeStackNavigationProp<RootAuthStackParamList, "DriverInfo">;
 type DriverInfoRouteProp = RouteProp<
@@ -37,26 +38,42 @@ type inputFocusType = "mobile_number" | "email" | "first_name" | "last_name" | "
 
 export default function DriverInfo({ route }: Props) {
     const { mobileNo: phone_number, email: emailVal, country: countryNameVal, countryCode: countryCodeVal, callingCode: callingCodeVal } = route.params;
-    const [country, setCountry] = useState<Country | null>(null)
-    const [mobileNo, setMobileNo] = useState("");
-    const [driverImage, setDriverImage] = useState<string | null>("");
-    const [email, setEmail] = useState("");
-    const [firstname, setFirstName] = useState("");
-    const [lastname, setLastName] = useState("");
+    const [country, setCountry] = useState<Country | null>(() => {
+        const jsonCountry = driverStorage.getString("country");
+        if (!jsonCountry) return null;
+        return JSON.parse(jsonCountry);
+    });
+    const [mobileNo, setMobileNo] = useState(() => driverStorage.getString("mobileNo") ?? "");
+    const [driverImage, setDriverImage] = useState(() => driverStorage.getString("driverImage") ?? "");
+    const [email, setEmail] = useState(() => driverStorage.getString("email") ?? "");
+    const [firstname, setFirstName] = useState(() => driverStorage.getString("firstname") ?? "");
+    const [lastname, setLastName] = useState(() => driverStorage.getString("lastname") ?? "");
     const [inputFocus, setInputFocus] = useState<inputFocusType | null>(null);
     const [clickedContinue, setClickedContinue] = useState(false);
-    const [nin, setNin] = useState("");
+    const [nin, setNin] = useState(() => driverStorage.getString("nin") ?? "");
     const [openBottomSheet, setOpenBottomSheet] = useState<bottomSheetType | null>(null);
-    const [dob, setDob] = useState(new Date())
+    const [dob, setDob] = useState<Date>(() => {
+        const dobString = driverStorage.getString("dob");
+        console.log("dob string", dobString);
+        return dobString ? new Date(dobString) : new Date();
+    });
     const [open, setOpen] = useState(false)
-    const [ninImage, setNinImage] = useState<string | null>(null);
+    const [ninImage, setNinImage] = useState(() => driverStorage.getString("ninImage") ?? "");
     const [datePicked, setDatePicked] = useState(false);
     const navigation = useNavigation<DriverInfoNavigationProp>();
     const DATA_LEVEL = useRef(1);
     const DETAILS_LEVEL = DATA_LEVEL.current
 
+    console.log("dob", dob);
 
-    const snapPoints = useMemo(() => ['25%%'], []);
+
+    const snapPoints = useMemo(() => ['25%'], []);
+
+
+    const driverLocalStorageDob = useMemo(()=> {
+        return driverStorage.getString("dob");
+    }, []);
+    
 
 
 
@@ -125,58 +142,67 @@ export default function DriverInfo({ route }: Props) {
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
     };
 
-    
-
-const phone = phone_number || mobileNo;
-const mail = emailVal || email;
-const isMailValid = isValidEmail(mail);
-const isAgeValid = isAtLeast18YearsOld(dob);
-const firstname_err      = clickedContinue && firstname.trim() === "";
-const lastname_err       = clickedContinue && lastname.trim() === "";
-const mobile_no_err      = clickedContinue && phone.trim() === "";
-const email_length_err   = clickedContinue && mail.trim() === "";
-const email_valid_err    = clickedContinue && mail.length > 0 && !isMailValid;
-const nin_empty          = clickedContinue && nin.length === 0;
-const nin_length_err     = clickedContinue && nin.length > 0 && nin.length < 11;
-const dob_err            = clickedContinue && !datePicked;
-const dob_err_less_18    = datePicked && !isAgeValid;
-const nin_image_empty    = clickedContinue && !ninImage;
-const driver_photo_empty = clickedContinue && !driverImage;
 
 
-
-const continueToVehicleInfo = () => {
-    setClickedContinue(true);
-     const phone = phone_number || mobileNo;
+    const phone = phone_number || mobileNo;
     const mail = emailVal || email;
     const isMailValid = isValidEmail(mail);
     const isAgeValid = isAtLeast18YearsOld(dob);
+    const firstname_err = clickedContinue && firstname.trim() === "";
+    const lastname_err = clickedContinue && lastname.trim() === "";
+    const mobile_no_err = clickedContinue && phone.trim() === "";
+    const email_length_err = clickedContinue && mail.trim() === "";
+    const email_valid_err = clickedContinue && mail.length > 0 && !isMailValid;
+    const nin_empty = clickedContinue && nin.length === 0;
+    const nin_length_err = clickedContinue && nin.length > 0 && nin.length < 11;
+    const dob_err = clickedContinue && (!datePicked && !driverLocalStorageDob);
+    const dob_err_less_18 = datePicked && !isAgeValid;
+    const nin_image_empty = clickedContinue && !ninImage;
+    const driver_photo_empty = clickedContinue && !driverImage;
 
-    const hasErrors = [
-        firstname.trim() === "",
-        lastname.trim() === "",
-        phone.trim() === "",
-        mail.trim() === "",
-        mail.length > 0 && !isMailValid,
-        !datePicked,
-        datePicked && !isAgeValid,
-        nin.length === 0,
-        nin.length > 0 && nin.length < 11,
-        !ninImage,
-        !driverImage,
-    ].some(Boolean);
 
-    if (hasErrors) return;
 
-    
+    const continueToVehicleInfo = () => {
+        setClickedContinue(true);
+        const phone = phone_number || mobileNo;
+        const mail = emailVal || email;
+        const isMailValid = isValidEmail(mail);
+        const isAgeValid = isAtLeast18YearsOld(dob);
 
-    navigation.navigate("VehicleInfo", {
-        mobileNo: phone_number ?? mobileNo,
-        email: emailVal ?? email,
-        role: "Driver",
-        country: countryName ?? countryNameVal,
-    });
-};
+        const hasErrors = [
+            firstname.trim() === "",
+            lastname.trim() === "",
+            phone.trim() === "",
+            mail.trim() === "",
+            mail.length > 0 && !isMailValid,
+            (!datePicked && !driverLocalStorageDob),
+            datePicked && !isAgeValid,
+            nin.length === 0,
+            nin.length > 0 && nin.length < 11,
+            !ninImage,
+            !driverImage,
+        ].some(Boolean);
+
+        if (hasErrors) return;
+        const country_obj = {
+            callingCode: callingCodeVal ?? country?.callingCode,
+            countryCode: countryCode ?? country?.cca2,
+            countryName: countryNameVal ?? country?.name
+        }
+        const countryObj = JSON.stringify(country_obj);
+        driverStorage.set("firstname", firstname);
+        driverStorage.set("lastname", lastname);
+        driverStorage.set("mobileNo", phone);
+        driverStorage.set("email", mail);
+        driverStorage.set("dob", dob.toISOString());
+        driverStorage.set("nin", nin);
+        driverStorage.set("driverImage", driverImage);
+        driverStorage.set("ninImage", ninImage);
+        driverStorage.set("country", countryObj);
+
+
+        navigation.navigate("VehicleInfo");
+    };
 
 
     const showNinBottomSheet = () => {
@@ -189,14 +215,14 @@ const continueToVehicleInfo = () => {
 
     const showProfilePictureBottomSheet = () => {
         if (driverImage) {
-            setDriverImage(null);
+            setDriverImage("");
             return;
         }
         setOpenBottomSheet("DriverPhoto");
     }
 
 
-    
+
     async function pickImageFromGallery() {
         if (Platform.OS === 'ios') {
             const { status, canAskAgain } = await ImagePicker.getMediaLibraryPermissionsAsync();
@@ -243,33 +269,33 @@ const continueToVehicleInfo = () => {
         return result.canceled ? null : result.assets[0];
     }
 
-   const takePhoto = async () => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    const takePhoto = async () => {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
 
-    if (!permission.granted) {
-        if (!permission.canAskAgain) {
-            Alert.alert(
-                'Camera Permission Required',
-                'Please enable camera access in your device settings.',
-                [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Open Settings', onPress: () => Linking.openSettings() },
-                ]
-            );
+        if (!permission.granted) {
+            if (!permission.canAskAgain) {
+                Alert.alert(
+                    'Camera Permission Required',
+                    'Please enable camera access in your device settings.',
+                    [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Open Settings', onPress: () => Linking.openSettings() },
+                    ]
+                );
+            }
+            return null;
         }
-        return null;
-    }
 
-    const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: openBottomSheet === 'DriverPhoto' ? true : undefined,
-        aspect: openBottomSheet === 'DriverPhoto' ? [4, 3] : undefined,
-        quality: 0.8,
-    });
+        const result = await ImagePicker.launchCameraAsync({
+            allowsEditing: openBottomSheet === 'DriverPhoto' ? true : undefined,
+            aspect: openBottomSheet === 'DriverPhoto' ? [4, 3] : undefined,
+            quality: 0.8,
+        });
 
-    if (result.canceled) return null;
+        if (result.canceled) return null;
 
-    return result.assets[0];
-};
+        return result.assets[0];
+    };
 
 
     const handleCamera = async () => {
@@ -285,16 +311,16 @@ const continueToVehicleInfo = () => {
                 }
 
             }
-             setOpenBottomSheet(null);
+            setOpenBottomSheet(null);
         } catch (error) {
             Alert.alert(
-            'Camera Unavailable',
-            'Unable to open the camera. Please try again.',
-        );
+                'Camera Unavailable',
+                'Unable to open the camera. Please try again.',
+            );
             setOpenBottomSheet(null);
             return null
         }
-       
+
 
     };
 
@@ -311,22 +337,22 @@ const continueToVehicleInfo = () => {
                 }
 
             }
-                 setOpenBottomSheet(null);
+            setOpenBottomSheet(null);
         } catch (error) {
             Alert.alert(
-            'Gallery Unavailable',
-            'Unable to open the gallery. Please try again.',
-        );
-         setOpenBottomSheet(null);
+                'Gallery Unavailable',
+                'Unable to open the gallery. Please try again.',
+            );
+            setOpenBottomSheet(null);
             return null
-            
+
         }
-       
+
     };
 
 
     const deleteNinImage = () => {
-        setNinImage(null);
+        setNinImage("");
     }
 
 
@@ -335,7 +361,7 @@ const continueToVehicleInfo = () => {
             <KeyboardAvoidingView
                 style={{ flex: 1, paddingHorizontal: 15, }}
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
-                
+
             >
                 <View style={styles.headerContainer}>
                     <Pressable onPress={goToPreviousScreen} style={styles.backBtn}>
@@ -477,7 +503,7 @@ const continueToVehicleInfo = () => {
                     <View style={styles.infoCont}>
                         <Text style={styles.mobileLabel}>Birthday</Text>
                         <TouchableOpacity onPress={() => setOpen(true)} style={{ ...styles.inputBoxCont, flexDirection: "row", alignItems: "center", borderColor: dob_err ? Colors.error : Colors.borderColor, paddingHorizontal: 10 }}>
-                            <Text style={{ marginRight: "auto", fontSize: 14, fontWeight: "500", color: Colors.text.gray }}>{datePicked ? formatDate(dob) : "Enter your birthday"}</Text>
+                            <Text style={{ marginRight: "auto", fontSize: 14, fontWeight: "500", color: Colors.text.gray }}>{ (driverLocalStorageDob || datePicked)? formatDate(dob) : "Enter your birthday"}</Text>
                             <FontAwesome name="calendar" size={22} color={Colors.primary} />
                             {
                                 open && <DatePicker
@@ -810,12 +836,12 @@ const styles = StyleSheet.create({
         fontSize: 16
     },
     bottomSheetCont: {
-        
-         height: "100%",
+
+        height: "100%",
     },
     bottomSheetViewCont: {
         flex: 1,
-       
+
         paddingHorizontal: 10,
         paddingTop: 20
     },

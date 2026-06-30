@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import SplashLoadingScreen from "../components/splashLoadingScreen";
 import { useAuthStore } from "../../store/authStore";
+import { driverStorage } from "../../localStorage/driverStorage";
 
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -15,14 +16,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const { data } = await supabase.auth.getSession();
       
     
-      console.log("the user : ", data.session?.user);
+      console.log("the user : ", data.session?.user.id);
 
       setSession(data.session ?? null);
+     
+
       setLoading(false);
     };
 
     const timer = setTimeout(()=>{
-       getSession();
+        getSession();
     }, 2000);
 
    

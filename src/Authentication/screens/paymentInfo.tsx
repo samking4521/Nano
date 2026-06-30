@@ -8,16 +8,9 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootAuthStackParamList } from '../../Navigation/auth';
 import { RouteProp, useNavigation } from '@react-navigation/native'
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
+import { driverStorage } from '../../localStorage/driverStorage'
 
 type PaymentInfoNavigationProp = NativeStackNavigationProp<RootAuthStackParamList, "PaymentInfo">;
-type PaymentInfoRouteProp = RouteProp<
-    RootAuthStackParamList,
-    "PaymentInfo"
->;
-
-type Props = {
-    route: PaymentInfoRouteProp;
-};
 
 type Bank = {
     name: string;
@@ -27,16 +20,19 @@ type Bank = {
 const PAYSTACK_SECRET_KEY = process.env.EXPO_PUBLIC_PAYSTACK_SECRET_KEY;
 type resolveAccNoErrType = "invalid_account_number" | "network_request_failed";
 
-export default function PaymentInfo({ route }: Props) {
-    const { mobileNo, email, role, country } = route.params;
-    const [accountNo, setAccountNo] = useState("");
+export default function PaymentInfo() {
+    const [accountNo, setAccountNo] = useState(()=> driverStorage.getString("accountNo") ?? "");
     const [accountName, setAccountName] = useState<string | null>(null);
     const [inputFocus, setInputFocus] = useState(false);
 
     const [clickedContinue, setClickedContinue] = useState(false);
     const [banks, setBanks] = useState<Bank[]>([]);
     const [search, setSearch] = useState("");
-    const [selectedBank, setSelectedBank] = useState<Bank | null>(null);
+    const [selectedBank, setSelectedBank] = useState<Bank | null>(()=>{
+           const selectedBankJson =  driverStorage.getString("selectedBank");
+           if(!selectedBankJson) return null;
+           return JSON.parse(selectedBankJson);
+    });
     const [showBanksListBottomSheet, setShowBanksListBottomSheet] = useState(false);
     const [resolveAccNoErr, setResolveAccNoErr] = useState<resolveAccNoErrType | null>(null);
     const navigation = useNavigation<PaymentInfoNavigationProp>();
@@ -94,15 +90,15 @@ export default function PaymentInfo({ route }: Props) {
     };
 
     useEffect(() => {
-           if(accountNo.length !== 10  || !selectedBank?.code){
-              if(accountName){
-                  setAccountName(null)
-              }
+        if (accountNo.length !== 10 || !selectedBank?.code) {
+            if (accountName) {
+                setAccountName(null)
+            }
             return
-           }
+        }
 
-       
-          
+
+
 
         (
             async () => {
@@ -157,11 +153,15 @@ export default function PaymentInfo({ route }: Props) {
     const continueToVehicleInfo = () => {
         setClickedContinue(true);
 
-        if(!accountName){
+        if (!accountName) {
             console.log("coolant")
             return;
         }
 
+      
+
+        driverStorage.set("accountNo", accountNo);
+        driverStorage.set("selectedBank", JSON.stringify(selectedBank));
         navigation.navigate("SubmitScreen");
     };
 
@@ -211,7 +211,7 @@ export default function PaymentInfo({ route }: Props) {
                                 value={accountNo}
                                 onChangeText={setAccountNo}
                                 placeholder='0121000000'
-                                keyboardType="default"
+                                keyboardType="number-pad"
                                 maxLength={10}
                                 style={styles.mobileTextInput}
                                 onFocus={() => setInputFocus(true)}
@@ -220,7 +220,7 @@ export default function PaymentInfo({ route }: Props) {
                             />
                         </View>
                         {(bank_acc_number_err || resolveAccNoErr || bank_acc_length_incomplete) && <View style={styles.errorBox}>
-                            <Text style={styles.errorText}>{bank_acc_number_err ? "Enter a bank account number" : bank_acc_length_incomplete? "Bank account number must be 10 digits" : resolveAccNoErr == "invalid_account_number" ? "Invalid account number. Please check and try again." : "Unable to verify account. Check your internet connection."}</Text>
+                            <Text style={styles.errorText}>{bank_acc_number_err ? "Enter a bank account number" : bank_acc_length_incomplete ? "Bank account number must be 10 digits" : resolveAccNoErr == "invalid_account_number" ? "Invalid account number. Please check and try again." : "Unable to verify account. Check your internet connection."}</Text>
                         </View>}
                     </View>
 
@@ -269,7 +269,7 @@ export default function PaymentInfo({ route }: Props) {
                     <View style={{ flex: 1 }}>
                         <FlatList
                             data={filteredBanks}
-                            contentContainerStyle={{flex: 1}}
+                            contentContainerStyle={{ flex: 1 }}
                             keyExtractor={(item) => item.name}
                             renderItem={({ item }) => (
                                 <TouchableOpacity
@@ -288,7 +288,7 @@ export default function PaymentInfo({ route }: Props) {
                                     <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
                                         <View style={{ justifyContent: "center", alignItems: "center" }}>
                                             <ActivityIndicator size={"large"} color={Colors.primary} />
-                                            <Text style={{...styles.headerDesc, textAlign: "center"}}>Loading Bank List,{"\n"}check your internet connection and <Text onPress={getBanks} style={{fontWeight: "600", color: Colors.primary}}>Refresh</Text></Text>
+                                            <Text style={{ ...styles.headerDesc, textAlign: "center" }}>Loading Bank List,{"\n"}check your internet connection and <Text onPress={getBanks} style={{ fontWeight: "600", color: Colors.primary }}>Refresh</Text></Text>
                                         </View>
                                     </View>
                                 )

@@ -9,6 +9,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootAuthStackParamList } from '../../Navigation/auth';
 import * as WebBrowser from "expo-web-browser";
 import CountryPicker, { Country } from 'react-native-country-picker-modal'
+import { useAuthStore } from '../../store/authStore'
 
 const countryPickerProps = {
     withFilter: true,
@@ -26,6 +27,7 @@ type errorType = "emptyMobileNo";
 const googleIcon = require("../../../assets/google_icon.png");
 
 export default function SignUp() {
+    const setSession = useAuthStore((store)=> store.setSession);
     const [mobileNo, setMobileNo] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<errorType | null>(null);
@@ -161,14 +163,17 @@ export default function SignUp() {
 
             if (sessionError) throw sessionError;
 
+             setSession(sessionData.session);
+            
             console.log("Signed in:", sessionData.session?.user?.email);
+
             navigation.navigate("RoleSelection", {
                  mobileNo: null,
                 email: sessionData.session?.user?.email || null,
                 country: null,
                 countryCode: null,
                 callingCode: null,
-                userId: ""
+               
             })
 
 

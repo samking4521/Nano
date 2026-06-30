@@ -1,5 +1,5 @@
 import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, KeyboardAvoidingView, TouchableOpacity } from 'react-native'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Feather, FontAwesome } from '@expo/vector-icons'
 import { RouteProp, useNavigation } from '@react-navigation/native'
@@ -8,6 +8,7 @@ import { RootAuthStackParamList } from '../../Navigation/auth';
 import CountryPicker, { Country, CountryCode } from 'react-native-country-picker-modal'
 import DatePicker from 'react-native-date-picker'
 import { Colors } from '../../constants/colors'
+import { shipperStorage } from '../../localStorage/shipperStorage'
 
 
 type MerchantInfoNavigationProp = NativeStackNavigationProp<RootAuthStackParamList, "MerchantInfo">;
@@ -34,17 +35,24 @@ const countryPickerProps = {
 export default function MerchantInfo({ route }: Props) {
 
     const { mobileNo: phone_number, email: emailVal, country: countryNameVal, countryCode: countryCodeVal, callingCode: callingCodeVal } = route.params;
-    const [country, setCountry] = useState<Country | null>(null)
-    const [mobileNo, setMobileNo] = useState("");
-    const [email, setEmail] = useState("");
-    const [firstname, setFirstName] = useState("");
-    const [lastname, setLastName] = useState("");
-    const [businessName, setBusinessName] = useState("")
-    const [dob, setDob] = useState(new Date())
+    const [country, setCountry] = useState<Country | null>(() => {
+           const jsonCountry = shipperStorage.getString("country");
+           if (!jsonCountry) return null;
+           return JSON.parse(jsonCountry);
+       });
+    const [mobileNo, setMobileNo] = useState(()=> shipperStorage.getString("mobileNo") ?? "");
+    const [email, setEmail] = useState(()=> shipperStorage.getString("email") ?? "");
+    const [firstname, setFirstName] = useState(()=> shipperStorage.getString("firstname") ?? "");
+    const [lastname, setLastName] = useState(()=> shipperStorage.getString("lastname") ?? "");
+    const [businessName, setBusinessName] = useState(()=> shipperStorage.getString("businessName") ?? "")
+    const [dob, setDob] = useState<Date>(() => {
+           const dobString = shipperStorage.getString("dob");
+           console.log("dob string", dobString);
+           return dobString ? new Date(dobString) : new Date();
+       });
     const [open, setOpen] = useState(false)
     const [datePicked, setDatePicked] = useState(false);
     const [clickedContinue, setClickedContinue] = useState(false);
-    const [loading, setLoading] = useState(false);
 
     const [inputFocus, setInputFocus] = useState<inputFocusType | null>(null);
     const [error, setError] = useState<errorType | null>(null);
@@ -89,6 +97,10 @@ export default function MerchantInfo({ route }: Props) {
         return `${getOrdinal(day)} ${month}, ${year}`;
     };
 
+     const  shipperLocalStorageDob = useMemo(()=> {
+            return shipperStorage.getString("dob");
+        }, []);
+        
 
     const navigation = useNavigation<MerchantInfoNavigationProp>()
 
@@ -96,29 +108,78 @@ export default function MerchantInfo({ route }: Props) {
         navigation.goBack()
     }
 
+     const isAtLeast18YearsOld = (dateOfBirth: Date): boolean => {
+        const today = new Date();
+
+        let age = today.getFullYear() - dateOfBirth.getFullYear();
+
+        const hasHadBirthdayThisYear =
+            today.getMonth() > dateOfBirth.getMonth() ||
+            (today.getMonth() === dateOfBirth.getMonth() &&
+                today.getDate() >= dateOfBirth.getDate());
+
+        if (!hasHadBirthdayThisYear) {
+            age--;
+        }
+
+        return age >= 18;
+    };
+
     const isValidEmail = (email: string): boolean => {
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
     };
 
-    const firstname_err = clickedContinue && (firstname.length <= 0) ? true : false;
-    const lastname_err = clickedContinue && (lastname.length <= 0) ? true : false;
-    const phone = phone_number ? phone_number : mobileNo;
-    const mail = emailVal ? emailVal : email;
-    const isMailValid = isValidEmail(mail);
-    const mobile_no_err = clickedContinue && (phone.length <= 0) ? true : false;
-    const email_length_err = clickedContinue && (mail.length <= 0) ? true : false;
-    const email_valid_err = clickedContinue && !isMailValid ? true : false;
-    const dob_err = clickedContinue && !datePicked ? true : false;
-
-
-    const continueToSignUp = () => {
-
-        setClickedContinue(true);
-        if (firstname_err || lastname_err || mobile_no_err || email_length_err || email_valid_err || dob_err) {
-            return;
-        }
-    }
-
+     const phone = phone_number || mobileNo;
+        const mail = emailVal || email;
+        const isMailValid = isValidEmail(mail);
+        const isAgeValid = isAtLeast18YearsOld(dob);
+        const firstname_err = clickedContinue && firstname.trim() === "";
+        const lastname_err = clickedContinue && lastname.trim() === "";
+        const mobile_no_err = clickedContinue && phone.trim() === "";
+        const email_length_err = clickedContinue && mail.trim() === "";
+        const email_valid_err = clickedContinue && mail.length > 0 && !isMailValid;
+        const dob_err = clickedContinue && (!datePicked && !shipperLocalStorageDob);
+        const dob_err_less_18 = datePicked && !isAgeValid;
+    
+    
+    
+        const continueToHomeScreen = () => {
+            setClickedContinue(true);
+            const phone = phone_number || mobileNo;
+            const mail = emailVal || email;
+            const isMailValid = isValidEmail(mail);
+            const isAgeValid = isAtLeast18YearsOld(dob);
+    
+            const hasErrors = [
+                firstname.trim() === "",
+                lastname.trim() === "",
+                phone.trim() === "",
+                mail.trim() === "",
+                mail.length > 0 && !isMailValid,
+                (!datePicked && !shipperLocalStorageDob),
+                datePicked && !isAgeValid,
+              
+            ].some(Boolean);
+    
+            if (hasErrors) return;
+            const country_obj = {
+                callingCode: callingCodeVal ?? country?.callingCode,
+                countryCode: countryCode ?? country?.cca2,
+                countryName: countryNameVal ?? country?.name
+            }
+            const countryObj = JSON.stringify(country_obj);
+            shipperStorage.set("firstname", firstname);
+            shipperStorage.set("lastname", lastname);
+            shipperStorage.set("mobileNo", phone);
+            shipperStorage.set("businessName", businessName);
+            shipperStorage.set("email", mail);
+            shipperStorage.set("dob", dob.toISOString());
+            shipperStorage.set("country", countryObj);
+    
+    
+            console.log("Working")
+        };
+    
     return (
         <SafeAreaView style={styles.container}>
             <KeyboardAvoidingView
@@ -255,7 +316,7 @@ export default function MerchantInfo({ route }: Props) {
                             <View style={styles.infoCont}>
                                 <Text style={styles.mobileLabel}>Birthday</Text>
                                 <TouchableOpacity onPress={() => setOpen(true)} style={{ ...styles.inputBoxCont, flexDirection: "row", alignItems: "center", borderColor: dob_err ? Colors.error : Colors.borderColor, paddingHorizontal: 10 }}>
-                                    <Text style={{ marginRight: "auto", fontSize: 14, fontWeight: "500", color: Colors.text.gray }}>{datePicked ? formatDate(dob) : "Enter your birthday"}</Text>
+                                    <Text style={{ marginRight: "auto", fontSize: 14, fontWeight: "500", color: Colors.text.gray }}>{ (shipperLocalStorageDob || datePicked)? formatDate(dob) : "Enter your birthday"}</Text>
                                     <FontAwesome name="calendar" size={22} color={Colors.primary} />
                                     {
                                         open && <DatePicker
@@ -277,15 +338,15 @@ export default function MerchantInfo({ route }: Props) {
                                 <View style={styles.discountBox}>
                                     <Text style={styles.discountText}>Enjoy free delivery on your birthday.</Text>
                                 </View>
-                                {dob_err && <View style={styles.errorBox}>
-                                    <Text style={styles.errorText}>Birthday cannot be empty</Text>
+                                {(dob_err || dob_err_less_18 ) && <View style={styles.errorBox}>
+                                    <Text style={styles.errorText}>{dob_err? "Birthday cannot be empty" : "You must be at least 18 years of age"}</Text>
                                 </View>}
                             </View>
 
 
                         </View>
 
-                        <Pressable onPress={continueToSignUp} style={styles.nextBtn}>
+                        <Pressable onPress={continueToHomeScreen} style={styles.nextBtn}>
                             <Text style={styles.continueText}>Continue</Text>
                         </Pressable>
 
@@ -343,7 +404,7 @@ const styles = StyleSheet.create({
         height: 50,
         borderWidth: 1,
         backgroundColor: Colors.borderBackground,
-        borderRadius: 12,
+        borderRadius: 50,
         flexDirection: "row",
         alignItems: "center",
     },
@@ -351,7 +412,7 @@ const styles = StyleSheet.create({
         height: 50,
         borderWidth: 1,
         backgroundColor: Colors.borderBackground,
-        borderRadius: 12,
+        borderRadius: 50,
     },
     mobileCodeCont: {
         height: 50,
@@ -410,7 +471,7 @@ const styles = StyleSheet.create({
     },
     nextBtn: {
         height: 50,
-        borderRadius: 12,
+        borderRadius: 50,
         justifyContent: "center",
         alignItems: "center",
         backgroundColor: Colors.primary,

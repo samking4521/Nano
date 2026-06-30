@@ -9,6 +9,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootAuthStackParamList } from '../../Navigation/auth';
 import * as WebBrowser from "expo-web-browser";
 import { RouteProp } from "@react-navigation/native";
+import { useAuthStore } from '../../store/authStore'
 
 type VerificationCodeRouteProp = RouteProp<
     RootAuthStackParamList,
@@ -31,6 +32,7 @@ type otpErrorType = "emptyOtp" | "invalidOtpLength";
 
 export default function VerificationCode({ route }: Props) {
     const { mobileNo, country, countryCode, callingCode } = route.params;
+    const setSession = useAuthStore((store)=> store.setSession);
     const [otp, setOtp] = useState("");
     const [resendCode, setResendCode] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -112,6 +114,7 @@ export default function VerificationCode({ route }: Props) {
 
         console.log("session", session)
         console.log("user logged in successfully")
+        setSession(session);
         setLoading(false);
         requestAnimationFrame(() => {
             navigation.navigate("RoleSelection", {
@@ -120,12 +123,8 @@ export default function VerificationCode({ route }: Props) {
                 country: country,
                 countryCode: countryCode,
                 callingCode: callingCode,
-                userId: ""
-
             });
         });
-
-
     }
 
 

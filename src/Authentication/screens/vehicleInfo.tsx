@@ -1,30 +1,21 @@
-import { Alert, Dimensions, FlatList, Image, ImageSourcePropType, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { Alert, FlatList, Image, ImageSourcePropType, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import React, { useMemo, useRef, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { AntDesign, Entypo, Feather, FontAwesome, MaterialCommunityIcons, MaterialIcons, SimpleLineIcons } from '@expo/vector-icons'
+import { AntDesign, Feather, MaterialCommunityIcons, MaterialIcons, SimpleLineIcons } from '@expo/vector-icons'
 import ProgressLevel from './components/progressLevel'
 import { Colors } from '../../constants/colors'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootAuthStackParamList } from '../../Navigation/auth';
-import { RouteProp, useNavigation } from '@react-navigation/native'
+import { useNavigation } from '@react-navigation/native'
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet'
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete'
 import * as ImagePicker from 'expo-image-picker';
 import * as Crypto from 'expo-crypto';
-
+import { driverStorage } from '../../localStorage/driverStorage'
 
 type VehicleInfoNavigationProp = NativeStackNavigationProp<RootAuthStackParamList, "VehicleInfo">;
-type VehicleInfoRouteProp = RouteProp<
-    RootAuthStackParamList,
-    "VehicleInfo"
->;
-
-type Props = {
-    route: VehicleInfoRouteProp;
-};
 
 type bottomSheetType = "base_location" | "vehicle_type" | "photos" | "license";
-
 
 const initialPreferredRegion = {
     withinCity: false,
@@ -32,6 +23,13 @@ const initialPreferredRegion = {
     interState: false,
     openToAnyRoute: false,
 };
+
+type initialPreferredRegionType = {
+    withinCity: boolean,
+    interCity: boolean,
+    interState: boolean,
+    openToAnyRoute: boolean,
+}
 
 type vehicleDataType = {
     image: ImageSourcePropType,
@@ -71,7 +69,7 @@ const vehicleTypeData: vehicleDataType[] = [
     }
 ]
 
-const VehicleType = ({ item, index, vehicleType, selectVehicleType }: { item: vehicleDataType, index: number, vehicleType: vehicleType | null, selectVehicleType: (truck: vehicleType | null) => void }) => {
+const VehicleType = ({ item, index, vehicleType, selectVehicleType }: { item: vehicleDataType, index: number, vehicleType: string, selectVehicleType: (truck: string) => void }) => {
     return (
         <Pressable onPress={() => selectVehicleType(item.name)} style={{ borderRadius: 10, flex: 1, height: 200, borderWidth: vehicleType == item.name ? 2 : 0.5, justifyContent: "center", alignItems: "center", borderColor: vehicleType == item.name ? Colors.primary : Colors.text.gray }}>
             <Image source={item.image} style={{ width: "100%", height: 100 }} resizeMode="contain" />
@@ -83,36 +81,50 @@ const VehicleType = ({ item, index, vehicleType, selectVehicleType }: { item: ve
 
 type vehiclePhotoType = {
     id: string,
-    asset: ImagePicker.ImagePickerAsset
+    uri: string
 }
 
 type vehicleType = "Pickup Truck" | "Flatbed Truck" | "Tipper Truck" | "Box Truck" | "Van Truck" | "Container Truck";
 
 type inputFocusType = "vehicle_capacity" | "plate_number";
 
-export default function VehicleInfo({route}: Props) {
-    const { mobileNo, email, role, country } = route.params;
-    const [plateNumber, setPlateNumber] = useState("");
-    const [inputFocus, setInputFocus] = useState< inputFocusType |  null>(null);
+export default function VehicleInfo() {
+    const [plateNumber, setPlateNumber] = useState(() => driverStorage.getString("plateNumber") ?? "");
+    const [inputFocus, setInputFocus] = useState<inputFocusType | null>(null);
     const [openBottomSheet, setOpenBottomSheet] = useState<bottomSheetType | null>(null);
-    const [vehicleBaseCity, setVehicleBaseCity] = useState<string | null>("Oko oba");
-    const [vehicleBaseState, setVehicleBaseState] = useState<string | null>("Lagos");
-    const [vehicleCapacity, setVehicleCapacity] = useState("");
-    const [vehiclePhotos, setVehiclePhotos] = useState<vehiclePhotoType[]>([]);
-    const [vehicleLicensePhotos, setVehicleLicensePhotos] = useState<ImagePicker.ImagePickerAsset | null>(null);
+    const [vehicleBaseCity, setVehicleBaseCity] = useState(() => driverStorage.getString("vehicleBaseCity") ?? "Tesla");
+    const [vehicleBaseState, setVehicleBaseState] = useState(() => driverStorage.getString("vehicleBaseState") ?? "Fremont");
+    const [vehicleCapacity, setVehicleCapacity] = useState(() => driverStorage.getString("vehicleCapacity") ?? "");
+    const [vehiclePhotos, setVehiclePhotos] = useState<vehiclePhotoType[]>(() => {
+        const vehicleArrString = driverStorage.getString("vehiclePhotos");
+      
+        if (!vehicleArrString) return [];
+        return JSON.parse(vehicleArrString);
+
+    });
+
+   
+    const [driverLicensePhoto, setDriverLicensePhoto] = useState(() => driverStorage.getString("driverLicensePhoto") ?? "");
+  
     const [modalVisible, setModalVisible] = useState(false);
-    const [vehicleType, setVehicleType] = useState<vehicleType | null>(null);
+    const [vehicleType, setVehicleType] = useState(() => driverStorage.getString("vehicleType") ?? "");
     const [editVehiclePhotos, setEditVehiclePhotos] = useState(false);
-    const [preferredRegion, setPreferredRegion] = useState(initialPreferredRegion);
+    const [preferredRegion, setPreferredRegion] = useState<initialPreferredRegionType>(
+        () => {
+            const preferredRegionJson = driverStorage.getString("prefferedRegion");
+            if (!preferredRegionJson) return initialPreferredRegion;
+            return JSON.parse(preferredRegionJson);
+        }
+    );
     const navigation = useNavigation<VehicleInfoNavigationProp>();
-     const [clickedContinue, setClickedContinue] = useState(false);
+    const [clickedContinue, setClickedContinue] = useState(false);
 
     const DATA_LEVEL = useRef(2);
     const DETAILS_LEVEL = DATA_LEVEL.current
 
     const snapPoints = useMemo(() => [(openBottomSheet == "photos" || openBottomSheet == "license") ? '30%' : '90%'], [openBottomSheet]);
 
-    const selectVehicleType = (truck: vehicleType | null) => {
+    const selectVehicleType = (truck: string) => {
         setVehicleType(truck);
     }
 
@@ -169,7 +181,7 @@ export default function VehicleInfo({route}: Props) {
     };
 
     const closeVehicleTypeBottomSheet = () => {
-        setVehicleType(null);
+        setVehicleType("");
         setOpenBottomSheet(null);
     }
 
@@ -226,10 +238,11 @@ export default function VehicleInfo({route}: Props) {
     }
 
     const takePhoto = async () => {
-        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        let permission = await ImagePicker.getCameraPermissionsAsync();
 
         if (!permission.granted) {
-            if (!permission.canAskAgain) {
+            permission = await ImagePicker.requestCameraPermissionsAsync();
+            if (!permission.granted) {
                 Alert.alert(
                     'Camera Permission Required',
                     'Please enable camera access in your device settings.',
@@ -238,21 +251,46 @@ export default function VehicleInfo({route}: Props) {
                         { text: 'Open Settings', onPress: () => Linking.openSettings() },
                     ]
                 );
+                return null;
             }
-            return null;
         }
 
         const result = await ImagePicker.launchCameraAsync({
             mediaTypes: ['images'],
             quality: 0.8,
-
-
         });
 
         if (result.canceled) return null;
-
         return result.assets;
     };
+    // const takePhoto = async () => {
+    //     const permission = await ImagePicker.requestCameraPermissionsAsync();
+
+    //     if (!permission.granted) {
+    //         if (!permission.canAskAgain) {
+    //             Alert.alert(
+    //                 'Camera Permission Required',
+    //                 'Please enable camera access in your device settings.',
+    //                 [
+    //                     { text: 'Cancel', style: 'cancel' },
+    //                     { text: 'Open Settings', onPress: () => Linking.openSettings() },
+    //                 ]
+    //             );
+    //         }
+    //         return null;
+    //     }
+
+    //     const result = await ImagePicker.launchCameraAsync({
+    //         mediaTypes: ['images'],
+    //         quality: 0.8,
+
+
+    //     });
+
+    //     if (result.canceled) return null;
+
+    //     return result.assets;
+    // };
 
     const handleCamera = async () => {
         try {
@@ -262,11 +300,11 @@ export default function VehicleInfo({route}: Props) {
                 if (openBottomSheet == "photos") {
                     const the_Image = image.map((assets) => ({
                         id: Crypto.randomUUID(),
-                        asset: assets
+                        uri: assets.uri
                     }))
                     setVehiclePhotos((prev) => [...prev, ...the_Image])
                 } else {
-                    setVehicleLicensePhotos(image[0])
+                    setDriverLicensePhoto(image[0].uri)
                 }
 
             }
@@ -293,11 +331,11 @@ export default function VehicleInfo({route}: Props) {
                 if (openBottomSheet == "photos") {
                     const images = image_arr.map((assets) => ({
                         id: Crypto.randomUUID(),
-                        asset: assets
+                        uri: assets.uri
                     }))
                     setVehiclePhotos((prev) => [...prev, ...images])
                 } else {
-                    setVehicleLicensePhotos(image_arr[0])
+                    setDriverLicensePhoto(image_arr[0].uri)
                 }
 
 
@@ -327,7 +365,7 @@ export default function VehicleInfo({route}: Props) {
     }
 
     const selectDriverLicensePhoto = () => {
-        if (vehicleLicensePhotos) {
+        if (driverLicensePhoto) {
             return
         }
         setOpenBottomSheet("license")
@@ -344,47 +382,53 @@ export default function VehicleInfo({route}: Props) {
         return <VehicleType item={item} index={index} selectVehicleType={selectVehicleType} vehicleType={vehicleType} />
     }
 
-const base_location_err  = clickedContinue && (!vehicleBaseCity || !vehicleBaseState); 
-const preffered_region_err       = clickedContinue && (!preferredRegion.interCity && !preferredRegion.interState && !preferredRegion.withinCity && !preferredRegion.openToAnyRoute);
-const vehicle_type_err      = clickedContinue && !vehicleType;
-const vehicle_plate_no_err   = clickedContinue && plateNumber.trim() == "";
-const vehicle_capacity_err = clickedContinue && vehicleCapacity.trim() == "";
-const vehicle_photo_empty_err    = clickedContinue && vehiclePhotos.length == 0;
-const vehicle_photo_length_err         = clickedContinue && (vehiclePhotos.length < 4 || vehiclePhotos.length >4);
-const driver_license_photo_err     = clickedContinue && !vehicleLicensePhotos;
+    const base_location_err = clickedContinue && (!vehicleBaseCity || !vehicleBaseState);
+    const preffered_region_err = clickedContinue && (!preferredRegion.interCity && !preferredRegion.interState && !preferredRegion.withinCity && !preferredRegion.openToAnyRoute);
+    const vehicle_type_err = clickedContinue && !vehicleType;
+    const vehicle_plate_no_err = clickedContinue && plateNumber.trim() == "";
+    const vehicle_capacity_err = clickedContinue && vehicleCapacity.trim() == "";
+    const vehicle_photo_empty_err = clickedContinue && vehiclePhotos.length == 0;
+    const vehicle_photo_length_err = clickedContinue && (vehiclePhotos.length < 4 || vehiclePhotos.length > 4);
+    const driver_license_photo_err = clickedContinue && !driverLicensePhoto;
 
 
 
-const continueToPaymentInfo = () => {
-    setClickedContinue(true);
-   
-    const hasErrors = [
-       (!vehicleBaseCity || !vehicleBaseState),
-       (!preferredRegion.interCity && !preferredRegion.interState && !preferredRegion.withinCity && !preferredRegion.openToAnyRoute),
-        !vehicleType,
-        plateNumber.trim() == "",
-        vehicleCapacity.trim() == "",
-        vehiclePhotos.length == 0,
-        vehiclePhotos.length < 4,
-        !vehicleLicensePhotos
-    ].some(Boolean);
+    const continueToPaymentInfo = () => {
+        setClickedContinue(true);
 
-    if (hasErrors) return;
+        const hasErrors = [
+            (!vehicleBaseCity || !vehicleBaseState),
+            (!preferredRegion.interCity && !preferredRegion.interState && !preferredRegion.withinCity && !preferredRegion.openToAnyRoute),
+            !vehicleType,
+            plateNumber.trim() == "",
+            vehicleCapacity.trim() == "",
+            vehiclePhotos.length == 0,
+            vehiclePhotos.length < 4,
+            !driverLicensePhoto
+        ].some(Boolean);
 
-    navigation.navigate("PaymentInfo", {
-        mobileNo: mobileNo,
-        email: email,
-        role: role,
-        country: country,
-    });
-};
+        if (hasErrors) return;
+
+        driverStorage.set("vehicleBaseCity", vehicleBaseCity);
+        driverStorage.set("vehicleBaseState", vehicleBaseState);
+        driverStorage.set("prefferedRegion", JSON.stringify(preferredRegion));
+        driverStorage.set("vehicleType", vehicleType ?? "");
+        driverStorage.set("vehicleCapacity", vehicleCapacity);
+        driverStorage.set("plateNumber", plateNumber);
+        driverStorage.set("vehiclePhotos", JSON.stringify(vehiclePhotos));
+        driverStorage.set("driverLicensePhoto", driverLicensePhoto);
+
+
+
+        navigation.navigate("PaymentInfo");
+    };
 
     return (
         <SafeAreaView style={styles.container}>
             <KeyboardAvoidingView
                 style={{ flex: 1, paddingHorizontal: 15, }}
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
-                
+
             >
                 <View style={styles.headerContainer}>
                     <Pressable onPress={goToPreviousScreen} style={styles.backBtn}>
@@ -411,42 +455,42 @@ const continueToPaymentInfo = () => {
                     <View style={styles.infoCont}>
                         <Text style={styles.mobileLabel}>Base Location</Text>
                         <Text style={styles.headerDesc}>Where is this truck usually located and available for jobs?</Text>
-                        <Pressable onPress={() => setOpenBottomSheet("base_location")} style={{...styles.mobileTextInputContainer, borderColor: base_location_err? Colors.error : Colors.borderColor}}>
+                        <Pressable onPress={() => setOpenBottomSheet("base_location")} style={{ ...styles.mobileTextInputContainer, borderColor: base_location_err ? Colors.error : Colors.borderColor }}>
                             <Text style={styles.placeHolderText}>{(vehicleBaseCity || vehicleBaseState) ? `${vehicleBaseCity}, ${vehicleBaseState}` : "Select location"}</Text>
                             <MaterialIcons name="keyboard-arrow-down" size={24} color={Colors.text.gray} />
                         </Pressable>
                         {base_location_err && <View style={styles.errorBox}>
-                                                    <Text style={styles.errorText}>Select your base location</Text>
-                                                </View>}
+                            <Text style={styles.errorText}>Select your base location</Text>
+                        </View>}
                     </View>
 
                     <View style={styles.infoCont}>
                         <Text style={styles.mobileLabel}>Preffered Region</Text>
                         <Text style={styles.headerDesc}>Enter your preferred operating areas to move goods. This helps us match you, but you may still get other available trips.</Text>
-                        <Pressable onPress={() => setModalVisible(true)} style={{...styles.mobileTextInputContainer, borderColor: preffered_region_err? Colors.error : Colors.borderColor}}>
+                        <Pressable onPress={() => setModalVisible(true)} style={{ ...styles.mobileTextInputContainer, borderColor: preffered_region_err ? Colors.error : Colors.borderColor }}>
                             <Text style={styles.placeHolderText}>{getPreferredRegionText()}</Text>
                             <MaterialIcons name="keyboard-arrow-down" size={24} color={Colors.text.gray} />
                         </Pressable>
-                         {preffered_region_err && <View style={styles.errorBox}>
-                                                    <Text style={styles.errorText}>Select your preffered region</Text>
-                                                </View>}
+                        {preffered_region_err && <View style={styles.errorBox}>
+                            <Text style={styles.errorText}>Select your preffered region</Text>
+                        </View>}
                     </View>
 
                     <View style={styles.infoCont}>
                         <Text style={styles.mobileLabel}>Vehicle Type</Text>
                         <Text style={styles.headerDesc}>Select the type of truck you use for deliveries.</Text>
-                        <Pressable onPress={() => setOpenBottomSheet("vehicle_type")} style={{...styles.mobileTextInputContainer, borderColor: vehicle_type_err? Colors.error : Colors.borderColor}}>
+                        <Pressable onPress={() => setOpenBottomSheet("vehicle_type")} style={{ ...styles.mobileTextInputContainer, borderColor: vehicle_type_err ? Colors.error : Colors.borderColor }}>
                             <Text style={styles.placeHolderText}>{vehicleType ? vehicleType : "Select Truck"}</Text>
                             <MaterialIcons name="keyboard-arrow-down" size={24} color={Colors.text.gray} />
                         </Pressable>
-                         {vehicle_type_err && <View style={styles.errorBox}>
-                                                    <Text style={styles.errorText}>Select your vehicle type</Text>
-                                                </View>}
+                        {vehicle_type_err && <View style={styles.errorBox}>
+                            <Text style={styles.errorText}>Select your vehicle type</Text>
+                        </View>}
                     </View>
 
-                     <View style={styles.infoCont}>
+                    <View style={styles.infoCont}>
                         <Text style={styles.mobileLabel}>Vehicle Load Capacity (tonnes)</Text>
-                        <View style={{ ...styles.mobileTextInputContainer, borderColor: vehicle_capacity_err? Colors.error :  inputFocus == "vehicle_capacity" ? Colors.primary : Colors.borderColor }}>
+                        <View style={{ ...styles.mobileTextInputContainer, borderColor: vehicle_capacity_err ? Colors.error : inputFocus == "vehicle_capacity" ? Colors.primary : Colors.borderColor }}>
                             <TextInput
                                 value={vehicleCapacity}
                                 onChangeText={setVehicleCapacity}
@@ -459,16 +503,16 @@ const continueToPaymentInfo = () => {
 
                             />
                         </View>
-                         {vehicle_capacity_err && <View style={styles.errorBox}>
-                                                    <Text style={styles.errorText}>Enter vehicle load capacity</Text>
-                                                </View>}
+                        {vehicle_capacity_err && <View style={styles.errorBox}>
+                            <Text style={styles.errorText}>Enter vehicle load capacity</Text>
+                        </View>}
                     </View>
 
 
 
                     <View style={styles.infoCont}>
                         <Text style={styles.mobileLabel}>Vehicle Plate Number</Text>
-                        <View style={{ ...styles.mobileTextInputContainer, borderColor: vehicle_plate_no_err? Colors.error :  inputFocus == "plate_number" ? Colors.primary : Colors.borderColor }}>
+                        <View style={{ ...styles.mobileTextInputContainer, borderColor: vehicle_plate_no_err ? Colors.error : inputFocus == "plate_number" ? Colors.primary : Colors.borderColor }}>
                             <TextInput
                                 value={plateNumber}
                                 onChangeText={setPlateNumber}
@@ -481,16 +525,16 @@ const continueToPaymentInfo = () => {
 
                             />
                         </View>
-                         {vehicle_plate_no_err && <View style={styles.errorBox}>
-                                                    <Text style={styles.errorText}>Plate number cannot be empty</Text>
-                                                </View>}
+                        {vehicle_plate_no_err && <View style={styles.errorBox}>
+                            <Text style={styles.errorText}>Plate number cannot be empty</Text>
+                        </View>}
                     </View>
 
 
 
                     <View>
-                        <Pressable onPress={selectVehiclePhotos} style={{...styles.pictureVehicleCont, borderColor: (vehicle_photo_empty_err || vehicle_photo_length_err)? Colors.error : Colors.borderColor}}>
-                            <View style={{...styles.pictureVehicleHeader, borderBottomColor: (vehicle_photo_empty_err || vehicle_photo_length_err)? Colors.error : Colors.borderColor}}>
+                        <Pressable onPress={selectVehiclePhotos} style={{ ...styles.pictureVehicleCont, borderColor: (vehicle_photo_empty_err || vehicle_photo_length_err) ? Colors.error : Colors.borderColor }}>
+                            <View style={{ ...styles.pictureVehicleHeader, borderBottomColor: (vehicle_photo_empty_err || vehicle_photo_length_err) ? Colors.error : Colors.borderColor }}>
                                 <View style={styles.vehicleIcon}>
                                     <SimpleLineIcons name="picture" size={16} color={Colors.text.black} />
                                 </View>
@@ -511,7 +555,7 @@ const continueToPaymentInfo = () => {
                                             <View style={{ width: "50%", height: 150, padding: 10 }}>
 
                                                 <View style={{ flex: 1, }}>
-                                                    <Image source={{ uri: item.asset.uri }} style={{ width: "100%", height: "100%", borderRadius: 10 }} resizeMode="cover" />
+                                                    <Image source={{ uri: item.uri }} style={{ width: "100%", height: "100%", borderRadius: 10 }} resizeMode="cover" />
                                                     {editVehiclePhotos && <Pressable onPress={() => deleteVehiclePhotos(item)} style={{ ...styles.bottomSheetCloseIconCont, backgroundColor: "rgba(0,0,0,0.8)", position: "absolute", top: 15, left: 10 }}>
                                                         <AntDesign name="close" size={16} color={Colors.text.white} />
                                                     </Pressable>}
@@ -554,15 +598,15 @@ const continueToPaymentInfo = () => {
                         </Pressable>
 
                         {(vehicle_photo_empty_err || vehicle_photo_length_err) && <View style={styles.errorBox}>
-                                                    <Text style={styles.errorText}>{vehicle_photo_empty_err? "Enter your vehicle photos" : "Upload 4 photos of your vehicle"}</Text>
-                                                </View>}
+                            <Text style={styles.errorText}>{vehicle_photo_empty_err ? "Enter your vehicle photos" : "Upload 4 photos of your vehicle"}</Text>
+                        </View>}
 
                     </View>
 
 
                     <View>
-                        <Pressable onPress={selectDriverLicensePhoto} style={{...styles.pictureVehicleCont, borderColor: driver_license_photo_err? Colors.error : Colors.borderColor}}>
-                            <View style={{...styles.pictureVehicleHeader, borderBottomColor: driver_license_photo_err? Colors.error : Colors.borderColor}}>
+                        <Pressable onPress={selectDriverLicensePhoto} style={{ ...styles.pictureVehicleCont, borderColor: driver_license_photo_err ? Colors.error : Colors.borderColor }}>
+                            <View style={{ ...styles.pictureVehicleHeader, borderBottomColor: driver_license_photo_err ? Colors.error : Colors.borderColor }}>
                                 <View style={styles.vehicleIcon}>
                                     <SimpleLineIcons name="picture" size={16} color={Colors.text.black} />
                                 </View>
@@ -570,29 +614,29 @@ const continueToPaymentInfo = () => {
                                     <Text style={{ ...styles.mobileLabel, marginBottom: 5 }}>Driver License Photo</Text>
                                     <Text style={styles.headerDesc}>upload a clear driver license {"\n"}photo for verification.</Text>
                                 </View>
-                                {vehicleLicensePhotos ? <Pressable onPress={() => setVehicleLicensePhotos(null)} style={styles.editBtn}>
+                                {driverLicensePhoto ? <Pressable onPress={() => setDriverLicensePhoto("")} style={styles.editBtn}>
                                     <MaterialCommunityIcons name="delete-outline" size={22} color={Colors.text.gray} />
                                 </Pressable> : <View style={{ ...styles.editBtn, backgroundColor: undefined }} />
                                 }
                             </View>
                             <View>
-                                {vehicleLicensePhotos ? <View>
-                                    <Image source={{ uri: vehicleLicensePhotos.uri }} style={{ width: "100%", height: 200 }} resizeMode="cover" />
+                                {driverLicensePhoto ? <View>
+                                    <Image source={{ uri: driverLicensePhoto }} style={{ width: "100%", height: 200 }} resizeMode="cover" />
                                 </View> : <View style={styles.addVehicleIcon}>
                                     <AntDesign name="plus" size={24} color={Colors.text.black} />
                                 </View>}
                             </View>
 
                         </Pressable>
-                              {driver_license_photo_err && <View style={styles.errorBox}>
-                                                    <Text style={styles.errorText}>Upload photo of your driver license</Text>
-                                                </View>}
+                        {driver_license_photo_err && <View style={styles.errorBox}>
+                            <Text style={styles.errorText}>Upload photo of your driver license</Text>
+                        </View>}
 
                     </View>
 
 
 
-                    <Pressable onPress={continueToPaymentInfo}  style={styles.nextBtn}>
+                    <Pressable onPress={continueToPaymentInfo} style={styles.nextBtn}>
                         <Text style={styles.continueText}>Continue</Text>
                     </Pressable>
 
@@ -968,7 +1012,7 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         fontSize: 16
     },
-      errorBox: {
+    errorBox: {
         marginTop: 10,
         width: "100%",
         padding: 10,

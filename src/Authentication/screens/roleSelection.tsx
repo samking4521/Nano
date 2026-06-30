@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import React, { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Colors } from '../../constants/colors'
 import { Feather } from '@expo/vector-icons'
@@ -7,6 +7,9 @@ import { useNavigation } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootAuthStackParamList } from '../../Navigation/auth';
 import { RouteProp } from "@react-navigation/native";
+import { useAuthStore } from '../../store/authStore'
+import { driverStorage } from '../../localStorage/driverStorage'
+import { shipperStorage } from '../../localStorage/shipperStorage'
 
 type RoleSelectionRouteProp = RouteProp<
     RootAuthStackParamList,
@@ -26,6 +29,7 @@ type roleType = "Merchant" | "Driver"
 export default function RoleSelection({ route }: Props) {
     const { mobileNo, email, country, countryCode, callingCode } = route.params;
     const [role, setRole] = useState<roleType>("Merchant");
+    const userId = useAuthStore((store) => store.session?.user.id);
     const navigation = useNavigation<RoleSelectionNavigationProp>();
 
 
@@ -33,34 +37,76 @@ export default function RoleSelection({ route }: Props) {
         navigation.goBack()
     }
 
+
+    // useEffect(()=>{
+    //       shipperStorage.clearAll();
+    //       driverStorage.clearAll();
+    //       console.log("cleared")
+    // }, [])
+   
+
+
     const navigateToUserDetailsScreen = () => {
-        const phone_number = !mobileNo || !callingCode? mobileNo : mobileNo.slice(callingCode.length)
-        if(role == "Merchant"){
-                 navigation.navigate("MerchantInfo", {
-            mobileNo: phone_number,
-            email: email,
-            role: role,
-            country: country,
-            countryCode: countryCode,
-            callingCode: callingCode,
-           
-            
-        })
-        }else{
-             navigation.navigate("DriverInfo", {
-            mobileNo: phone_number,
-            email: email,
-            role: role,
-            country: country,
-            countryCode: countryCode,
-            callingCode: callingCode,
-           
-            
-        })
+
+        const phone_number = !mobileNo || !callingCode ? mobileNo : mobileNo.slice(callingCode.length);
+
+        if (!userId) {
+            return;
         }
-       
+
+        if (role === "Merchant") {
+              
+              const localShipperStorageId = shipperStorage.getString("id");
+              console.log("localShipperStorageId: ", localShipperStorageId);
+            if (localShipperStorageId) {
+                if (localShipperStorageId !== `shipper-${userId}`) {
+                    console.log("not equals shipper");
+                    shipperStorage.clearAll();
+                    shipperStorage.set("id", `shipper-${userId}`);
+                    shipperStorage.set("role", role);
+                }
+                
+            } else {
+                shipperStorage.set("id", `shipper-${userId}`);
+                shipperStorage.set("role", role);
+            }
+            
+            navigation.navigate("MerchantInfo", {
+                mobileNo: phone_number,
+                email: email,
+                role: role,
+                country: country,
+                countryCode: countryCode,
+                callingCode: callingCode,
+            })
+        } else {
+            const localDriverStorageId = driverStorage.getString("id");
+                          console.log("localDriverStorageId: ", localDriverStorageId);
+
+            if (localDriverStorageId) {
+                if (localDriverStorageId !==  `driver-${userId}`) {
+                     console.log("not equals driver");
+                    driverStorage.clearAll();
+                    driverStorage.set("id", `driver-${userId}`);
+                    driverStorage.set("role", role);
+                }
+                
+            } else {
+                driverStorage.set("id", `driver-${userId}`);
+                driverStorage.set("role", role);
+            }
+
+            navigation.navigate("DriverInfo", {
+                mobileNo: phone_number,
+                email: email,
+                role: role,
+                country: country,
+                countryCode: countryCode,
+                callingCode: callingCode,
+            })
+        }
     }
-    
+
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.body}>
@@ -78,7 +124,7 @@ export default function RoleSelection({ route }: Props) {
                     <Pressable onPress={() => setRole("Merchant")} style={{ ...styles.borderBox, borderColor: role == "Merchant" ? Colors.primary : Colors.borderColor, borderWidth: role == "Merchant" ? 2 : 1 }}>
                         <View>
                             <View style={styles.roleContainer}>
-                                <View style={{ ...styles.roleRadioButton, backgroundColor: role == "Merchant" ? Colors.primary : undefined, borderColor: role == "Merchant" ? undefined : Colors.borderColor,  borderWidth: role == "Merchant" ? 0 : 1  }}>
+                                <View style={{ ...styles.roleRadioButton, backgroundColor: role == "Merchant" ? Colors.primary : undefined, borderColor: role == "Merchant" ? undefined : Colors.borderColor, borderWidth: role == "Merchant" ? 0 : 1 }}>
                                     <View style={{ ...styles.roleButtonInnerCont, backgroundColor: role == "Merchant" ? Colors.text.white : undefined }}></View>
                                 </View>
 
@@ -171,7 +217,7 @@ const styles = StyleSheet.create({
         marginTop: 20,
         padding: 10,
         borderRadius: 10,
-      
+
     },
     nextBtn: {
         width: "100%",
