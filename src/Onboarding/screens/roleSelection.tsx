@@ -1,108 +1,176 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useEffect, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Colors } from '../../constants/colors'
 import { Feather } from '@expo/vector-icons'
 import { useNavigation } from '@react-navigation/native'
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootAuthStackParamList } from '../../Navigation/auth';
-import { RouteProp } from "@react-navigation/native";
-import { useAuthStore } from '../../store/authStore'
+import { useAuthStore } from '../../Authentication/store/authStore'
 import { driverStorage } from '../../localStorage/driverStorage'
 import { shipperStorage } from '../../localStorage/shipperStorage'
+import { RoleSelectionNavigationProp } from '../../Navigation/OnboardingNavigation'
+import { NativeStackScreenProps } from '@react-navigation/native-stack'
+import { OnboardingStackParamList } from '../onboarding'
+import { signUpDataStorage } from '../../localStorage/signUpDataStorage'
+import { AuthNavigationProp } from '../../Navigation/RootNavigation'
+import { onboardStorage } from '../../localStorage/onboardStorage'
+import { supabase } from '../../lib/supabase'
 
-type RoleSelectionRouteProp = RouteProp<
-    RootAuthStackParamList,
+type Props = NativeStackScreenProps<
+    OnboardingStackParamList,
     "RoleSelection"
 >;
-
-type Props = {
-    route: RoleSelectionRouteProp;
-};
-
-
-type RoleSelectionNavigationProp = NativeStackNavigationProp<RootAuthStackParamList, "RoleSelection">;
-
 
 type roleType = "Merchant" | "Driver"
 
 export default function RoleSelection({ route }: Props) {
-    const { mobileNo, email, country, countryCode, callingCode } = route.params;
     const [role, setRole] = useState<roleType>("Merchant");
     const userId = useAuthStore((store) => store.session?.user.id);
     const navigation = useNavigation<RoleSelectionNavigationProp>();
+    const replaceNavigation = useNavigation<AuthNavigationProp>();
+    const setSession = useAuthStore((store)=> store.setSession);
 
+    const mobileNo = route.params?.mobileNo ?? signUpDataStorage.getString("mobileNo");
+    const email = route.params?.email ?? signUpDataStorage.getString("email");
+    const country = route.params?.country ?? signUpDataStorage.getString("country");
+    const countryCode = route.params?.countryCode ?? signUpDataStorage.getString("countryCode");
+    const callingCode = route.params?.callingCode ?? signUpDataStorage.getString("callingCode");
+
+
+    const storeSignUpData = () => {
+        const localSignUpDataId = signUpDataStorage.getString("id");
+        console.log("localSignUpDataId: ", localSignUpDataId);
+        const localNumber = callingCode && mobileNo?.startsWith(callingCode)
+            ? mobileNo.slice(callingCode.length)
+            : mobileNo;
+
+        if (localSignUpDataId) {
+            if (localSignUpDataId !== userId) {
+                console.log("not equals user");
+                signUpDataStorage.clearAll();
+                signUpDataStorage.set("id", userId ?? "");
+                signUpDataStorage.set("mobileNo", localNumber ?? "");
+                signUpDataStorage.set("email", email ?? "");
+                signUpDataStorage.set("country", country ?? "");
+                signUpDataStorage.set("countryCode", countryCode ?? "");
+                signUpDataStorage.set("callingCode", callingCode ?? "");
+            }
+
+        } else {
+            signUpDataStorage.set("id", userId ?? "");
+            signUpDataStorage.set("mobileNo", localNumber ?? "");
+            signUpDataStorage.set("email", email ?? "");
+            signUpDataStorage.set("country", country ?? "");
+            signUpDataStorage.set("countryCode", countryCode ?? "");
+            signUpDataStorage.set("callingCode", callingCode ?? "");
+            console.log("data stored")
+        }
+    }
+
+    useEffect(() => {
+        if (!userId) {
+            return
+        }
+        storeSignUpData();
+    }, [userId])
+
+    const signOut = async () => {
+        const { error } = await supabase.auth.signOut({ scope: "local" })
+        if (error) {
+           console.log("error signing out");
+           return;
+        }
+        console.log("Sign out successful")
+       
+    }
 
     const goToPreviousScreen = () => {
-        navigation.goBack()
+
+        Alert.alert(
+            "Leave Onboarding?",
+            "Going back will clear your current onboarding progress. Proceed?",
+            [
+                {
+                    text: "Stay",
+                    onPress: () => console.log("Cancelled"),
+                },
+                {
+                    text: "Leave",
+                    onPress: () => {
+                        driverStorage.clearAll();
+                        // shipperStorage.clearAll();
+                        onboardStorage.clearAll();
+                        signUpDataStorage.clearAll();
+                        signOut();
+                        setSession(null);
+                        replaceNavigation.replace("Auth");
+                    },
+                }
+            ]
+        )
+
+
     }
 
 
-    // useEffect(()=>{
-    //       shipperStorage.clearAll();
-    //       driverStorage.clearAll();
-    //       console.log("cleared")
-    // }, [])
-   
-
 
     const navigateToUserDetailsScreen = () => {
-
-        const phone_number = !mobileNo || !callingCode ? mobileNo : mobileNo.slice(callingCode.length);
 
         if (!userId) {
             return;
         }
 
+        const localNumber = callingCode && mobileNo?.startsWith(callingCode)
+            ? mobileNo.slice(callingCode.length)
+            : mobileNo;
+
         if (role === "Merchant") {
-              
-              const localShipperStorageId = shipperStorage.getString("id");
-              console.log("localShipperStorageId: ", localShipperStorageId);
-            if (localShipperStorageId) {
-                if (localShipperStorageId !== `shipper-${userId}`) {
-                    console.log("not equals shipper");
-                    shipperStorage.clearAll();
-                    shipperStorage.set("id", `shipper-${userId}`);
-                    shipperStorage.set("role", role);
-                }
-                
-            } else {
-                shipperStorage.set("id", `shipper-${userId}`);
-                shipperStorage.set("role", role);
-            }
-            
+
+            // const localShipperStorageId = shipperStorage.getString("id");
+            // console.log("localShipperStorageId: ", localShipperStorageId);
+            // if (localShipperStorageId) {
+            //     if (localShipperStorageId !== `shipper-${userId}`) {
+            //         console.log("not equals shipper");
+            //         shipperStorage.clearAll();
+            //         shipperStorage.set("id", `shipper-${userId}`);
+            //         shipperStorage.set("role", role);
+            //     }
+
+            // } else {
+            //     shipperStorage.set("id", `shipper-${userId}`);
+            //     shipperStorage.set("role", role);
+            // }
+
+
             navigation.navigate("MerchantInfo", {
-                mobileNo: phone_number,
-                email: email,
-                role: role,
-                country: country,
-                countryCode: countryCode,
-                callingCode: callingCode,
+                mobileNo: localNumber ?? "",
+                email: email ?? "",
+                country: country ?? "",
+                countryCode: countryCode ?? "",
+                callingCode: callingCode ?? ""
             })
         } else {
             const localDriverStorageId = driverStorage.getString("id");
-                          console.log("localDriverStorageId: ", localDriverStorageId);
+            console.log("localDriverStorageId: ", localDriverStorageId);
 
             if (localDriverStorageId) {
-                if (localDriverStorageId !==  `driver-${userId}`) {
-                     console.log("not equals driver");
+                if (localDriverStorageId !== `driver-${userId}`) {
+                    console.log("not equals driver");
                     driverStorage.clearAll();
                     driverStorage.set("id", `driver-${userId}`);
                     driverStorage.set("role", role);
                 }
-                
+
             } else {
                 driverStorage.set("id", `driver-${userId}`);
                 driverStorage.set("role", role);
             }
 
             navigation.navigate("DriverInfo", {
-                mobileNo: phone_number,
-                email: email,
-                role: role,
-                country: country,
-                countryCode: countryCode,
-                callingCode: callingCode,
+                mobileNo: localNumber ?? "",
+                email: email ?? "",
+                country: country ?? "",
+                countryCode: countryCode ?? "",
+                callingCode: callingCode ?? ""
             })
         }
     }

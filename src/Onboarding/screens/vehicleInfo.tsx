@@ -4,16 +4,13 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { AntDesign, Feather, MaterialCommunityIcons, MaterialIcons, SimpleLineIcons } from '@expo/vector-icons'
 import ProgressLevel from './components/progressLevel'
 import { Colors } from '../../constants/colors'
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootAuthStackParamList } from '../../Navigation/auth';
 import { useNavigation } from '@react-navigation/native'
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet'
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete'
 import * as ImagePicker from 'expo-image-picker';
 import * as Crypto from 'expo-crypto';
 import { driverStorage } from '../../localStorage/driverStorage'
-
-type VehicleInfoNavigationProp = NativeStackNavigationProp<RootAuthStackParamList, "VehicleInfo">;
+import { VehicleInfoNavigationProp } from '../../Navigation/OnboardingNavigation'
 
 type bottomSheetType = "base_location" | "vehicle_type" | "photos" | "license";
 

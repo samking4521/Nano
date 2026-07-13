@@ -1,6 +1,4 @@
-export type RootAuthStackParamList = {
-  Welcome: undefined;
-  SignUp: undefined;
+export type OnboardingStackParamList = {
   RoleSelection: {
     mobileNo: string | null,
     email: string | null,
@@ -9,34 +7,21 @@ export type RootAuthStackParamList = {
     callingCode: string | null,
   };
   MerchantInfo: {
-    mobileNo: string | null,
+     mobileNo: string | null,
     email: string | null,
-    role: "Merchant",
     country: string | null,
     countryCode: string | null,
     callingCode: string | null,
   };
   DriverInfo: {
-    mobileNo: string | null,
+     mobileNo: string | null,
     email: string | null,
-    role: "Driver",
     country: string | null,
     countryCode: string | null,
     callingCode: string | null,
   };
+  OwnershipStatus: undefined;
   VehicleInfo: undefined;
-  VerificationCode: {
-    mobileNo: string,
-    country: string,
-    countryCode: string,
-    callingCode: string,
-  };
   PaymentInfo: undefined,
-   SubmitScreen: undefined
-};
-
-export type RootUserStackParamList = {
-  Home: undefined;
-
-};
-
+  SubmitScreen: undefined
+}

@@ -4,13 +4,12 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { AntDesign, Feather, MaterialIcons } from '@expo/vector-icons'
 import ProgressLevel from './components/progressLevel'
 import { Colors } from '../../constants/colors'
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootAuthStackParamList } from '../../Navigation/auth';
-import { RouteProp, useNavigation } from '@react-navigation/native'
+import { useNavigation } from '@react-navigation/native'
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
 import { driverStorage } from '../../localStorage/driverStorage'
+import { PaymentInfoNavigationProp } from '../../Navigation/OnboardingNavigation'
 
-type PaymentInfoNavigationProp = NativeStackNavigationProp<RootAuthStackParamList, "PaymentInfo">;
+
 
 type Bank = {
     name: string;

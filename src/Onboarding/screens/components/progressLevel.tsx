@@ -58,7 +58,7 @@ export default function ProgressLevel({progressLevel}: {progressLevel: number}) 
    
                                <Text style={{ color: progressLevel <= 1? "#9CA3AF" : progressLevel <=2? Colors.text.black : Colors.primary, marginTop: 8, 
                                 fontWeight: progressLevel <= 1? undefined : progressLevel <=2? "600" : "600" }}>
-                                   Vehicle
+                                   Ownership
                                </Text>
                            </View>
    

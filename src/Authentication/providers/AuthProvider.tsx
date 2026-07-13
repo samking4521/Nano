@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import SplashLoadingScreen from "../components/splashLoadingScreen";
-import { useAuthStore } from "../../store/authStore";
+import { useAuthStore } from "../store/authStore";
 import { driverStorage } from "../../localStorage/driverStorage";
+import { onboardStorage } from "../../localStorage/onboardStorage";
 
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const setSession = useAuthStore((store) => store.setSession);
+  const setInitialRouteName = useAuthStore((store)=> store.setInitialRouteName);
+  const isOnBoardComplete = onboardStorage.getBoolean("isOnBoardComplete");
 
   useEffect(() => {
     
@@ -19,6 +22,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log("the user : ", data.session?.user.id);
 
       setSession(data.session ?? null);
+      if(!(data.session)){
+           setInitialRouteName("Auth");
+      }else{
+           if(!isOnBoardComplete){
+               setInitialRouteName("Onboard");
+           }
+      }
      
 
       setLoading(false);

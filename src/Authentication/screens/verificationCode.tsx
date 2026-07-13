@@ -5,21 +5,12 @@ import { Feather } from '@expo/vector-icons'
 import { Colors } from '../../constants/colors'
 import { supabase } from '../../lib/supabase'
 import { useNavigation } from '@react-navigation/native'
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootAuthStackParamList } from '../../Navigation/auth';
 import * as WebBrowser from "expo-web-browser";
-import { RouteProp } from "@react-navigation/native";
-import { useAuthStore } from '../../store/authStore'
+import { useAuthStore } from '../store/authStore'
+import { VerificationCodeNavigationProp, VerificationCodeRouteProp } from '../../Navigation/AuthUserNavigation'
+import { onboardStorage } from '../../localStorage/onboardStorage'
+import { AuthNavigationProp } from '../../Navigation/RootNavigation'
 
-type VerificationCodeRouteProp = RouteProp<
-    RootAuthStackParamList,
-    "VerificationCode"
->;
-
-type VerificationCodeNavigationProp = NativeStackNavigationProp<
-    RootAuthStackParamList,
-    "VerificationCode"
->;
 
 type Props = {
     route: VerificationCodeRouteProp;
@@ -32,17 +23,20 @@ type otpErrorType = "emptyOtp" | "invalidOtpLength";
 
 export default function VerificationCode({ route }: Props) {
     const { mobileNo, country, countryCode, callingCode } = route.params;
-    const setSession = useAuthStore((store)=> store.setSession);
+    const setSession = useAuthStore((store) => store.setSession);
     const [otp, setOtp] = useState("");
     const [resendCode, setResendCode] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<otpErrorType | null>(null);
     const navigation = useNavigation<VerificationCodeNavigationProp>();
+    const replaceNavigation = useNavigation<AuthNavigationProp>();
+
     const [countDownTime, setCountDownTime] = useState(60);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const [inputFocus, setInputFocus] = useState(false);
     const isMounted = useRef(true);
 
+    console.log("mobileNo", mobileNo);
     useEffect(() => {
         startTimer()
     }, []);
@@ -54,7 +48,7 @@ export default function VerificationCode({ route }: Props) {
         }
     };
 
-    
+
 
     useEffect(() => {
         return () => {
@@ -112,19 +106,21 @@ export default function VerificationCode({ route }: Props) {
             return
         }
 
+
+
         console.log("session", session)
         console.log("user logged in successfully")
+        onboardStorage.set("isOnBoardComplete", false);
         setSession(session);
         setLoading(false);
-        requestAnimationFrame(() => {
-            navigation.navigate("RoleSelection", {
-                mobileNo: mobileNo,
-                email: null,
-                country: country,
-                countryCode: countryCode,
-                callingCode: callingCode,
-            });
-        });
+
+        replaceNavigation.replace("Onboard", {
+            mobileNo: mobileNo,
+            email: null,
+            country: country,
+            countryCode: countryCode,
+            callingCode: callingCode,
+        })
     }
 
 

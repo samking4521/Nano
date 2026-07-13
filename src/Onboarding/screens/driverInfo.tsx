@@ -3,21 +3,15 @@ import React, { useMemo, useRef, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Colors } from '../../constants/colors'
 import { AntDesign, Feather, FontAwesome, MaterialCommunityIcons, SimpleLineIcons } from '@expo/vector-icons'
-import { RouteProp, useNavigation } from '@react-navigation/native'
+import { useNavigation } from '@react-navigation/native'
 import CountryPicker, { Country, CountryCode } from 'react-native-country-picker-modal'
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootAuthStackParamList } from '../../Navigation/auth';
 import ProgressLevel from './components/progressLevel'
 import DatePicker from 'react-native-date-picker'
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
 import * as ImagePicker from 'expo-image-picker';
 import { driverStorage } from '../../localStorage/driverStorage'
+import { DriverInfoNavigationProp, DriverInfoRouteProp } from '../../Navigation/OnboardingNavigation'
 
-type DriverInfoNavigationProp = NativeStackNavigationProp<RootAuthStackParamList, "DriverInfo">;
-type DriverInfoRouteProp = RouteProp<
-    RootAuthStackParamList,
-    "DriverInfo"
->;
 
 type Props = {
     route: DriverInfoRouteProp;
@@ -64,7 +58,6 @@ export default function DriverInfo({ route }: Props) {
     const DATA_LEVEL = useRef(1);
     const DETAILS_LEVEL = DATA_LEVEL.current
 
-    console.log("dob", dob);
 
 
     const snapPoints = useMemo(() => ['25%'], []);
@@ -201,7 +194,7 @@ export default function DriverInfo({ route }: Props) {
         driverStorage.set("country", countryObj);
 
 
-        navigation.navigate("VehicleInfo");
+        navigation.navigate("OwnershipStatus");
     };
 
 
@@ -464,7 +457,7 @@ export default function DriverInfo({ route }: Props) {
                             <View style={styles.mobileInputCont}>
                                 <Text style={styles.mobileCodeText}>+{callingCodeVal ?? callingCode}</Text>
                                 <TextInput
-                                    value={phone_number ?? mobileNo}
+                                    value={phone_number || mobileNo}
                                     onChangeText={setMobileNo}
                                     placeholder='Enter number here'
                                     keyboardType="phone-pad"
@@ -485,7 +478,7 @@ export default function DriverInfo({ route }: Props) {
                         <Text style={styles.mobileLabel}>Email</Text>
                         <View pointerEvents={emailVal ? "none" : "auto"} style={{ ...styles.inputBoxCont, borderColor: (email_length_err || email_valid_err) ? Colors.error : inputFocus == "email" ? Colors.primary : Colors.borderColor }}>
                             <TextInput
-                                value={emailVal ?? email}
+                                value={emailVal || email}
                                 onChangeText={setEmail}
                                 placeholder='johndoe@gmail.com'
                                 keyboardType="email-address"

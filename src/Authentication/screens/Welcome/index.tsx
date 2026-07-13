@@ -5,12 +5,10 @@ import { data } from './components/data';
 import OnBoardingSwipes from './components/onBoardingSwipes';
 import { labelData } from './types';
 import { useRef, useState } from 'react';
-import { Colors } from '../constants/colors';
+import { Colors } from '../../../constants/colors';
 import { useNavigation } from "@react-navigation/native";
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootAuthStackParamList } from '../Navigation/auth';
+import { WelcomeScreenNavigationProp } from '../../../Navigation/AuthUserNavigation';
 
-type WelcomeScreenNavigationProp = NativeStackNavigationProp<RootAuthStackParamList, "Welcome">;
 export default function Welcome() {
     const [currentIndex, setCurrentIndex] = useState(0);
     const navigation = useNavigation<WelcomeScreenNavigationProp>();

@@ -2,24 +2,15 @@ import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, Key
 import { useMemo, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Feather, FontAwesome } from '@expo/vector-icons'
-import { RouteProp, useNavigation } from '@react-navigation/native'
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootAuthStackParamList } from '../../Navigation/auth';
+import { useNavigation } from '@react-navigation/native'
 import CountryPicker, { Country, CountryCode } from 'react-native-country-picker-modal'
 import DatePicker from 'react-native-date-picker'
 import { Colors } from '../../constants/colors'
 import { shipperStorage } from '../../localStorage/shipperStorage'
+import { MerchantInfoNavigationProp, MerchantInfoRouteProp } from '../../Navigation/OnboardingNavigation'
 
 
-type MerchantInfoNavigationProp = NativeStackNavigationProp<RootAuthStackParamList, "MerchantInfo">;
-type MerchantInfoRouteProp = RouteProp<
-    RootAuthStackParamList,
-    "MerchantInfo"
->;
 
-type Props = {
-    route: MerchantInfoRouteProp;
-};
 type errorType = "emptyMobileNo" | "empty_email" | "incorrect_email" | "empty_firstname" | "empty_lastname" | "empty_business" | "empty_dob";
 type inputFocusType = "mobile_number" | "email" | "first_name" | "last_name" | "business_name" | "birthday";
 
@@ -32,7 +23,11 @@ const countryPickerProps = {
     withEmoji: true,
 };
 
-export default function MerchantInfo({ route }: Props) {
+type Props = {
+    route: MerchantInfoRouteProp;
+}
+
+export default function MerchantInfo({route}: Props) {
 
     const { mobileNo: phone_number, email: emailVal, country: countryNameVal, countryCode: countryCodeVal, callingCode: callingCodeVal } = route.params;
     const [country, setCountry] = useState<Country | null>(() => {
@@ -53,6 +48,7 @@ export default function MerchantInfo({ route }: Props) {
     const [open, setOpen] = useState(false)
     const [datePicked, setDatePicked] = useState(false);
     const [clickedContinue, setClickedContinue] = useState(false);
+        const navigation = useNavigation<MerchantInfoNavigationProp>()
 
     const [inputFocus, setInputFocus] = useState<inputFocusType | null>(null);
     const [error, setError] = useState<errorType | null>(null);
@@ -102,7 +98,6 @@ export default function MerchantInfo({ route }: Props) {
         }, []);
         
 
-    const navigation = useNavigation<MerchantInfoNavigationProp>()
 
     const goToPreviousScreen = () => {
         navigation.goBack()
@@ -281,7 +276,7 @@ export default function MerchantInfo({ route }: Props) {
                                 <Text style={styles.mobileLabel}>Email</Text>
                                 <View pointerEvents={emailVal ? "none" : "auto"} style={{ ...styles.inputBoxCont, borderColor: (email_length_err || email_valid_err) ? Colors.error : inputFocus == "email" ? Colors.primary : Colors.borderColor }}>
                                     <TextInput
-                                        value={emailVal ?? email}
+                                        value={emailVal || email}
                                         onChangeText={setEmail}
                                         placeholder='johndoe@gmail.com'
                                         keyboardType="email-address"

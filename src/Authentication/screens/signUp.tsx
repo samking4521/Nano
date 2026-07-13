@@ -5,11 +5,12 @@ import { Feather } from '@expo/vector-icons'
 import { Colors } from '../../constants/colors'
 import { supabase } from '../../lib/supabase'
 import { useNavigation } from '@react-navigation/native'
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootAuthStackParamList } from '../../Navigation/auth';
 import * as WebBrowser from "expo-web-browser";
 import CountryPicker, { Country } from 'react-native-country-picker-modal'
-import { useAuthStore } from '../../store/authStore'
+import { useAuthStore } from '../store/authStore'
+import { SignUpScreenNavigationProp } from '../../Navigation/AuthUserNavigation'
+import { AuthNavigationProp } from '../../Navigation/RootNavigation'
+import { onboardStorage } from '../../localStorage/onboardStorage'
 
 const countryPickerProps = {
     withFilter: true,
@@ -22,16 +23,16 @@ const countryPickerProps = {
 
 WebBrowser.maybeCompleteAuthSession();
 
-type SignUpScreenNavigationProp = NativeStackNavigationProp<RootAuthStackParamList, "SignUp">;
 type errorType = "emptyMobileNo";
 const googleIcon = require("../../../assets/google_icon.png");
 
 export default function SignUp() {
-    const setSession = useAuthStore((store)=> store.setSession);
+    const setSession = useAuthStore((store) => store.setSession);
     const [mobileNo, setMobileNo] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<errorType | null>(null);
     const navigation = useNavigation<SignUpScreenNavigationProp>();
+    const replaceNavigation = useNavigation<AuthNavigationProp>();
     const [country, setCountry] = useState<Country>();
     const [inputFocus, setInputFocus] = useState(false);
 
@@ -45,19 +46,19 @@ export default function SignUp() {
     const onSelect = (country: Country) => {
         console.log("country: ", country);
         setCountry(country);
-       
+
     }
 
     const signUpWithMobileNumber = async () => {
-         if (loading) {
+        if (loading) {
             return;
         }
-        
+
         if (mobileNo.length == 0) {
             setError("emptyMobileNo");
             return;
         }
-       
+
         const phone_number = formatNigerianPhone(mobileNo);
         console.log("phone_number: ", phone_number);
         setLoading(true)
@@ -130,7 +131,7 @@ export default function SignUp() {
         if (loading) return;
 
         try {
-            
+
             const { data, error } = await supabase.auth.signInWithOAuth({
                 provider: "google",
                 options: {
@@ -163,36 +164,37 @@ export default function SignUp() {
 
             if (sessionError) throw sessionError;
 
-             setSession(sessionData.session);
-            
-            console.log("Signed in:", sessionData.session?.user?.email);
 
-            navigation.navigate("RoleSelection", {
+            setSession(sessionData.session);
+
+            console.log("Signed in:", sessionData.session?.user?.email);
+             onboardStorage.set("isOnBoardComplete", false);
+
+            replaceNavigation.replace("Onboard" , {
                  mobileNo: null,
                 email: sessionData.session?.user?.email || null,
                 country: null,
                 countryCode: null,
                 callingCode: null,
-               
             })
 
 
         } catch (err) {
-            console.error("Google sign-in failed:", err);    
-                 Alert.alert(
+            console.error("Google sign-in failed:", err);
+            Alert.alert(
                 "Google Sign-In Failed",
                 "Something went wrong while signing in with Google. Check your connection and try again."
-                  );
+            );
         }
     };
 
 
-   
 
-    useEffect(()=>{
-         if (error == "emptyMobileNo" && mobileNo.length == 1) {
-        setError(null);
-    }
+
+    useEffect(() => {
+        if (error == "emptyMobileNo" && mobileNo.length == 1) {
+            setError(null);
+        }
     }, [error, mobileNo])
 
 
