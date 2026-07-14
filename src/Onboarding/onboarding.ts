@@ -20,7 +20,7 @@ export type OnboardingStackParamList = {
     countryCode: string | null,
     callingCode: string | null,
   };
-  OwnershipStatus: undefined;
+  IdentityVerification: undefined;
   VehicleInfo: undefined;
   PaymentInfo: undefined,
   SubmitScreen: undefined

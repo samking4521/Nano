@@ -255,7 +255,7 @@ export default function MerchantInfo({route}: Props) {
                                     <View style={styles.mobileInputCont}>
                                         <Text style={styles.mobileCodeText}>+{callingCodeVal ?? callingCode}</Text>
                                         <TextInput
-                                            value={phone_number ?? mobileNo}
+                                            value={phone_number || mobileNo}
                                             onChangeText={setMobileNo}
                                             placeholder='Enter number here'
                                             keyboardType="phone-pad"

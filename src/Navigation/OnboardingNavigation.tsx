@@ -8,7 +8,7 @@ import VehicleInfo from "../Onboarding/screens/vehicleInfo";
 import PaymentInfo from "../Onboarding/screens/paymentInfo";
 import SubmitScreen from "../Onboarding/screens/submitScreen";
 import { RootNavigationStackParamList } from "./RootNav";
-import OwnershipStatus from "../Onboarding/screens/ownershipStatus";
+import IdentityVerification from "../Onboarding/screens/identityVerification";
 
 
 
@@ -26,7 +26,7 @@ export type MerchantInfoRouteProp = RouteProp<
     "MerchantInfo"
 >;
 
-export type OwnershipStatusNavigationProp = NativeStackNavigationProp<OnboardingStackParamList, "OwnershipStatus">;
+export type IdentityVerificationNavigationProp = NativeStackNavigationProp<OnboardingStackParamList, "IdentityVerification">;
 
 type Props = NativeStackScreenProps<RootNavigationStackParamList, "Onboard">;
 
@@ -46,7 +46,7 @@ export function OnboardingNavigation({route}: Props) {
       <Stack.Screen name="VehicleInfo" component={VehicleInfo} />
       <Stack.Screen name="PaymentInfo" component={PaymentInfo} />
       <Stack.Screen name="SubmitScreen" component={SubmitScreen} />
-            <Stack.Screen name="OwnershipStatus" component={OwnershipStatus} />
+            <Stack.Screen name="IdentityVerification" component={IdentityVerification} />
 
     </Stack.Navigator>
   );

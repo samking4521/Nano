@@ -1,23 +1,22 @@
-import { Platform, ScrollView, StatusBar, StyleSheet, KeyboardAvoidingView, View, Pressable, Text, Dimensions, Image, TextInput, TouchableOpacity, Alert, Linking } from 'react-native'
-import React, { useMemo, useRef, useState } from 'react'
+import { Platform, ScrollView, StatusBar, StyleSheet, KeyboardAvoidingView, View, Pressable, Text, Image, TextInput, TouchableOpacity } from 'react-native'
+import React, { useCallback, useMemo, useRef, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Colors } from '../../constants/colors'
-import { AntDesign, Feather, FontAwesome, MaterialCommunityIcons, SimpleLineIcons } from '@expo/vector-icons'
+import { AntDesign, Feather, FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons'
 import { useNavigation } from '@react-navigation/native'
 import CountryPicker, { Country, CountryCode } from 'react-native-country-picker-modal'
 import ProgressLevel from './components/progressLevel'
 import DatePicker from 'react-native-date-picker'
-import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
-import * as ImagePicker from 'expo-image-picker';
 import { driverStorage } from '../../localStorage/driverStorage'
 import { DriverInfoNavigationProp, DriverInfoRouteProp } from '../../Navigation/OnboardingNavigation'
+import PhotoBottomSheet, { photoTypeData } from './components/PhotoBottomSheet'
+import BottomSheet from '@gorhom/bottom-sheet'
 
 
 type Props = {
     route: DriverInfoRouteProp;
 };
 
-type bottomSheetType = "DriverPhoto" | "NinPhoto";
 
 const countryPickerProps = {
     withFilter: true,
@@ -44,29 +43,30 @@ export default function DriverInfo({ route }: Props) {
     const [lastname, setLastName] = useState(() => driverStorage.getString("lastname") ?? "");
     const [inputFocus, setInputFocus] = useState<inputFocusType | null>(null);
     const [clickedContinue, setClickedContinue] = useState(false);
-    const [nin, setNin] = useState(() => driverStorage.getString("nin") ?? "");
-    const [openBottomSheet, setOpenBottomSheet] = useState<bottomSheetType | null>(null);
+    const [photoType, setPhotoType] = useState<photoTypeData>(null);
     const [dob, setDob] = useState<Date>(() => {
         const dobString = driverStorage.getString("dob");
         console.log("dob string", dobString);
         return dobString ? new Date(dobString) : new Date();
     });
     const [open, setOpen] = useState(false)
-    const [ninImage, setNinImage] = useState(() => driverStorage.getString("ninImage") ?? "");
     const [datePicked, setDatePicked] = useState(false);
     const navigation = useNavigation<DriverInfoNavigationProp>();
     const DATA_LEVEL = useRef(1);
     const DETAILS_LEVEL = DATA_LEVEL.current
+    // ref
+    const bottomSheetRef = useRef<BottomSheet>(null);
+
+    
 
 
 
-    const snapPoints = useMemo(() => ['25%'], []);
 
 
-    const driverLocalStorageDob = useMemo(()=> {
+    const driverLocalStorageDob = useMemo(() => {
         return driverStorage.getString("dob");
     }, []);
-    
+
 
 
 
@@ -146,11 +146,10 @@ export default function DriverInfo({ route }: Props) {
     const mobile_no_err = clickedContinue && phone.trim() === "";
     const email_length_err = clickedContinue && mail.trim() === "";
     const email_valid_err = clickedContinue && mail.length > 0 && !isMailValid;
-    const nin_empty = clickedContinue && nin.length === 0;
-    const nin_length_err = clickedContinue && nin.length > 0 && nin.length < 11;
+
     const dob_err = clickedContinue && (!datePicked && !driverLocalStorageDob);
     const dob_err_less_18 = datePicked && !isAgeValid;
-    const nin_image_empty = clickedContinue && !ninImage;
+
     const driver_photo_empty = clickedContinue && !driverImage;
 
 
@@ -170,9 +169,9 @@ export default function DriverInfo({ route }: Props) {
             mail.length > 0 && !isMailValid,
             (!datePicked && !driverLocalStorageDob),
             datePicked && !isAgeValid,
-            nin.length === 0,
-            nin.length > 0 && nin.length < 11,
-            !ninImage,
+            // nin.length === 0,
+            // nin.length > 0 && nin.length < 11,
+            // !ninImage,
             !driverImage,
         ].some(Boolean);
 
@@ -188,22 +187,17 @@ export default function DriverInfo({ route }: Props) {
         driverStorage.set("mobileNo", phone);
         driverStorage.set("email", mail);
         driverStorage.set("dob", dob.toISOString());
-        driverStorage.set("nin", nin);
+        // driverStorage.set("nin", nin);
         driverStorage.set("driverImage", driverImage);
-        driverStorage.set("ninImage", ninImage);
+        // driverStorage.set("ninImage", ninImage);
         driverStorage.set("country", countryObj);
 
 
-        navigation.navigate("OwnershipStatus");
+        navigation.navigate("IdentityVerification");
     };
 
 
-    const showNinBottomSheet = () => {
-        if (ninImage) {
-            return;
-        }
-        setOpenBottomSheet("NinPhoto");
-    }
+
 
 
     const showProfilePictureBottomSheet = () => {
@@ -211,142 +205,11 @@ export default function DriverInfo({ route }: Props) {
             setDriverImage("");
             return;
         }
-        setOpenBottomSheet("DriverPhoto");
+        setPhotoType("DriverPhoto");
+        bottomSheetRef.current?.expand();
     }
 
 
-
-    async function pickImageFromGallery() {
-        if (Platform.OS === 'ios') {
-            const { status, canAskAgain } = await ImagePicker.getMediaLibraryPermissionsAsync();
-
-            if (status !== 'granted') {
-                if (canAskAgain) {
-                    const { status: newStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-                    if (newStatus !== 'granted') return null;
-                } else {
-                    Alert.alert(
-                        'Photos Permission Required',
-                        'Please enable photo access in your device settings.',
-                        [
-                            { text: 'Cancel', style: 'cancel' },
-                            { text: 'Open Settings', onPress: () => Linking.openSettings() },
-                        ]
-                    );
-                    return null;
-                }
-            }
-        } else {
-            // Android: launch handles the prompt, only intercept if permanently denied
-            const { canAskAgain } = await ImagePicker.getMediaLibraryPermissionsAsync();
-            if (!canAskAgain) {
-                Alert.alert(
-                    'Photos Permission Required',
-                    'Please enable photo access in your device settings.',
-                    [
-                        { text: 'Cancel', style: 'cancel' },
-                        { text: 'Open Settings', onPress: () => Linking.openSettings() },
-                    ]
-                );
-                return null;
-            }
-        }
-
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images'],
-            allowsEditing: openBottomSheet == "DriverPhoto" ? true : undefined,
-            aspect: openBottomSheet == "DriverPhoto" ? [4, 3] : undefined,
-            quality: 0.8,
-        });
-
-        return result.canceled ? null : result.assets[0];
-    }
-
-    const takePhoto = async () => {
-        const permission = await ImagePicker.requestCameraPermissionsAsync();
-
-        if (!permission.granted) {
-            if (!permission.canAskAgain) {
-                Alert.alert(
-                    'Camera Permission Required',
-                    'Please enable camera access in your device settings.',
-                    [
-                        { text: 'Cancel', style: 'cancel' },
-                        { text: 'Open Settings', onPress: () => Linking.openSettings() },
-                    ]
-                );
-            }
-            return null;
-        }
-
-        const result = await ImagePicker.launchCameraAsync({
-            allowsEditing: openBottomSheet === 'DriverPhoto' ? true : undefined,
-            aspect: openBottomSheet === 'DriverPhoto' ? [4, 3] : undefined,
-            quality: 0.8,
-        });
-
-        if (result.canceled) return null;
-
-        return result.assets[0];
-    };
-
-
-    const handleCamera = async () => {
-        try {
-            const image = await takePhoto();
-
-            if (image) {
-                console.log(image.uri);
-                if (openBottomSheet == "DriverPhoto") {
-                    setDriverImage(image.uri);
-                } else {
-                    setNinImage(image.uri)
-                }
-
-            }
-            setOpenBottomSheet(null);
-        } catch (error) {
-            Alert.alert(
-                'Camera Unavailable',
-                'Unable to open the camera. Please try again.',
-            );
-            setOpenBottomSheet(null);
-            return null
-        }
-
-
-    };
-
-    const handleGallery = async () => {
-        try {
-            const image = await pickImageFromGallery();
-
-            if (image) {
-                console.log(image.uri);
-                if (openBottomSheet == "DriverPhoto") {
-                    setDriverImage(image.uri);
-                } else {
-                    setNinImage(image.uri);
-                }
-
-            }
-            setOpenBottomSheet(null);
-        } catch (error) {
-            Alert.alert(
-                'Gallery Unavailable',
-                'Unable to open the gallery. Please try again.',
-            );
-            setOpenBottomSheet(null);
-            return null
-
-        }
-
-    };
-
-
-    const deleteNinImage = () => {
-        setNinImage("");
-    }
 
 
     return (
@@ -496,7 +359,7 @@ export default function DriverInfo({ route }: Props) {
                     <View style={styles.infoCont}>
                         <Text style={styles.mobileLabel}>Birthday</Text>
                         <TouchableOpacity onPress={() => setOpen(true)} style={{ ...styles.inputBoxCont, flexDirection: "row", alignItems: "center", borderColor: dob_err ? Colors.error : Colors.borderColor, paddingHorizontal: 10 }}>
-                            <Text style={{ marginRight: "auto", fontSize: 14, fontWeight: "500", color: Colors.text.gray }}>{ (driverLocalStorageDob || datePicked)? formatDate(dob) : "Enter your birthday"}</Text>
+                            <Text style={{ marginRight: "auto", fontSize: 14, fontWeight: "500", color: Colors.text.gray }}>{(driverLocalStorageDob || datePicked) ? formatDate(dob) : "Enter your birthday"}</Text>
                             <FontAwesome name="calendar" size={22} color={Colors.primary} />
                             {
                                 open && <DatePicker
@@ -523,55 +386,6 @@ export default function DriverInfo({ route }: Props) {
                         </View>}
                     </View>
 
-                    <View style={styles.infoCont}>
-                        <Text style={styles.mobileLabel}>NIN</Text>
-                        <View style={{ ...styles.inputBoxCont, borderColor: (nin_empty || nin_length_err) ? Colors.error : inputFocus == "nin" ? Colors.primary : Colors.borderColor }}>
-                            <TextInput
-                                value={nin}
-                                onChangeText={setNin}
-                                maxLength={11}
-                                placeholder='00000000000'
-                                keyboardType="decimal-pad"
-                                style={styles.mobileTextInput}
-                                onFocus={() => setInputFocus("nin")}
-                                onBlur={() => setInputFocus(null)}
-
-                            />
-                        </View>
-                        {(nin_empty || nin_length_err) && <View style={styles.errorBox}>
-                            <Text style={styles.errorText}>{nin_empty ? "NIN cannot be empty" : "NIN must be 11 digits"}</Text>
-                        </View>}
-                    </View>
-
-                    <View>
-                        <Pressable onPress={showNinBottomSheet} style={styles.pictureNinCont}>
-                            <View style={styles.pictureNinHeader}>
-                                <View style={styles.ninIcon}>
-                                    <SimpleLineIcons name="picture" size={16} color={Colors.text.black} />
-                                </View>
-                                <View>
-                                    <Text style={{ ...styles.mobileLabel, marginBottom: 5 }}>Picture of NIN</Text>
-                                    <Text style={styles.headerDesc}>Picture should be your id</Text>
-                                </View>
-                                {ninImage ? <Pressable onPress={deleteNinImage} style={styles.editBtn}>
-                                    <MaterialCommunityIcons name="delete-outline" size={22} color={Colors.text.gray} />
-
-                                </Pressable> : <View style={{ ...styles.editBtn, backgroundColor: undefined }} />}
-                            </View>
-                            <View>
-                                {ninImage ? <Image style={styles.ninImageStyle} source={{ uri: ninImage }} /> : <View style={styles.addNinIcon}>
-                                    <AntDesign name="plus" size={24} color={Colors.text.black} />
-                                </View>
-                                }
-                            </View>
-
-
-
-                        </Pressable>
-                        {nin_image_empty && <View style={styles.errorBox}>
-                            <Text style={styles.errorText}>Add NIN image</Text>
-                        </View>}
-                    </View>
 
 
                     <Pressable onPress={continueToVehicleInfo} style={styles.nextBtn}>
@@ -583,31 +397,8 @@ export default function DriverInfo({ route }: Props) {
 
 
             </KeyboardAvoidingView>
-            {openBottomSheet && <Pressable onPress={() => setOpenBottomSheet(null)} style={{ ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.5)" }} />}
 
-            {openBottomSheet && <BottomSheet
-                style={{ flex: 1 }}
-                handleIndicatorStyle={{ display: "none" }}
-                index={1}
-                snapPoints={snapPoints}
-                onClose={() => setOpenBottomSheet(null)}
-                enablePanDownToClose
-            >
-                <BottomSheetView style={styles.bottomSheetCont}>
-                    <View style={styles.bottomSheetViewCont}>
-                        <TouchableOpacity onPress={handleCamera} style={styles.takePhotoBtns}>
-                            <Text style={styles.takePhotoBtnText}>Capture with Camera</Text>
-                            <Feather name="camera" size={24} color={Colors.text.gray} />
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={handleGallery} style={{ ...styles.takePhotoBtns, marginTop: 20 }}>
-                            <Text style={styles.takePhotoBtnText}>Take from gallery</Text>
-                            <MaterialCommunityIcons name="view-gallery-outline" size={24} color={Colors.text.gray} />
-                        </TouchableOpacity>
-
-                    </View>
-
-                </BottomSheetView>
-            </BottomSheet>}
+            <PhotoBottomSheet bottomSheetRef={bottomSheetRef} photoType={photoType} setDriverImage={setDriverImage} setPhotoType={setPhotoType}/>
 
         </SafeAreaView>
     )
@@ -828,30 +619,8 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         fontSize: 16
     },
-    bottomSheetCont: {
 
-        height: "100%",
-    },
-    bottomSheetViewCont: {
-        flex: 1,
 
-        paddingHorizontal: 10,
-        paddingTop: 20
-    },
-    takePhotoBtns: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        backgroundColor: "#F3F4F6",
-        borderRadius: 12,
-        height: 50,
-        paddingHorizontal: 10
-    },
-    takePhotoBtnText: {
-        color: Colors.text.black,
-        fontWeight: "600",
-        fontSize: 16
-    },
     ninImageStyle: {
         width: "100%",
         height: 200,

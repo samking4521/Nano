@@ -45,41 +45,42 @@ export default function SubmitScreen() {
   const animatedValue = useSharedValue(0);
   const halfCircle = radius + strokeWidth
   const circleCircumference = 2 * Math.PI * radius
-  
-  const uploadDriverPhoto = ()=>{
-      
-  }
 
+  const uploadDriverPhoto = () => {
+
+    const driverImage = driverStorage.getString("driverImage");
+    const driverNinImage = driverStorage.getString("ninImage");
+    
+    
+  }
+ 
   const uploadDriverInfo = async () => {
-   const firstname = driverStorage.getString("firstname");
-   const lastname = driverStorage.getString("lastname");
-   const phone = driverStorage.getString("mobileNo");
-   const email = driverStorage.getString("email");
-   const birthday = driverStorage.getString("dob");
-   const nin =  driverStorage.getString("nin");
-  // driverStorage.getString("driverImage");
-    // driverStorage.getString("ninImage");
-   const country = driverStorage.getString("country");
-   let countryObj: any = null;
-   try {
-     countryObj = country ? JSON.parse(country) : null;
-   } catch (e) {
-     countryObj = null;
-   }
+    const firstname = driverStorage.getString("firstname");
+    const lastname = driverStorage.getString("lastname");
+    const phone = driverStorage.getString("mobileNo");
+    const email = driverStorage.getString("email");
+    const birthday = driverStorage.getString("dob");
+    const nin = driverStorage.getString("nin");
+
+    const country = driverStorage.getString("country");
+    if (!country) {
+      return;
+    }
+    const countryObj = JSON.parse(country);
     const { error } = await supabase
       .from("Driver")
       .insert({
-            firstname: firstname,
-            lastname: lastname,
-            phone: phone,
-            email: email,
-            birthday: birthday,
-            nin: nin,
-            country_name: "",
-            country_code: "",
-            calling_code: "",
-            nin_img_key: "",
-            driver_img_key: ""
+        firstname: firstname,
+        lastname: lastname,
+        phone: phone,
+        email: email,
+        birthday: birthday,
+        nin: nin,
+        country_name: countryObj.countryName,
+        country_code: countryObj.countryCode,
+        calling_code: countryObj.callingCode,
+        nin_img_key: "",
+        driver_img_key: ""
       })
   }
 
