@@ -1,16 +1,18 @@
-import { Alert, Linking, Platform, Pressable, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { Alert, Linking, Platform, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import React, { useMemo } from 'react'
-import BottomSheet, { BottomSheetScrollView, BottomSheetView } from '@gorhom/bottom-sheet'
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons'
+import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet'
 import * as ImagePicker from 'expo-image-picker';
+import * as Crypto from 'expo-crypto';
 import { RefObject } from 'react';
 import { Colors } from '../../../constants/colors';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import PhotoDesc from './photoDesc';
 import NinDesc from './ninDesc';
 import LicenseDesc from './licenseDesc';
+import { vehiclePhotoType } from './vehicleInfoModal';
+import VehicleLicenseDesc from './vehicleLicenseDesc';
+import VehiclePhotoDesc from './vehiclePhotoDesc';
 
-export type photoTypeData = "DriverPhoto" | "DriverLicense" | "NinPhoto" | null;
+export type photoTypeData = "DriverPhoto" | "DriverLicense" | "NinPhoto" | "VehiclePhotos" | "VehicleLicensePhoto" | null;
 
 type photoBottomSheetTypes = {
     bottomSheetRef: RefObject<BottomSheet | null>;
@@ -19,10 +21,12 @@ type photoBottomSheetTypes = {
     setPhotoType: React.Dispatch<React.SetStateAction<photoTypeData>>;
     setNinImage?: React.Dispatch<React.SetStateAction<string>>;
     setDriverLicense?: React.Dispatch<React.SetStateAction<string>>;
+    setVehiclePhotos?: React.Dispatch<React.SetStateAction<vehiclePhotoType[]>>,
+    setVehicleLicensePhoto?: React.Dispatch<React.SetStateAction<string>>;
 }
 
 
-function PhotoBottomSheet({ bottomSheetRef, photoType, setDriverImage, setPhotoType, setNinImage, setDriverLicense }: photoBottomSheetTypes) {
+function PhotoBottomSheet({ bottomSheetRef, photoType, setDriverImage, setPhotoType, setNinImage, setDriverLicense, setVehiclePhotos, setVehicleLicensePhoto }: photoBottomSheetTypes) {
 
     const snapPoints = useMemo(() => ['90%'], []);
 
@@ -64,12 +68,20 @@ function PhotoBottomSheet({ bottomSheetRef, photoType, setDriverImage, setPhotoT
 
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ['images'],
+            allowsMultipleSelection: photoType === "VehiclePhotos"? true : undefined,
             allowsEditing: photoType == "DriverPhoto" ? true : undefined,
             aspect: photoType == "DriverPhoto" ? [4, 3] : undefined,
             quality: 0.8,
         });
 
-        return result.canceled ? null : result.assets[0];
+        if(result.canceled){
+            return null;
+        }else {
+            
+                return result.assets
+           
+        }
+
     }
 
     const takePhoto = async () => {
@@ -102,6 +114,7 @@ function PhotoBottomSheet({ bottomSheetRef, photoType, setDriverImage, setPhotoT
 
 
     const handleCamera = async () => {
+         closeBottomSheet();
         try {
             const image = await takePhoto();
 
@@ -109,28 +122,38 @@ function PhotoBottomSheet({ bottomSheetRef, photoType, setDriverImage, setPhotoT
                 if (photoType == "DriverPhoto" && setDriverImage) {
 
                     setDriverImage(image.uri);
-                    return
+                   
                 }
                 if (photoType == "NinPhoto" && setNinImage) {
 
                     setNinImage(image.uri);
-                    return
+                    
                 }
                 if (photoType == "DriverLicense" && setDriverLicense) {
 
                     setDriverLicense(image.uri);
-                    return
+                    
+                }
+
+                if(photoType == "VehiclePhotos" && setVehiclePhotos){
+                          const imgObj = {
+                            id : Crypto.randomUUID(),
+                            uri: image.uri
+                          }
+                       setVehiclePhotos((prev)=> [...prev, imgObj]);
+                }
+                if(photoType == "VehicleLicensePhoto" && setVehicleLicensePhoto){
+                      setVehicleLicensePhoto(image.uri);
+                      
                 }
 
             }
 
-            bottomSheetRef.current?.close();
         } catch (error) {
             Alert.alert(
                 'Camera Unavailable',
                 'Unable to open the camera. Please try again.',
             );
-            bottomSheetRef.current?.close();
             return null
         }
 
@@ -138,32 +161,47 @@ function PhotoBottomSheet({ bottomSheetRef, photoType, setDriverImage, setPhotoT
     };
 
     const handleGallery = async () => {
+       closeBottomSheet();
         try {
             const image = await pickImageFromGallery();
 
             if (image) {
                 if (photoType == "DriverPhoto" && setDriverImage) {
 
-                    setDriverImage(image.uri);
+                    setDriverImage(image[0].uri);
+                   
                 }
                  if (photoType == "NinPhoto" && setNinImage) {
 
-                    setNinImage(image.uri);
+                    setNinImage(image[0].uri);
+                    
                 }
                 if (photoType == "DriverLicense" && setDriverLicense) {
-                    setDriverLicense(image.uri);
+                    setDriverLicense(image[0].uri);
+                    
                    
                 }
-
+                if(photoType === "VehiclePhotos" && setVehiclePhotos ){
+                    const idImgs = image.map((item) => ({
+                        id: Crypto.randomUUID(),
+                        uri: item.uri
+                    }));
+                    setVehiclePhotos((prev) => [...prev, ...idImgs]);
+                   
+                }
+                if(photoType === "VehicleLicensePhoto" && setVehicleLicensePhoto){
+                    setVehicleLicensePhoto(image[0].uri)
+                    
+                }
 
             }
-            bottomSheetRef.current?.close();
+            
         } catch (error) {
             Alert.alert(
                 'Gallery Unavailable',
                 'Unable to open the gallery. Please try again.',
             );
-            bottomSheetRef.current?.close();
+           
             return null
 
         }
@@ -181,11 +219,6 @@ function PhotoBottomSheet({ bottomSheetRef, photoType, setDriverImage, setPhotoT
 
     return (
         <>
-            {
-                photoType ? <Pressable onPress={closeBottomSheet} style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.5)" }]} /> : null
-            }
-
-
 
             <BottomSheet
                 ref={bottomSheetRef}
@@ -194,25 +227,25 @@ function PhotoBottomSheet({ bottomSheetRef, photoType, setDriverImage, setPhotoT
                 handleIndicatorStyle={{ display: "none" }}
                 handleComponent={() => null}
                 index={-1}
-                onClose={closeBottomSheet}
                 snapPoints={snapPoints}
-                enablePanDownToClose
                 enableDynamicSizing={false}
                 enableContentPanningGesture={false}
             >
 
 
-
-                <TouchableOpacity onPress={closeBottomSheet} style={styles.bottomSheetContHeader}>
+                <View style={styles.bottomSheetContHeader}>
+                    <TouchableOpacity style={{alignSelf: "flex-end"}} onPress={closeBottomSheet}>
                     <Text style={styles.closeText}>Close</Text>
                 </TouchableOpacity>
+                </View>
+                
                 <BottomSheetScrollView
                     style={styles.bottomSheetCont}
                     showsVerticalScrollIndicator={false}
 
                 >
                     <View style={styles.bottomSheetViewCont}>
-                        {photoType === "DriverPhoto" ? <PhotoDesc /> : photoType === "NinPhoto"? <NinDesc /> : <LicenseDesc/>}
+                        {photoType === "DriverPhoto" ? <PhotoDesc /> : photoType === "NinPhoto"? <NinDesc /> : photoType === "DriverLicense"? <LicenseDesc/> : photoType === "VehicleLicensePhoto"? <VehicleLicenseDesc/> : <VehiclePhotoDesc/>}
 
                         <View style={{ paddingBottom: 50 }}>
                             <TouchableOpacity onPress={handleCamera} style={styles.takePhotoBtns}>

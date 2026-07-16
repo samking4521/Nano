@@ -820,10 +820,11 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: Colors.background,
+         paddingTop: Platform.OS == "ios" ? null : StatusBar.currentHeight,
     },
     body: {
         flex: 1,
-        paddingTop: Platform.OS == "ios" ? null : StatusBar.currentHeight,
+       
     },
     backBtn: {
         width: 45,

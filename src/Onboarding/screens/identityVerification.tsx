@@ -1,5 +1,5 @@
-import { Alert, Image, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
-import React, { useMemo, useRef, useState } from 'react'
+import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View } from 'react-native'
+import { useRef, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { AntDesign, Feather, MaterialCommunityIcons, SimpleLineIcons } from '@expo/vector-icons'
 import ProgressLevel from './components/progressLevel'
@@ -7,8 +7,7 @@ import { Colors } from '../../constants/colors'
 import { useNavigation } from '@react-navigation/native'
 import { IdentityVerificationNavigationProp } from '../../Navigation/OnboardingNavigation'
 import { driverStorage } from '../../localStorage/driverStorage'
-import * as ImagePicker from 'expo-image-picker';
-import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet'
+import BottomSheet from '@gorhom/bottom-sheet'
 import PhotoBottomSheet, { photoTypeData } from './components/PhotoBottomSheet'
 
 
@@ -39,17 +38,11 @@ export default function IdentityVerification() {
     console.log("type: ", photoType)
 
     const showNinBottomSheet = () => {
-        if (ninImage) {
-            return;
-        }
         setPhotoType("NinPhoto");
         bottomSheetRef.current?.expand();
     }
 
     const showLicenseBottomSheet = () => {
-        if (driverLicenseImage) {
-            return;
-        }
         setPhotoType("DriverLicense");
         bottomSheetRef.current?.expand();
     }
@@ -93,7 +86,7 @@ export default function IdentityVerification() {
                
                  console.log("navigates")
         
-                // navigation.navigate("IdentityVerification");
+                navigation.navigate("OwnershipStatus");
     }
    
    
@@ -117,7 +110,7 @@ export default function IdentityVerification() {
 
 
                 <ScrollView
-                    contentContainerStyle={{ flexGrow: 1 }}
+                    contentContainerStyle={{ flexGrow: 1, paddingBottom: 50 }}
                     keyboardShouldPersistTaps="never"
                     showsVerticalScrollIndicator={false}
                     style={styles.body}>
@@ -148,7 +141,7 @@ export default function IdentityVerification() {
                     </View>
 
                     <View>
-                        <Pressable onPress={showNinBottomSheet} style={styles.pictureNinCont}>
+                        <View  style={styles.pictureNinCont}>
                             <View style={styles.pictureNinHeader}>
                                 <View style={styles.ninIcon}>
                                     <SimpleLineIcons name="picture" size={16} color={Colors.text.black} />
@@ -163,16 +156,18 @@ export default function IdentityVerification() {
                                 </Pressable> : <View style={{ ...styles.editBtn, backgroundColor: undefined }} />}
                             </View>
                             <View>
-                                {ninImage ? <Image style={styles.ninImageStyle} source={{ uri: ninImage }} /> : <View style={styles.addNinIcon}>
-                                    <AntDesign name="plus" size={24} color={Colors.text.black} />
-                                </View>
+                                {ninImage ? <Image style={styles.ninImageStyle} source={{ uri: ninImage }} /> : <Pressable style={{flex: 1}} onPress={showNinBottomSheet}>
+                                                                        <View  style={styles.addNinIcon}>
+                                                                                <AntDesign name="plus" size={24} color={Colors.text.black} />
+                                                                            </View>
+                                                                        </Pressable>
                                 }
                             </View>
 
 
 
 
-                        </Pressable>
+                        </View>
                         {nin_image_empty && <View style={styles.errorBox}>
                             <Text style={styles.errorText}>Add NIN image</Text>
                         </View>}
@@ -186,7 +181,7 @@ export default function IdentityVerification() {
                                 onChangeText={setDriverLicenseNumber}
                                 maxLength={12}
                                 placeholder='ABC123456789'
-                                keyboardType="decimal-pad"
+                                keyboardType="default"
                                 style={styles.mobileTextInput}
                                 onFocus={() => setInputFocus("license")}
                                 onBlur={() => setInputFocus(null)}
@@ -199,7 +194,7 @@ export default function IdentityVerification() {
                     </View>
 
                     <View>
-                        <Pressable onPress={showLicenseBottomSheet} style={styles.pictureNinCont}>
+                        <View style={styles.pictureNinCont}>
                             <View style={styles.pictureNinHeader}>
                                 <View style={styles.ninIcon}>
                                     <SimpleLineIcons name="picture" size={16} color={Colors.text.black} />
@@ -213,26 +208,31 @@ export default function IdentityVerification() {
                                 </Pressable> : <View style={{ ...styles.editBtn, backgroundColor: undefined }} />}
                             </View>
                             <View>
-                                {driverLicenseImage ? <Image style={styles.ninImageStyle} source={{ uri: driverLicenseImage }} /> : <View style={styles.addNinIcon}>
-                                    <AntDesign name="plus" size={24} color={Colors.text.black} />
-                                </View>
+                                {driverLicenseImage ? <Image style={styles.ninImageStyle} source={{ uri: driverLicenseImage }} /> : 
+                                <Pressable style={{flex: 1}} onPress={showLicenseBottomSheet}>
+                                                                        <View  style={styles.addNinIcon}>
+                                                                                <AntDesign name="plus" size={24} color={Colors.text.black} />
+                                                                            </View>
+                                                                        </Pressable>
                                 }
                             </View>
 
 
 
 
-                        </Pressable>
+                        </View>
                         {license_image_empty && <View style={styles.errorBox}>
                             <Text style={styles.errorText}>Add Driver license image</Text>
                         </View>}
                     </View>
 
-                      <Pressable onPress={continueToOwnershipStatus} style={styles.nextBtn}>
-                                            <Text style={styles.continueText}>Continue</Text>
-                                        </Pressable>
-
+                      
                 </ScrollView>
+                <View style={{paddingVertical: 5}}>
+                                                         <Pressable onPress={continueToOwnershipStatus} style={styles.nextBtn}>
+                                                           <Text style={styles.continueText}>Continue</Text>
+                                                       </Pressable>
+                                                   </View>
             </KeyboardAvoidingView>
             <PhotoBottomSheet bottomSheetRef={bottomSheetRef} photoType={photoType} setPhotoType={setPhotoType} setNinImage={setNinImage} setDriverLicense={setDriverLicenseImage}/>
         </SafeAreaView>
@@ -243,10 +243,11 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: Colors.background,
+         paddingTop: Platform.OS == "ios" ? null : StatusBar.currentHeight,
     },
     body: {
         flex: 1,
-        paddingTop: Platform.OS == "ios" ? null : StatusBar.currentHeight,
+       
     },
     backBtn: {
         width: 45,
@@ -349,8 +350,10 @@ const styles = StyleSheet.create({
     },
     ninImageStyle: {
         width: "100%",
-        height: 200,
+        height: 150,
         resizeMode: "cover",
+        borderBottomLeftRadius: 10,
+        borderBottomRightRadius: 10
     },
     addNinIcon: {
         width: 70,
@@ -392,7 +395,6 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
         backgroundColor: Colors.primary,
-        marginTop: 30
     },
     continueText: {
         color: Colors.text.white,

@@ -1,4 +1,4 @@
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useEffect, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Colors } from '../../constants/colors'
@@ -21,6 +21,8 @@ type Props = NativeStackScreenProps<
 >;
 
 type roleType = "Merchant" | "Driver"
+
+const role_desc_img = require("../../../assets/onboarding/role_desc_img.png");
 
 export default function RoleSelection({ route }: Props) {
     const [role, setRole] = useState<roleType>("Merchant");
@@ -177,7 +179,7 @@ export default function RoleSelection({ route }: Props) {
 
     return (
         <SafeAreaView style={styles.container}>
-            <View style={styles.body}>
+            <ScrollView showsVerticalScrollIndicator={false} style={styles.body}>
                 <Pressable onPress={goToPreviousScreen} style={styles.backBtn}>
                     <Feather name="arrow-left" size={22} color={Colors.text.black} />
                 </Pressable>
@@ -186,6 +188,10 @@ export default function RoleSelection({ route }: Props) {
                     <Text style={styles.headerText}>What are you using{"\n"} Nano for?</Text>
                     <Text style={styles.headerDesc}>Select your role to personalize your experience</Text>
                 </View>
+
+                  <View style={styles.imageCont}>
+                                        <Image source={role_desc_img} style={styles.image} />
+                                    </View>
 
                 <View>
 
@@ -197,7 +203,7 @@ export default function RoleSelection({ route }: Props) {
                                 </View>
 
                                 <View>
-                                    <Text style={styles.roleText}>Merchant</Text>
+                                    <Text style={styles.roleText}>Shipper</Text>
                                     <View>
                                         <Text style={styles.headerDesc}>
                                             Find available trucks on demand
@@ -243,12 +249,13 @@ export default function RoleSelection({ route }: Props) {
 
 
                 </View>
-                <View style={{ marginTop: 30 }}>
+               
+            </ScrollView>
+             <View style={{ paddingHorizontal: 15 }}>
                     <Pressable onPress={navigateToUserDetailsScreen} style={styles.nextBtn}>
                         <Text style={styles.nextText}>Next</Text>
                     </Pressable>
                 </View>
-            </View>
         </SafeAreaView>
 
     )
@@ -260,7 +267,7 @@ const styles = StyleSheet.create({
     },
     body: {
         flex: 1,
-        padding: 15
+        padding: 15,
     },
     backBtn: {
         width: 45,
@@ -294,7 +301,6 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
         backgroundColor: Colors.primary,
-        marginTop: 20
     },
     nextText: {
         color: Colors.text.white,
@@ -312,5 +318,17 @@ const styles = StyleSheet.create({
     },
     roleText: {
         fontWeight: "600", color: Colors.text.black, fontSize: 15
-    }
+    },
+     imageCont: {
+        width: "100%",
+        height: 200,
+        borderRadius: 10,
+        marginVertical: 10
+    },
+    image: {
+        width: "100%",
+        height: "100%",
+        resizeMode: "cover",
+        borderRadius: 10
+    },
 })

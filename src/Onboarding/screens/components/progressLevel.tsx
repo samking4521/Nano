@@ -16,19 +16,19 @@ function ProgressLevel({ progressLevel }: { progressLevel: number }) {
                 <View style={{ alignItems: 'center' }}>
                     <View
                         style={{
-                            width: 25,
-                            height: 25,
-                            borderRadius: 25,
+                            width: 20,
+                            height: 20,
+                            borderRadius: 20,
                             justifyContent: 'center',
                             alignItems: 'center',
                             backgroundColor: progressLevel <= 1 ? undefined : Colors.primary,
-                            borderWidth: progressLevel <= 1 ? 2 : undefined,
+                            borderWidth: progressLevel <= 1 ? 1 : undefined,
                             borderColor: progressLevel <= 1 ? Colors.primary : undefined,
                         }}
                     >
                         <Text style={{ color: progressLevel <= 1 ? Colors.primary : Colors.text.white, fontWeight: '600' }}>1</Text>
                     </View>
-                    <Text style={{ color: progressLevel <= 1 ? Colors.text.black : Colors.primary, marginTop: 8, fontWeight: '600' }}>Personal</Text>
+                    <Text style={{ color: progressLevel <= 1 ? Colors.text.black : Colors.primary, marginTop: 8, fontWeight: '600', fontSize: 12 }}>Personal</Text>
                 </View>
                 <View
                     style={{
@@ -43,11 +43,11 @@ function ProgressLevel({ progressLevel }: { progressLevel: number }) {
                 <View style={{ alignItems: 'center' }}>
                     <View
                         style={{
-                            width: 25,
-                            height: 25,
-                            borderRadius: 25,
+                            width: 20,
+                            height: 20,
+                            borderRadius: 20,
                             backgroundColor: progressLevel <= 1 ? gray : progressLevel <= 2 ? undefined : Colors.primary,
-                            borderWidth: progressLevel <= 1 ? undefined : progressLevel <= 2 ? 2 : undefined,
+                            borderWidth: progressLevel <= 1 ? undefined : progressLevel <= 2 ? 1 : undefined,
                             borderColor: progressLevel <= 1 ? undefined : progressLevel <= 2 ? Colors.primary : undefined,
                             justifyContent: 'center',
                             alignItems: 'center',
@@ -58,7 +58,8 @@ function ProgressLevel({ progressLevel }: { progressLevel: number }) {
 
                     <Text style={{
                         color: progressLevel <= 1 ? "#9CA3AF" : progressLevel <= 2 ? Colors.text.black : Colors.primary, marginTop: 8,
-                        fontWeight: progressLevel <= 1 ? undefined : progressLevel <= 2 ? "600" : "600"
+                        fontWeight: progressLevel <= 1 ? undefined : progressLevel <= 2 ? "600" : "600",
+                        fontSize: 12
                     }}>
                         Identity
                     </Text>
@@ -78,11 +79,11 @@ function ProgressLevel({ progressLevel }: { progressLevel: number }) {
                 <View style={{ alignItems: 'center' }}>
                     <View
                         style={{
-                            width: 25,
-                            height: 25,
-                            borderRadius: 25,
+                            width: 20,
+                            height: 20,
+                            borderRadius: 20,
                             backgroundColor: progressLevel <= 2 ? gray : progressLevel <= 3 ? undefined : Colors.primary,
-                            borderWidth: progressLevel <= 2 ? undefined : progressLevel <= 3 ? 2 : undefined,
+                            borderWidth: progressLevel <= 2 ? undefined : progressLevel <= 3 ? 1 : undefined,
                             borderColor: progressLevel <= 2 ? undefined : progressLevel <= 3 ? Colors.primary : undefined,
                             justifyContent: 'center',
                             alignItems: 'center',
@@ -96,6 +97,7 @@ function ProgressLevel({ progressLevel }: { progressLevel: number }) {
                             marginTop: 8,
                             color: progressLevel <= 2 ? '#9CA3AF' : progressLevel <= 3 ? Colors.text.black : Colors.primary,
                             fontWeight: progressLevel <= 2 ? undefined : progressLevel <= 3 ? "600" : "600",
+                            fontSize: 12
                         }}
                     >
                         Ownership
@@ -116,11 +118,11 @@ function ProgressLevel({ progressLevel }: { progressLevel: number }) {
                 <View style={{ alignItems: 'center' }}>
                     <View
                         style={{
-                            width: 25,
-                            height: 25,
-                            borderRadius: 25,
+                            width: 20,
+                            height: 20,
+                            borderRadius: 20,
                             backgroundColor: progressLevel > 3 ? undefined : gray,
-                            borderWidth: progressLevel > 3 ? 2 : undefined,
+                            borderWidth: progressLevel > 3 ? 1 : undefined,
                             borderColor: progressLevel > 3 ? Colors.primary : undefined,
                             justifyContent: 'center',
                             alignItems: 'center',
@@ -133,7 +135,8 @@ function ProgressLevel({ progressLevel }: { progressLevel: number }) {
                         style={{
                             marginTop: 8,
                             color: progressLevel > 3 ? Colors.text.black : '#9CA3AF',
-                            fontWeight: progressLevel > 3 ? "600" : undefined
+                            fontWeight: progressLevel > 3 ? "600" : undefined,
+                            fontSize: 12
                         }}
                     >
                         Preview
@@ -151,7 +154,7 @@ export default React.memo(ProgressLevel);
 
 const styles = StyleSheet.create({
     container: {
-        marginTop: 20
+        marginTop: 5
     },
     progressCont: {
         flexDirection: 'row',

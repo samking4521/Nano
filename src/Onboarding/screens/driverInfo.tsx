@@ -388,13 +388,16 @@ export default function DriverInfo({ route }: Props) {
 
 
 
-                    <Pressable onPress={continueToVehicleInfo} style={styles.nextBtn}>
-                        <Text style={styles.continueText}>Continue</Text>
-                    </Pressable>
+                    
 
                 </ScrollView>
 
-
+                    <View style={{paddingVertical: 5}}>
+                          <Pressable onPress={continueToVehicleInfo} style={styles.nextBtn}>
+                            <Text style={styles.continueText}>Continue</Text>
+                        </Pressable>
+                    </View>
+                    
 
             </KeyboardAvoidingView>
 
@@ -612,7 +615,6 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
         backgroundColor: Colors.primary,
-        marginTop: 30
     },
     continueText: {
         color: Colors.text.white,
