@@ -254,14 +254,8 @@ CREATE TABLE IF NOT EXISTS "public"."Vehicle" (
     "current_driver_id" "uuid",
     "plate_number" "text" NOT NULL,
     "vehicle_type" "public"."VEHICLE_TYPE" NOT NULL,
-    "vehicle_manufacturer" "text",
-    "vehicle_model" "text",
-    "vehicle_year" "text",
-    "vehicle_color" "text",
-    "verification_status" "public"."VERIFICATION_STATUS" DEFAULT 'PENDING'::"public"."VERIFICATION_STATUS" NOT NULL,
-    "verified_at" "text",
-    "verified_by" "text",
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "vehicle_capacity" numeric NOT NULL
 );
 
 
@@ -293,6 +287,35 @@ CREATE TABLE IF NOT EXISTS "public"."Vehicle_Photos" (
 
 
 ALTER TABLE "public"."Vehicle_Photos" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."Vehicle_Verification" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "vehicle_id" "uuid" NOT NULL,
+    "vehicle_manufacturer" "text",
+    "vehicle_model" "text",
+    "vehicle_color" "text",
+    "verification_status" "public"."VERIFICATION_STATUS" NOT NULL,
+    "vehicle_year" "text",
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."Vehicle_Verification" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."Vehicle_Verification_Audit" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "vehicle_verification_id" "uuid" NOT NULL,
+    "verifier_id" "uuid" NOT NULL,
+    "verified_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "decision" "public"."VERIFICATION_STATUS" NOT NULL
+);
+
+
+ALTER TABLE "public"."Vehicle_Verification_Audit" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."Verification_Issues" (
@@ -394,6 +417,21 @@ ALTER TABLE ONLY "public"."Vehicle_Photos"
 
 
 
+ALTER TABLE ONLY "public"."Vehicle_Verification_Audit"
+    ADD CONSTRAINT "Vehicle_Verification_Audit_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."Vehicle_Verification"
+    ADD CONSTRAINT "Vehicle_Verification_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."Vehicle_Verification"
+    ADD CONSTRAINT "Vehicle_Verification_vehicle_id_key" UNIQUE ("vehicle_id");
+
+
+
 ALTER TABLE ONLY "public"."Vehicle"
     ADD CONSTRAINT "Vehicle_current_driver_id_key" UNIQUE ("current_driver_id");
 
@@ -416,6 +454,11 @@ ALTER TABLE ONLY "public"."Verification_Issues"
 
 ALTER TABLE ONLY "public"."Driver_Documents"
     ADD CONSTRAINT "Driver_Documents_driver_id_fkey" FOREIGN KEY ("driver_id") REFERENCES "public"."Driver"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."Driver_Verification_Audit"
+    ADD CONSTRAINT "Driver_Verification_Audit_driver_verification_id_fkey" FOREIGN KEY ("driver_verification_id") REFERENCES "public"."Driver_Verification"("id") ON DELETE CASCADE;
 
 
 
@@ -446,6 +489,16 @@ ALTER TABLE ONLY "public"."Vehicle_Documents"
 
 ALTER TABLE ONLY "public"."Vehicle_Photos"
     ADD CONSTRAINT "Vehicle_Photos_vehicle_id_fkey" FOREIGN KEY ("vehicle_id") REFERENCES "public"."Vehicle"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."Vehicle_Verification_Audit"
+    ADD CONSTRAINT "Vehicle_Verification_Audit_vehicle_verification_id_fkey" FOREIGN KEY ("vehicle_verification_id") REFERENCES "public"."Driver_Verification"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."Vehicle_Verification"
+    ADD CONSTRAINT "Vehicle_Verification_vehicle_id_fkey" FOREIGN KEY ("vehicle_id") REFERENCES "public"."Vehicle"("id") ON DELETE CASCADE;
 
 
 
@@ -503,6 +556,12 @@ ALTER TABLE "public"."Vehicle_Documents" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."Vehicle_Photos" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."Vehicle_Verification" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."Vehicle_Verification_Audit" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."Verification_Issues" ENABLE ROW LEVEL SECURITY;
@@ -566,6 +625,18 @@ GRANT ALL ON TABLE "public"."Vehicle_Documents" TO "service_role";
 GRANT ALL ON TABLE "public"."Vehicle_Photos" TO "anon";
 GRANT ALL ON TABLE "public"."Vehicle_Photos" TO "authenticated";
 GRANT ALL ON TABLE "public"."Vehicle_Photos" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."Vehicle_Verification" TO "anon";
+GRANT ALL ON TABLE "public"."Vehicle_Verification" TO "authenticated";
+GRANT ALL ON TABLE "public"."Vehicle_Verification" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."Vehicle_Verification_Audit" TO "anon";
+GRANT ALL ON TABLE "public"."Vehicle_Verification_Audit" TO "authenticated";
+GRANT ALL ON TABLE "public"."Vehicle_Verification_Audit" TO "service_role";
 
 
 
