@@ -168,10 +168,8 @@ CREATE TABLE IF NOT EXISTS "public"."Driver" (
     "lastname" "text" NOT NULL,
     "birthday" "text" NOT NULL,
     "driver_img_key" "text" NOT NULL,
-    "verification_status" "public"."VERIFICATION_STATUS" DEFAULT 'PENDING'::"public"."VERIFICATION_STATUS",
-    "verified_by" "text",
-    "verified_at" "text",
-    "online_status" "public"."ONLINE_STATUS" DEFAULT 'OFFLINE'::"public"."ONLINE_STATUS" NOT NULL
+    "online_status" "public"."ONLINE_STATUS" DEFAULT 'OFFLINE'::"public"."ONLINE_STATUS" NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
 );
 
 
@@ -179,17 +177,43 @@ ALTER TABLE "public"."Driver" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."Driver_Documents" (
-    "id" "uuid" DEFAULT "auth"."uid"() NOT NULL,
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "document_number" "text" NOT NULL,
     "document_img_key" "text" NOT NULL,
     "document_type" "public"."DRIVER_DOCUMENT_TYPE" NOT NULL,
     "expiry_date" "text",
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "driver_id" "uuid" NOT NULL
 );
 
 
 ALTER TABLE "public"."Driver_Documents" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."Driver_Verification" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "verification_status" "public"."VERIFICATION_STATUS",
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    "driver_id" "uuid" NOT NULL
+);
+
+
+ALTER TABLE "public"."Driver_Verification" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."Driver_Verification_Audit" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "driver_verification_id" "uuid" NOT NULL,
+    "verifier_id" "uuid" NOT NULL,
+    "verified_at" "text" NOT NULL,
+    "decision" "public"."VERIFICATION_STATUS" NOT NULL
+);
+
+
+ALTER TABLE "public"."Driver_Verification_Audit" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."Shipper" (
@@ -226,8 +250,8 @@ ALTER TABLE "public"."User" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."Vehicle" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "owner_driver_id" "uuid" DEFAULT "auth"."uid"() NOT NULL,
-    "current_driver_id" "uuid" DEFAULT "gen_random_uuid"(),
+    "owner_driver_id" "uuid" NOT NULL,
+    "current_driver_id" "uuid",
     "plate_number" "text" NOT NULL,
     "vehicle_type" "public"."VEHICLE_TYPE" NOT NULL,
     "vehicle_manufacturer" "text",
@@ -247,7 +271,7 @@ ALTER TABLE "public"."Vehicle" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."Vehicle_Documents" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "vehicle_id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "vehicle_id" "uuid" NOT NULL,
     "document_type" "public"."DRIVER_DOCUMENT_TYPE" NOT NULL,
     "document_number" "text",
     "vehicle_document_img_key" "text" NOT NULL,
@@ -274,7 +298,7 @@ ALTER TABLE "public"."Vehicle_Photos" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."Verification_Issues" (
     "id" bigint NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "driver_id" "text",
+    "driver_id" "uuid" NOT NULL,
     "section" "public"."VERIFICATION_ISSUES_SECTION",
     "field" "public"."VERIFICATION_ISSUES_FIELD",
     "ISSUES_CODE" "public"."VERIFICATION_ISSUES_CODE"
@@ -302,6 +326,21 @@ ALTER TABLE ONLY "public"."Driver_Documents"
 
 ALTER TABLE ONLY "public"."Driver_Documents"
     ADD CONSTRAINT "Driver_Documents_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."Driver_Verification_Audit"
+    ADD CONSTRAINT "Driver_Verification_Audit_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."Driver_Verification"
+    ADD CONSTRAINT "Driver_Verification_driver_id_key" UNIQUE ("driver_id");
+
+
+
+ALTER TABLE ONLY "public"."Driver_Verification"
+    ADD CONSTRAINT "Driver_Verification_pkey" PRIMARY KEY ("id");
 
 
 
@@ -376,7 +415,12 @@ ALTER TABLE ONLY "public"."Verification_Issues"
 
 
 ALTER TABLE ONLY "public"."Driver_Documents"
-    ADD CONSTRAINT "Driver_Documents_id_fkey" FOREIGN KEY ("id") REFERENCES "public"."Driver"("id") ON DELETE CASCADE;
+    ADD CONSTRAINT "Driver_Documents_driver_id_fkey" FOREIGN KEY ("driver_id") REFERENCES "public"."Driver"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."Driver_Verification"
+    ADD CONSTRAINT "Driver_Verification_driver_id_fkey" FOREIGN KEY ("driver_id") REFERENCES "public"."Driver"("id") ON DELETE CASCADE;
 
 
 
@@ -415,6 +459,11 @@ ALTER TABLE ONLY "public"."Vehicle"
 
 
 
+ALTER TABLE ONLY "public"."Verification_Issues"
+    ADD CONSTRAINT "Verification_Issues_driver_id_fkey" FOREIGN KEY ("driver_id") REFERENCES "public"."Driver"("id") ON DELETE SET NULL;
+
+
+
 CREATE POLICY "Auth shipper can update own shipper profile" ON "public"."Shipper" FOR UPDATE TO "authenticated" USING ((("id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
    FROM "public"."User" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."active_role" = 'SHIPPER'::"public"."USER_ROLES") AND ("u"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS")))))) WITH CHECK ((("id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
@@ -433,6 +482,12 @@ ALTER TABLE "public"."Driver" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."Driver_Documents" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."Driver_Verification" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."Driver_Verification_Audit" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."Shipper" ENABLE ROW LEVEL SECURITY;
@@ -469,6 +524,18 @@ GRANT ALL ON TABLE "public"."Driver" TO "service_role";
 GRANT ALL ON TABLE "public"."Driver_Documents" TO "anon";
 GRANT ALL ON TABLE "public"."Driver_Documents" TO "authenticated";
 GRANT ALL ON TABLE "public"."Driver_Documents" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."Driver_Verification" TO "anon";
+GRANT ALL ON TABLE "public"."Driver_Verification" TO "authenticated";
+GRANT ALL ON TABLE "public"."Driver_Verification" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."Driver_Verification_Audit" TO "anon";
+GRANT ALL ON TABLE "public"."Driver_Verification_Audit" TO "authenticated";
+GRANT ALL ON TABLE "public"."Driver_Verification_Audit" TO "service_role";
 
 
 
