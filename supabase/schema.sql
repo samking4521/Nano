@@ -238,13 +238,36 @@ CREATE TABLE IF NOT EXISTS "public"."User" (
     "has_shipper_profile" boolean,
     "has_driver_profile" boolean,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "account_status" "public"."ACCOUNT_STATUS" NOT NULL,
-    "email" "text",
-    "phone" "text"
+    "email" "text" NOT NULL,
+    "phone" "text" NOT NULL
 );
 
 
 ALTER TABLE "public"."User" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."User_Account_Status" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "account_status" "public"."ACCOUNT_STATUS" DEFAULT 'ACTIVE'::"public"."ACCOUNT_STATUS" NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."User_Account_Status" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."User_Account_Status_Audit" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "user_account_status_id" "uuid" NOT NULL,
+    "decision" "public"."ACCOUNT_STATUS" NOT NULL,
+    "changed_by" "uuid" NOT NULL
+);
+
+
+ALTER TABLE "public"."User_Account_Status_Audit" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."Vehicle" (
@@ -387,6 +410,31 @@ ALTER TABLE ONLY "public"."Shipper"
 
 
 
+ALTER TABLE ONLY "public"."User_Account_Status_Audit"
+    ADD CONSTRAINT "User_Account_Status_Audit_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."User_Account_Status"
+    ADD CONSTRAINT "User_Account_Status_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."User_Account_Status"
+    ADD CONSTRAINT "User_Account_Status_user_id_key" UNIQUE ("user_id");
+
+
+
+ALTER TABLE ONLY "public"."User"
+    ADD CONSTRAINT "User_email_key" UNIQUE ("email");
+
+
+
+ALTER TABLE ONLY "public"."User"
+    ADD CONSTRAINT "User_phone_key" UNIQUE ("phone");
+
+
+
 ALTER TABLE ONLY "public"."User"
     ADD CONSTRAINT "User_pkey" PRIMARY KEY ("id");
 
@@ -477,6 +525,16 @@ ALTER TABLE ONLY "public"."Shipper"
 
 
 
+ALTER TABLE ONLY "public"."User_Account_Status_Audit"
+    ADD CONSTRAINT "User_Account_Status_Audit_user_account_status_id_fkey" FOREIGN KEY ("user_account_status_id") REFERENCES "public"."User_Account_Status"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."User_Account_Status"
+    ADD CONSTRAINT "User_Account_Status_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."User"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."User"
     ADD CONSTRAINT "User_id_fkey" FOREIGN KEY ("id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
 
@@ -517,17 +575,42 @@ ALTER TABLE ONLY "public"."Verification_Issues"
 
 
 
+CREATE POLICY "Auth active user can update own User table" ON "public"."User" FOR UPDATE TO "authenticated" USING ((("id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
+   FROM "public"."User_Account_Status" "uas"
+  WHERE (("uas"."user_id" = "auth"."uid"()) AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS")))))) WITH CHECK ((("id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
+   FROM "public"."User_Account_Status" "uas"
+  WHERE (("uas"."user_id" = "auth"."uid"()) AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS"))))));
+
+
+
 CREATE POLICY "Auth shipper can update own shipper profile" ON "public"."Shipper" FOR UPDATE TO "authenticated" USING ((("id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
-   FROM "public"."User" "u"
-  WHERE (("u"."id" = "auth"."uid"()) AND ("u"."active_role" = 'SHIPPER'::"public"."USER_ROLES") AND ("u"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS")))))) WITH CHECK ((("id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
-   FROM "public"."User" "u"
-  WHERE (("u"."id" = "auth"."uid"()) AND ("u"."active_role" = 'SHIPPER'::"public"."USER_ROLES") AND ("u"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS"))))));
+   FROM ("public"."User" "u"
+     JOIN "public"."User_Account_Status" "uas" ON (("uas"."user_id" = "u"."id")))
+  WHERE (("u"."id" = "auth"."uid"()) AND ("u"."active_role" = 'SHIPPER'::"public"."USER_ROLES") AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS")))))) WITH CHECK ((("id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
+   FROM ("public"."User" "u"
+     JOIN "public"."User_Account_Status" "uas" ON (("uas"."user_id" = "u"."id")))
+  WHERE (("u"."id" = "auth"."uid"()) AND ("u"."active_role" = 'SHIPPER'::"public"."USER_ROLES") AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS"))))));
 
 
 
 CREATE POLICY "Auth user can create own shipper profile" ON "public"."Shipper" FOR INSERT TO "authenticated" WITH CHECK ((("id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
-   FROM "public"."User" "u"
-  WHERE (("u"."id" = "auth"."uid"()) AND ("u"."active_role" = 'SHIPPER'::"public"."USER_ROLES") AND ("u"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS"))))));
+   FROM ("public"."User" "u"
+     JOIN "public"."User_Account_Status" "uas" ON (("uas"."user_id" = "u"."id")))
+  WHERE (("u"."id" = "auth"."uid"()) AND ("u"."active_role" = 'SHIPPER'::"public"."USER_ROLES") AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS"))))));
+
+
+
+CREATE POLICY "Auth user can delete own User table" ON "public"."User" FOR DELETE TO "authenticated" USING ((("id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
+   FROM "public"."User_Account_Status" "uas"
+  WHERE (("uas"."user_id" = "auth"."uid"()) AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS"))))));
+
+
+
+CREATE POLICY "Auth user can insert to User" ON "public"."User" FOR INSERT TO "authenticated" WITH CHECK (("id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "Auth user can select own User table" ON "public"."User" FOR SELECT TO "authenticated" USING (("id" = "auth"."uid"()));
 
 
 
@@ -547,6 +630,12 @@ ALTER TABLE "public"."Shipper" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."User" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."User_Account_Status" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."User_Account_Status_Audit" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."Vehicle" ENABLE ROW LEVEL SECURITY;
@@ -607,6 +696,18 @@ GRANT ALL ON TABLE "public"."Shipper" TO "service_role";
 GRANT ALL ON TABLE "public"."User" TO "anon";
 GRANT ALL ON TABLE "public"."User" TO "authenticated";
 GRANT ALL ON TABLE "public"."User" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."User_Account_Status" TO "anon";
+GRANT ALL ON TABLE "public"."User_Account_Status" TO "authenticated";
+GRANT ALL ON TABLE "public"."User_Account_Status" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."User_Account_Status_Audit" TO "anon";
+GRANT ALL ON TABLE "public"."User_Account_Status_Audit" TO "authenticated";
+GRANT ALL ON TABLE "public"."User_Account_Status_Audit" TO "service_role";
 
 
 
