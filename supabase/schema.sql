@@ -167,7 +167,7 @@ CREATE TABLE IF NOT EXISTS "public"."Driver" (
     "firstname" "text" NOT NULL,
     "lastname" "text" NOT NULL,
     "birthday" "text" NOT NULL,
-    "driver_img_key" "text" NOT NULL,
+    "driver_img_key" "text",
     "online_status" "public"."ONLINE_STATUS" DEFAULT 'OFFLINE'::"public"."ONLINE_STATUS" NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
 );
@@ -239,7 +239,10 @@ CREATE TABLE IF NOT EXISTS "public"."User" (
     "has_driver_profile" boolean,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "email" "text" NOT NULL,
-    "phone" "text" NOT NULL
+    "phone" "text" NOT NULL,
+    "country_name" "text" NOT NULL,
+    "country_code" "text" NOT NULL,
+    "calling_code" "text" NOT NULL
 );
 
 
@@ -572,6 +575,14 @@ ALTER TABLE ONLY "public"."Vehicle"
 
 ALTER TABLE ONLY "public"."Verification_Issues"
     ADD CONSTRAINT "Verification_Issues_driver_id_fkey" FOREIGN KEY ("driver_id") REFERENCES "public"."Driver"("id") ON DELETE SET NULL;
+
+
+
+CREATE POLICY "Auth User can insert into own Driver table" ON "public"."Driver" FOR INSERT TO "authenticated" WITH CHECK ((("id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
+   FROM "public"."User" "u"
+  WHERE (("u"."id" = "auth"."uid"()) AND ("u"."active_role" = 'DRIVER'::"public"."USER_ROLES")))) AND (EXISTS ( SELECT 1
+   FROM "public"."User_Account_Status" "uas"
+  WHERE (("uas"."user_id" = "auth"."uid"()) AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS")))) AND ("online_status" = 'OFFLINE'::"public"."ONLINE_STATUS")));
 
 
 
