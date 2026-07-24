@@ -575,6 +575,12 @@ ALTER TABLE ONLY "public"."Verification_Issues"
 
 
 
+CREATE POLICY "Auth User can insert into own User_Account_Status" ON "public"."User_Account_Status" FOR INSERT TO "authenticated" WITH CHECK ((("user_id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
+   FROM "public"."User"
+  WHERE ("User"."id" = "auth"."uid"()))) AND ("account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS")));
+
+
+
 CREATE POLICY "Auth active user can update own User table" ON "public"."User" FOR UPDATE TO "authenticated" USING ((("id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
    FROM "public"."User_Account_Status" "uas"
   WHERE (("uas"."user_id" = "auth"."uid"()) AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS")))))) WITH CHECK ((("id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
