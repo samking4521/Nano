@@ -167,7 +167,7 @@ CREATE TABLE IF NOT EXISTS "public"."Driver" (
     "firstname" "text" NOT NULL,
     "lastname" "text" NOT NULL,
     "birthday" "text" NOT NULL,
-    "driver_img_key" "text",
+    "driver_img_key" "text" NOT NULL,
     "online_status" "public"."ONLINE_STATUS" DEFAULT 'OFFLINE'::"public"."ONLINE_STATUS" NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
 );
@@ -195,7 +195,7 @@ CREATE TABLE IF NOT EXISTS "public"."Driver_Verification" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "verification_status" "public"."VERIFICATION_STATUS",
-    "updated_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "driver_id" "uuid" NOT NULL
 );
 
@@ -207,9 +207,9 @@ CREATE TABLE IF NOT EXISTS "public"."Driver_Verification_Audit" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "driver_verification_id" "uuid" NOT NULL,
-    "verifier_id" "uuid" NOT NULL,
-    "verified_at" "text" NOT NULL,
-    "decision" "public"."VERIFICATION_STATUS" NOT NULL
+    "verifier_id" "uuid",
+    "verified_at" "text",
+    "decision" "public"."VERIFICATION_STATUS"
 );
 
 
@@ -265,8 +265,8 @@ CREATE TABLE IF NOT EXISTS "public"."User_Account_Status_Audit" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "user_account_status_id" "uuid" NOT NULL,
-    "decision" "public"."ACCOUNT_STATUS" NOT NULL,
-    "changed_by" "uuid" NOT NULL
+    "decision" "public"."ACCOUNT_STATUS",
+    "changed_by" "uuid"
 );
 
 
@@ -379,6 +379,11 @@ ALTER TABLE ONLY "public"."Driver_Documents"
 
 
 ALTER TABLE ONLY "public"."Driver_Verification_Audit"
+    ADD CONSTRAINT "Driver_Verification_Audit_driver_verification_id_key" UNIQUE ("driver_verification_id");
+
+
+
+ALTER TABLE ONLY "public"."Driver_Verification_Audit"
     ADD CONSTRAINT "Driver_Verification_Audit_pkey" PRIMARY KEY ("id");
 
 
@@ -415,6 +420,11 @@ ALTER TABLE ONLY "public"."Shipper"
 
 ALTER TABLE ONLY "public"."User_Account_Status_Audit"
     ADD CONSTRAINT "User_Account_Status_Audit_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."User_Account_Status_Audit"
+    ADD CONSTRAINT "User_Account_Status_Audit_user_account_status_id_key" UNIQUE ("user_account_status_id");
 
 
 
@@ -578,6 +588,14 @@ ALTER TABLE ONLY "public"."Verification_Issues"
 
 
 
+CREATE POLICY "Auth Driver can insert own Driver Documents" ON "public"."Driver_Documents" FOR INSERT TO "authenticated" WITH CHECK ((("driver_id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
+   FROM (("public"."Driver" "d"
+     JOIN "public"."User" "u" ON (("u"."id" = "d"."id")))
+     JOIN "public"."User_Account_Status" "uas" ON (("uas"."user_id" = "u"."id")))
+  WHERE (("d"."id" = "auth"."uid"()) AND ("u"."active_role" = 'DRIVER'::"public"."USER_ROLES") AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS"))))));
+
+
+
 CREATE POLICY "Auth User can insert into own Driver table" ON "public"."Driver" FOR INSERT TO "authenticated" WITH CHECK ((("id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
    FROM "public"."User" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."active_role" = 'DRIVER'::"public"."USER_ROLES")))) AND (EXISTS ( SELECT 1
@@ -597,6 +615,63 @@ CREATE POLICY "Auth active user can update own User table" ON "public"."User" FO
   WHERE (("uas"."user_id" = "auth"."uid"()) AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS")))))) WITH CHECK ((("id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
    FROM "public"."User_Account_Status" "uas"
   WHERE (("uas"."user_id" = "auth"."uid"()) AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS"))))));
+
+
+
+CREATE POLICY "Auth driver can insert own Driver_Verification_Audit row" ON "public"."Driver_Verification_Audit" FOR INSERT TO "authenticated" WITH CHECK (((EXISTS ( SELECT 1
+   FROM ((("public"."Driver_Verification" "dv"
+     JOIN "public"."Driver" "d" ON (("d"."id" = "dv"."driver_id")))
+     JOIN "public"."User" "u" ON (("u"."id" = "d"."id")))
+     JOIN "public"."User_Account_Status" "uas" ON (("uas"."user_id" = "u"."id")))
+  WHERE (("dv"."id" = "Driver_Verification_Audit"."driver_verification_id") AND ("d"."id" = "auth"."uid"()) AND ("u"."active_role" = 'DRIVER'::"public"."USER_ROLES") AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS")))) AND ("verifier_id" IS NULL) AND ("verified_at" IS NULL) AND ("decision" IS NULL)));
+
+
+
+CREATE POLICY "Auth driver can insert own driver verification row" ON "public"."Driver_Verification" FOR INSERT TO "authenticated" WITH CHECK ((("driver_id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
+   FROM (("public"."Driver" "d"
+     JOIN "public"."User" "u" ON (("u"."id" = "d"."id")))
+     JOIN "public"."User_Account_Status" "uas" ON (("uas"."user_id" = "u"."id")))
+  WHERE (("d"."id" = "auth"."uid"()) AND ("u"."active_role" = 'DRIVER'::"public"."USER_ROLES") AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS")))) AND ("verification_status" IS NULL)));
+
+
+
+CREATE POLICY "Auth driver can select own Driver Documents" ON "public"."Driver_Documents" FOR SELECT TO "authenticated" USING ((("driver_id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
+   FROM ("public"."Driver" "d"
+     JOIN "public"."User" "u" ON (("u"."id" = "d"."id")))
+  WHERE (("d"."id" = "auth"."uid"()) AND ("u"."active_role" = 'DRIVER'::"public"."USER_ROLES"))))));
+
+
+
+CREATE POLICY "Auth driver can select own driver verification" ON "public"."Driver_Verification" FOR SELECT TO "authenticated" USING ((("driver_id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
+   FROM ("public"."Driver" "d"
+     JOIN "public"."User" "u" ON (("u"."id" = "d"."id")))
+  WHERE (("d"."id" = "auth"."uid"()) AND ("u"."active_role" = 'DRIVER'::"public"."USER_ROLES"))))));
+
+
+
+CREATE POLICY "Auth driver can update Driver Documents" ON "public"."Driver_Documents" FOR UPDATE TO "authenticated" USING ((("driver_id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
+   FROM ((("public"."Driver" "d"
+     JOIN "public"."User" "u" ON (("u"."id" = "d"."id")))
+     JOIN "public"."User_Account_Status" "uas" ON (("uas"."user_id" = "u"."id")))
+     JOIN "public"."Driver_Verification" "dv" ON (("dv"."driver_id" = "d"."id")))
+  WHERE (("d"."id" = "auth"."uid"()) AND ("u"."active_role" = 'DRIVER'::"public"."USER_ROLES") AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS") AND ("dv"."verification_status" = 'REJECTED'::"public"."VERIFICATION_STATUS")))))) WITH CHECK ((("driver_id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
+   FROM ((("public"."Driver" "d"
+     JOIN "public"."User" "u" ON (("u"."id" = "d"."id")))
+     JOIN "public"."User_Account_Status" "uas" ON (("uas"."user_id" = "u"."id")))
+     JOIN "public"."Driver_Verification" "dv" ON (("dv"."driver_id" = "d"."id")))
+  WHERE (("d"."id" = "auth"."uid"()) AND ("u"."active_role" = 'DRIVER'::"public"."USER_ROLES") AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS") AND ("dv"."verification_status" = 'REJECTED'::"public"."VERIFICATION_STATUS"))))));
+
+
+
+CREATE POLICY "Auth driver can update Driver only when rejected" ON "public"."Driver" FOR UPDATE TO "authenticated" USING ((("id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
+   FROM (("public"."User" "u"
+     JOIN "public"."User_Account_Status" "uas" ON (("uas"."user_id" = "u"."id")))
+     JOIN "public"."Driver_Verification" "dv" ON (("dv"."driver_id" = "Driver"."id")))
+  WHERE (("u"."id" = "auth"."uid"()) AND ("u"."active_role" = 'DRIVER'::"public"."USER_ROLES") AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS") AND ("dv"."verification_status" = 'REJECTED'::"public"."VERIFICATION_STATUS")))))) WITH CHECK ((("id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
+   FROM (("public"."User" "u"
+     JOIN "public"."User_Account_Status" "uas" ON (("uas"."user_id" = "u"."id")))
+     JOIN "public"."Driver_Verification" "dv" ON (("dv"."driver_id" = "Driver"."id")))
+  WHERE (("u"."id" = "auth"."uid"()) AND ("u"."active_role" = 'DRIVER'::"public"."USER_ROLES") AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS") AND ("dv"."verification_status" = 'REJECTED'::"public"."VERIFICATION_STATUS"))))));
 
 
 
@@ -623,11 +698,25 @@ CREATE POLICY "Auth user can delete own User table" ON "public"."User" FOR DELET
 
 
 
+CREATE POLICY "Auth user can insert own User Account Status Audit" ON "public"."User_Account_Status_Audit" FOR INSERT TO "authenticated" WITH CHECK (((EXISTS ( SELECT 1
+   FROM "public"."User_Account_Status" "uas"
+  WHERE (("uas"."id" = "User_Account_Status_Audit"."user_account_status_id") AND ("uas"."user_id" = "auth"."uid"())))) AND ("decision" IS NULL) AND ("changed_by" IS NULL)));
+
+
+
 CREATE POLICY "Auth user can insert to User" ON "public"."User" FOR INSERT TO "authenticated" WITH CHECK (("id" = "auth"."uid"()));
 
 
 
+CREATE POLICY "Auth user can select Driver" ON "public"."Driver" FOR SELECT TO "authenticated" USING (("id" = "auth"."uid"()));
+
+
+
 CREATE POLICY "Auth user can select own User table" ON "public"."User" FOR SELECT TO "authenticated" USING (("id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "Auth user can select own User_Account_Status" ON "public"."User_Account_Status" FOR SELECT TO "authenticated" USING (("user_id" = "auth"."uid"()));
 
 
 
