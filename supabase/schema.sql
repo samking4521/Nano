@@ -118,6 +118,20 @@ CREATE TYPE "public"."VEHICLE_TYPE" AS ENUM (
 ALTER TYPE "public"."VEHICLE_TYPE" OWNER TO "postgres";
 
 
+CREATE TYPE "public"."VEHICLE_VERIFICATION_AUDIT_TYPE" AS ENUM (
+    'GENERAL',
+    'UPDATED_PLATE_NUMBER',
+    'UDPATED_VEHICLE_COLOR',
+    'UPDATED_CURRENT_DRIVER',
+    'UPDATED_VEHICLE_REG_CERTIFICATE_EXPIRY_DATE',
+    'UDPATED_VEHICLE_REG_CERTIFICATE_PHOTO',
+    'UPDATED_VEHICLE_PHOTOS'
+);
+
+
+ALTER TYPE "public"."VEHICLE_VERIFICATION_AUDIT_TYPE" OWNER TO "postgres";
+
+
 CREATE TYPE "public"."VERIFICATION_ISSUES_CODE" AS ENUM (
     'PROFILE_PHOTO_BLURRY',
     'PROFILE_PHOTO_INVALID',
@@ -454,6 +468,309 @@ $$;
 
 ALTER FUNCTION "public"."enforce_timestamp_columns"() OWNER TO "postgres";
 
+
+CREATE OR REPLACE FUNCTION "public"."enforce_vehicle_documents_update_fields"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+declare
+  v_status "VERIFICATION_STATUS";
+  v_is_staff boolean;
+  v_is_privileged boolean;
+  v_reviewer uuid;
+  v_vehicle_id uuid;
+begin
+  v_is_privileged := (current_user in ('postgres', 'service_role'));
+
+  if not v_is_privileged then
+    select exists (
+      select 1 from "STAFF"
+      where staff_id = auth.uid()
+      and active_status = true
+      and role in ('STAFF'::"STAFF_ROLES", 'SUPER_ADMIN'::"STAFF_ROLES")
+    ) into v_is_staff;
+  end if;
+
+  v_vehicle_id := old.vehicle_id;
+
+  select verification_status into v_status
+  from "Vehicle_Verification"
+  where vehicle_id = v_vehicle_id;
+
+  -- === PRIVILEGED / STAFF PATH ===
+  if v_is_privileged or v_is_staff then
+    v_reviewer := case when v_is_staff then auth.uid() else null end;
+
+    if v_status in ('PENDING'::"VERIFICATION_STATUS", 'REJECTED'::"VERIFICATION_STATUS") then
+      if new.document_type is distinct from old.document_type
+        or new.document_number is distinct from old.document_number
+        or new.document_img_key is distinct from old.document_img_key
+        or new.expiry_date is distinct from old.expiry_date
+        or new.pending_document_img_key is distinct from old.pending_document_img_key
+        or new.pending_document_img_key_at is distinct from old.pending_document_img_key_at
+        or new.pending_expiry_date is distinct from old.pending_expiry_date then
+        raise exception 'Staff cannot update Vehicle_Documents while verification is %', v_status;
+      end if;
+
+      return new;
+    end if;
+
+    if v_status = 'APPROVED'::"VERIFICATION_STATUS" then
+      if new.document_type is distinct from old.document_type
+        or new.document_number is distinct from old.document_number
+        or new.document_img_key is distinct from old.document_img_key then
+        raise exception 'This field cannot be updated by staff once approved';
+      end if;
+
+      if new.expiry_date is distinct from old.expiry_date then
+        insert into "Vehicle_Verification_Audit" (vehicle_id, decision, reviewed_by, type)
+        values (v_vehicle_id, 'APPROVED'::"VERIFICATION_STATUS", v_reviewer, 'UPDATED_VEHICLE_REG_CERTIFICATE_EXPIRY_DATE'::"VEHICLE_VERIFICATION_AUDIT_TYPE");
+      end if;
+
+      if old.pending_document_img_key is not null and new.pending_document_img_key is null then
+        insert into "Vehicle_Verification_Audit" (vehicle_id, decision, reviewed_by, type)
+        values (v_vehicle_id, 'APPROVED'::"VERIFICATION_STATUS", v_reviewer, 'UDPATED_VEHICLE_REG_CERTIFICATE_PHOTO'::"VEHICLE_VERIFICATION_AUDIT_TYPE");
+      end if;
+    end if;
+
+    return new;
+  end if;
+
+  -- === VEHICLE OWNER SELF-UPDATE PATH ===
+  if v_status in ('PENDING'::"VERIFICATION_STATUS", 'REJECTED'::"VERIFICATION_STATUS") then
+    if new.document_type is distinct from old.document_type
+      or new.pending_document_img_key is distinct from old.pending_document_img_key
+      or new.pending_document_img_key_at is distinct from old.pending_document_img_key_at
+      or new.pending_expiry_date is distinct from old.pending_expiry_date then
+      raise exception 'Cannot update this field while verification is %', v_status;
+    end if;
+
+  elsif v_status = 'APPROVED'::"VERIFICATION_STATUS" then
+    if new.document_type is distinct from old.document_type
+      or new.document_number is distinct from old.document_number
+      or new.document_img_key is distinct from old.document_img_key
+      or new.expiry_date is distinct from old.expiry_date then
+      raise exception 'Cannot update locked fields once approved';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."enforce_vehicle_documents_update_fields"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."enforce_vehicle_photos_update_fields"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+declare
+  v_status "VERIFICATION_STATUS";
+  v_is_staff boolean;
+  v_is_privileged boolean;
+  v_reviewer uuid;
+begin
+  v_is_privileged := (current_user in ('postgres', 'service_role'));
+
+  if not v_is_privileged then
+    select exists (
+      select 1 from "STAFF"
+      where staff_id = auth.uid()
+      and active_status = true
+      and role in ('STAFF'::"STAFF_ROLES", 'SUPER_ADMIN'::"STAFF_ROLES")
+    ) into v_is_staff;
+  end if;
+
+  select verification_status into v_status
+  from "Vehicle_Verification"
+  where vehicle_id = old.vehicle_id;
+
+  -- === PRIVILEGED / STAFF PATH ===
+  if v_is_privileged or v_is_staff then
+    v_reviewer := case when v_is_staff then auth.uid() else null end;
+
+    if v_status in ('PENDING'::"VERIFICATION_STATUS", 'REJECTED'::"VERIFICATION_STATUS") then
+      if new.vehicle_photos_keys is distinct from old.vehicle_photos_keys
+        or new.pending_vehicle_photos_keys is distinct from old.pending_vehicle_photos_keys then
+        raise exception 'Staff cannot update Vehicle_Photos while verification is %', v_status;
+      end if;
+
+      return new;
+    end if;
+
+    if v_status = 'APPROVED'::"VERIFICATION_STATUS" then
+      if new.vehicle_photos_keys is distinct from old.vehicle_photos_keys then
+        raise exception 'vehicle_photos_keys cannot be updated by staff once approved';
+      end if;
+
+      if old.pending_vehicle_photos_keys is not null and new.pending_vehicle_photos_keys is null then
+        insert into "Vehicle_Verification_Audit" (vehicle_id, decision, reviewed_by, type)
+        values (old.vehicle_id, 'APPROVED'::"VERIFICATION_STATUS", v_reviewer, 'UPDATED_VEHICLE_PHOTOS'::"VEHICLE_VERIFICATION_AUDIT_TYPE");
+      end if;
+    end if;
+
+    return new;
+  end if;
+
+  -- === VEHICLE OWNER SELF-UPDATE PATH ===
+  if v_status in ('PENDING'::"VERIFICATION_STATUS", 'REJECTED'::"VERIFICATION_STATUS") then
+    if new.pending_vehicle_photos_keys is distinct from old.pending_vehicle_photos_keys then
+      raise exception 'Cannot update pending_vehicle_photos_keys while verification is %', v_status;
+    end if;
+
+  elsif v_status = 'APPROVED'::"VERIFICATION_STATUS" then
+    if new.vehicle_photos_keys is distinct from old.vehicle_photos_keys then
+      raise exception 'Cannot update vehicle_photos_keys once approved';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."enforce_vehicle_photos_update_fields"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."enforce_vehicle_update_fields"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+declare
+  v_status "VERIFICATION_STATUS";
+  v_is_staff boolean;
+  v_is_privileged boolean;
+  v_reviewer uuid;
+  v_has_pending_reg_cert boolean;
+  v_new_driver_verified boolean;
+begin
+  v_is_privileged := (current_user in ('postgres', 'service_role'));
+
+  if not v_is_privileged then
+    select exists (
+      select 1 from "STAFF"
+      where staff_id = auth.uid()
+      and active_status = true
+      and role in ('STAFF'::"STAFF_ROLES", 'SUPER_ADMIN'::"STAFF_ROLES")
+    ) into v_is_staff;
+  end if;
+
+  select verification_status into v_status
+  from "Vehicle_Verification"
+  where vehicle_id = old.id;
+
+  -- === PRIVILEGED / STAFF PATH ===
+  if v_is_privileged or v_is_staff then
+    v_reviewer := case when v_is_staff then auth.uid() else null end;
+
+    if v_status in ('PENDING'::"VERIFICATION_STATUS", 'REJECTED'::"VERIFICATION_STATUS") then
+      if new.owner_driver_id is distinct from old.owner_driver_id
+        or new.current_driver_id is distinct from old.current_driver_id
+        or new.plate_number is distinct from old.plate_number
+        or new.vehicle_type is distinct from old.vehicle_type
+        or new.vehicle_capacity is distinct from old.vehicle_capacity
+        or new.vehicle_year is distinct from old.vehicle_year
+        or new.pending_plate_number is distinct from old.pending_plate_number
+        or new.pending_vehicle_color is distinct from old.pending_vehicle_color then
+        raise exception 'Staff can only update manufacturer, model, or color while verification is %', v_status;
+      end if;
+
+      return new;
+    end if;
+
+    if v_status = 'APPROVED'::"VERIFICATION_STATUS" then
+      if new.vehicle_year is distinct from old.vehicle_year
+        or new.vehicle_type is distinct from old.vehicle_type
+        or new.vehicle_manufacturer is distinct from old.vehicle_manufacturer
+        or new.vehicle_model is distinct from old.vehicle_model then
+        raise exception 'This field cannot be updated once approved';
+      end if;
+
+      if new.current_driver_id is distinct from old.current_driver_id then
+        if new.current_driver_id is not null then
+          raise exception 'Staff can only clear current_driver_id to null';
+        end if;
+
+        if not exists (
+          select 1 from "User_Account_Status"
+          where user_id = old.current_driver_id
+          and account_status = 'SUSPENDED'::"ACCOUNT_STATUS"
+        ) then
+          raise exception 'Can only clear current_driver_id while that driver is SUSPENDED';
+        end if;
+      end if;
+
+      if new.plate_number is distinct from old.plate_number
+        or new.pending_plate_number is distinct from old.pending_plate_number
+        or new.vehicle_color is distinct from old.vehicle_color
+        or new.pending_vehicle_color is distinct from old.pending_vehicle_color then
+
+        select exists (
+          select 1 from "Vehicle_Documents"
+          where vehicle_id = old.id
+          and document_type = 'VEHICLE_REGISTRATION_CERTIFICATE'::"VEHICLE_DOCUMENT_TYPE"
+          and pending_document_img_key is not null
+        ) into v_has_pending_reg_cert;
+
+        if not v_has_pending_reg_cert then
+          raise exception 'No pending vehicle registration certificate found';
+        end if;
+
+        if new.plate_number is distinct from old.plate_number then
+          insert into "Vehicle_Verification_Audit" (vehicle_id, decision, reviewed_by, type)
+          values (old.id, 'APPROVED'::"VERIFICATION_STATUS", v_reviewer, 'UPDATED_PLATE_NUMBER'::"VEHICLE_VERIFICATION_AUDIT_TYPE");
+        end if;
+
+        if new.vehicle_color is distinct from old.vehicle_color then
+          insert into "Vehicle_Verification_Audit" (vehicle_id, decision, reviewed_by, type)
+          values (old.id, 'APPROVED'::"VERIFICATION_STATUS", v_reviewer, 'UPDATED_VEHICLE_COLOR'::"VEHICLE_VERIFICATION_AUDIT_TYPE");
+        end if;
+      end if;
+    end if;
+
+    return new;
+  end if;
+
+  -- === DRIVER (OWNER) SELF-UPDATE PATH ===
+  if v_status in ('PENDING'::"VERIFICATION_STATUS", 'REJECTED'::"VERIFICATION_STATUS") then
+    if new.current_driver_id is distinct from old.current_driver_id
+      or new.vehicle_manufacturer is distinct from old.vehicle_manufacturer
+      or new.vehicle_model is distinct from old.vehicle_model
+      or new.vehicle_color is distinct from old.vehicle_color
+      or new.pending_vehicle_color is distinct from old.pending_vehicle_color
+      or new.pending_plate_number is distinct from old.pending_plate_number then
+      raise exception 'Cannot update this field while verification is %', v_status;
+    end if;
+
+  elsif v_status = 'APPROVED'::"VERIFICATION_STATUS" then
+    if new.vehicle_year is distinct from old.vehicle_year
+      or new.plate_number is distinct from old.plate_number
+      or new.vehicle_type is distinct from old.vehicle_type
+      or new.vehicle_manufacturer is distinct from old.vehicle_manufacturer
+      or new.vehicle_model is distinct from old.vehicle_model
+      or new.vehicle_color is distinct from old.vehicle_color then
+      raise exception 'Cannot update locked fields once approved';
+    end if;
+
+    if new.current_driver_id is distinct from old.current_driver_id then
+      select exists (
+        select 1 from "Driver_Verification"
+        where driver_id = new.current_driver_id
+        and verification_status = 'APPROVED'::"VERIFICATION_STATUS"
+      ) into v_new_driver_verified;
+
+      if not v_new_driver_verified then
+        raise exception 'current_driver_id must reference a driver with APPROVED verification';
+      end if;
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."enforce_vehicle_update_fields"() OWNER TO "postgres";
+
 SET default_tablespace = '';
 
 SET default_table_access_method = "heap";
@@ -618,7 +935,13 @@ CREATE TABLE IF NOT EXISTS "public"."Vehicle" (
     "plate_number" "text" NOT NULL,
     "vehicle_type" "public"."VEHICLE_TYPE" NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "vehicle_capacity" numeric NOT NULL
+    "vehicle_capacity" numeric NOT NULL,
+    "vehicle_manufacturer" "text",
+    "vehicle_model" "text",
+    "vehicle_color" "text",
+    "vehicle_year" "text" NOT NULL,
+    "pending_plate_number" "text",
+    "pending_vehicle_color" "text"
 );
 
 
@@ -630,10 +953,13 @@ CREATE TABLE IF NOT EXISTS "public"."Vehicle_Documents" (
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "vehicle_id" "uuid" NOT NULL,
     "document_type" "public"."DRIVER_DOCUMENT_TYPE" NOT NULL,
-    "document_number" "text",
-    "vehicle_document_img_key" "text" NOT NULL,
-    "expiry_date" "text",
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+    "document_number" "text" NOT NULL,
+    "document_img_key" "text",
+    "expiry_date" "text" NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "pending_document_img_key" "text",
+    "pending_document_img_key_at" "text",
+    "pending_expiry_date" "text"
 );
 
 
@@ -644,8 +970,9 @@ CREATE TABLE IF NOT EXISTS "public"."Vehicle_Photos" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "vehicle_id" "uuid" NOT NULL,
-    "vehicle_photos_keys" "jsonb" NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+    "vehicle_photos_keys" "jsonb",
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "pending_vehicle_photos_keys" "jsonb"
 );
 
 
@@ -656,11 +983,7 @@ CREATE TABLE IF NOT EXISTS "public"."Vehicle_Verification" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "vehicle_id" "uuid" NOT NULL,
-    "vehicle_manufacturer" "text",
-    "vehicle_model" "text",
-    "vehicle_color" "text",
     "verification_status" "public"."VERIFICATION_STATUS" NOT NULL,
-    "vehicle_year" "text",
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
 );
 
@@ -671,10 +994,10 @@ ALTER TABLE "public"."Vehicle_Verification" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."Vehicle_Verification_Audit" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "vehicle_verification_id" "uuid" NOT NULL,
-    "verifier_id" "uuid" NOT NULL,
-    "verified_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "decision" "public"."VERIFICATION_STATUS" NOT NULL
+    "decision" "public"."VERIFICATION_STATUS" NOT NULL,
+    "vehicle_id" "uuid" NOT NULL,
+    "reviewed_by" "uuid" NOT NULL,
+    "type" "public"."VEHICLE_VERIFICATION_AUDIT_TYPE" NOT NULL
 );
 
 
@@ -821,7 +1144,7 @@ ALTER TABLE ONLY "public"."Vehicle_Documents"
 
 
 ALTER TABLE ONLY "public"."Vehicle_Documents"
-    ADD CONSTRAINT "Vehicle_Documents_vehicle_document_img_key_key" UNIQUE ("vehicle_document_img_key");
+    ADD CONSTRAINT "Vehicle_Documents_vehicle_document_img_key_key" UNIQUE ("document_img_key");
 
 
 
@@ -918,6 +1241,18 @@ CREATE OR REPLACE TRIGGER "enforce_timestamps" BEFORE INSERT OR UPDATE ON "publi
 
 
 
+CREATE OR REPLACE TRIGGER "vehicle_documents_update_field_guard" BEFORE UPDATE ON "public"."Vehicle_Documents" FOR EACH ROW EXECUTE FUNCTION "public"."enforce_vehicle_documents_update_fields"();
+
+
+
+CREATE OR REPLACE TRIGGER "vehicle_photos_update_field_guard" BEFORE UPDATE ON "public"."Vehicle_Photos" FOR EACH ROW EXECUTE FUNCTION "public"."enforce_vehicle_photos_update_fields"();
+
+
+
+CREATE OR REPLACE TRIGGER "vehicle_update_field_guard" BEFORE UPDATE ON "public"."Vehicle" FOR EACH ROW EXECUTE FUNCTION "public"."enforce_vehicle_update_fields"();
+
+
+
 ALTER TABLE ONLY "public"."Driver_Documents"
     ADD CONSTRAINT "Driver_Documents_driver_id_fkey" FOREIGN KEY ("driver_id") REFERENCES "public"."Driver"("id") ON DELETE CASCADE;
 
@@ -994,7 +1329,12 @@ ALTER TABLE ONLY "public"."Vehicle_Photos"
 
 
 ALTER TABLE ONLY "public"."Vehicle_Verification_Audit"
-    ADD CONSTRAINT "Vehicle_Verification_Audit_vehicle_verification_id_fkey" FOREIGN KEY ("vehicle_verification_id") REFERENCES "public"."Driver_Verification"("id") ON DELETE CASCADE;
+    ADD CONSTRAINT "Vehicle_Verification_Audit_reviewed_by_fkey" FOREIGN KEY ("reviewed_by") REFERENCES "public"."STAFF"("staff_id");
+
+
+
+ALTER TABLE ONLY "public"."Vehicle_Verification_Audit"
+    ADD CONSTRAINT "Vehicle_Verification_Audit_vehicle_id_fkey" FOREIGN KEY ("vehicle_id") REFERENCES "public"."Vehicle"("id") ON DELETE CASCADE;
 
 
 
@@ -1026,6 +1366,26 @@ CREATE POLICY "Auth Driver can insert own Driver Documents" ON "public"."Driver_
 
 
 
+CREATE POLICY "Auth Driver can insert own Vehicle" ON "public"."Vehicle" FOR INSERT TO "authenticated" WITH CHECK ((("owner_driver_id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
+   FROM (("public"."Driver" "d"
+     JOIN "public"."User" "u" ON (("u"."id" = "d"."id")))
+     JOIN "public"."User_Account_Status" "uas" ON (("uas"."user_id" = "u"."id")))
+  WHERE (("d"."id" = "auth"."uid"()) AND ("u"."active_role" = 'DRIVER'::"public"."USER_ROLES") AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS")))) AND ("current_driver_id" IS NULL) AND ("vehicle_manufacturer" IS NULL) AND ("vehicle_model" IS NULL) AND ("vehicle_color" IS NULL) AND ("pending_plate_number" IS NULL) AND ("pending_vehicle_color" IS NULL)));
+
+
+
+CREATE POLICY "Auth Driver can resubmit own Verification status" ON "public"."Driver_Verification" FOR UPDATE TO "authenticated" USING ((("driver_id" = "auth"."uid"()) AND ("verification_status" = 'REJECTED'::"public"."VERIFICATION_STATUS") AND (EXISTS ( SELECT 1
+   FROM (("public"."Driver" "d"
+     JOIN "public"."User" "u" ON (("u"."id" = "d"."id")))
+     JOIN "public"."User_Account_Status" "uas" ON (("uas"."user_id" = "u"."id")))
+  WHERE (("d"."id" = "auth"."uid"()) AND ("u"."active_role" = 'DRIVER'::"public"."USER_ROLES") AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS")))))) WITH CHECK ((("driver_id" = "auth"."uid"()) AND ("verification_status" = 'PENDING'::"public"."VERIFICATION_STATUS") AND (EXISTS ( SELECT 1
+   FROM (("public"."Driver" "d"
+     JOIN "public"."User" "u" ON (("u"."id" = "d"."id")))
+     JOIN "public"."User_Account_Status" "uas" ON (("uas"."user_id" = "u"."id")))
+  WHERE (("d"."id" = "auth"."uid"()) AND ("u"."active_role" = 'DRIVER'::"public"."USER_ROLES") AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS"))))));
+
+
+
 CREATE POLICY "Auth Staff can insert Driver verification audits" ON "public"."Driver_Verification_Audit" FOR INSERT TO "authenticated" WITH CHECK ((EXISTS ( SELECT 1
    FROM "public"."STAFF"
   WHERE (("STAFF"."staff_id" = "auth"."uid"()) AND ("STAFF"."active_status" = true) AND ("STAFF"."role" = ANY (ARRAY['STAFF'::"public"."STAFF_ROLES", 'SUPER_ADMIN'::"public"."STAFF_ROLES"]))))));
@@ -1035,6 +1395,18 @@ CREATE POLICY "Auth Staff can insert Driver verification audits" ON "public"."Dr
 CREATE POLICY "Auth Staff can update verification_status" ON "public"."Driver_Verification" FOR UPDATE TO "authenticated" USING ((EXISTS ( SELECT 1
    FROM "public"."STAFF"
   WHERE (("STAFF"."staff_id" = "auth"."uid"()) AND ("STAFF"."active_status" = true) AND ("STAFF"."role" = ANY (ARRAY['STAFF'::"public"."STAFF_ROLES", 'SUPER_ADMIN'::"public"."STAFF_ROLES"])))))) WITH CHECK ((EXISTS ( SELECT 1
+   FROM "public"."STAFF"
+  WHERE (("STAFF"."staff_id" = "auth"."uid"()) AND ("STAFF"."active_status" = true) AND ("STAFF"."role" = ANY (ARRAY['STAFF'::"public"."STAFF_ROLES", 'SUPER_ADMIN'::"public"."STAFF_ROLES"]))))));
+
+
+
+CREATE POLICY "Auth Staff only can delete verification issues" ON "public"."Verification_Issues" FOR DELETE TO "authenticated" USING ((EXISTS ( SELECT 1
+   FROM "public"."STAFF"
+  WHERE (("STAFF"."staff_id" = "auth"."uid"()) AND ("STAFF"."active_status" = true) AND ("STAFF"."role" = ANY (ARRAY['STAFF'::"public"."STAFF_ROLES", 'SUPER_ADMIN'::"public"."STAFF_ROLES"]))))));
+
+
+
+CREATE POLICY "Auth Staff only can insert Vehicle Verification Auditi" ON "public"."Vehicle_Verification_Audit" FOR INSERT TO "authenticated" WITH CHECK ((EXISTS ( SELECT 1
    FROM "public"."STAFF"
   WHERE (("STAFF"."staff_id" = "auth"."uid"()) AND ("STAFF"."active_status" = true) AND ("STAFF"."role" = ANY (ARRAY['STAFF'::"public"."STAFF_ROLES", 'SUPER_ADMIN'::"public"."STAFF_ROLES"]))))));
 
@@ -1051,6 +1423,15 @@ CREATE POLICY "Auth User can insert into own Driver table" ON "public"."Driver" 
 CREATE POLICY "Auth User can insert into own User_Account_Status" ON "public"."User_Account_Status" FOR INSERT TO "authenticated" WITH CHECK ((("user_id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
    FROM "public"."User"
   WHERE ("User"."id" = "auth"."uid"()))) AND ("account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS")));
+
+
+
+CREATE POLICY "Auth Vehicle owner can insert Vehicle Verification" ON "public"."Vehicle_Verification" FOR INSERT TO "authenticated" WITH CHECK (((EXISTS ( SELECT 1
+   FROM ((("public"."Vehicle" "v"
+     JOIN "public"."Driver" "d" ON (("d"."id" = "v"."owner_driver_id")))
+     JOIN "public"."User" "u" ON (("u"."id" = "d"."id")))
+     JOIN "public"."User_Account_Status" "uas" ON (("uas"."user_id" = "u"."id")))
+  WHERE (("v"."id" = "Vehicle_Verification"."vehicle_id") AND ("v"."owner_driver_id" = "auth"."uid"()) AND ("u"."active_role" = 'DRIVER'::"public"."USER_ROLES") AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS")))) AND ("verification_status" = 'PENDING'::"public"."VERIFICATION_STATUS")));
 
 
 
@@ -1128,6 +1509,12 @@ CREATE POLICY "Auth shipper can update own shipper profile" ON "public"."Shipper
 
 
 
+CREATE POLICY "Auth staff only can insert in Verification Issues" ON "public"."Verification_Issues" FOR INSERT TO "authenticated" WITH CHECK ((EXISTS ( SELECT 1
+   FROM "public"."STAFF"
+  WHERE (("STAFF"."staff_id" = "auth"."uid"()) AND ("STAFF"."active_status" = true) AND ("STAFF"."role" = ANY (ARRAY['STAFF'::"public"."STAFF_ROLES", 'SUPER_ADMIN'::"public"."STAFF_ROLES"]))))));
+
+
+
 CREATE POLICY "Auth user can create own shipper profile" ON "public"."Shipper" FOR INSERT TO "authenticated" WITH CHECK ((("id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
    FROM ("public"."User" "u"
      JOIN "public"."User_Account_Status" "uas" ON (("uas"."user_id" = "u"."id")))
@@ -1172,10 +1559,84 @@ ALTER TABLE "public"."Driver_Verification" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."Driver_Verification_Audit" ENABLE ROW LEVEL SECURITY;
 
 
+CREATE POLICY "Owner Driver can insert Vehicle Documents" ON "public"."Vehicle_Documents" FOR INSERT TO "authenticated" WITH CHECK (((EXISTS ( SELECT 1
+   FROM ((("public"."Vehicle" "v"
+     JOIN "public"."Driver" "d" ON (("d"."id" = "v"."owner_driver_id")))
+     JOIN "public"."User" "u" ON (("u"."id" = "d"."id")))
+     JOIN "public"."User_Account_Status" "uas" ON (("uas"."user_id" = "u"."id")))
+  WHERE (("v"."id" = "Vehicle_Documents"."vehicle_id") AND ("v"."owner_driver_id" = "auth"."uid"()) AND ("u"."active_role" = 'DRIVER'::"public"."USER_ROLES") AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS")))) AND ("document_img_key" IS NULL) AND ("pending_document_img_key" IS NULL) AND ("pending_document_img_key_at" IS NULL) AND ("pending_expiry_date" IS NULL)));
+
+
+
+CREATE POLICY "Owner Driver or Staff can update vehicle" ON "public"."Vehicle" FOR UPDATE TO "authenticated" USING (((("owner_driver_id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
+   FROM (("public"."Driver" "d"
+     JOIN "public"."User" "u" ON (("u"."id" = "d"."id")))
+     JOIN "public"."User_Account_Status" "uas" ON (("uas"."user_id" = "u"."id")))
+  WHERE (("d"."id" = "auth"."uid"()) AND ("u"."active_role" = 'DRIVER'::"public"."USER_ROLES") AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS"))))) OR (EXISTS ( SELECT 1
+   FROM "public"."STAFF"
+  WHERE (("STAFF"."staff_id" = "auth"."uid"()) AND ("STAFF"."active_status" = true) AND ("STAFF"."role" = ANY (ARRAY['STAFF'::"public"."STAFF_ROLES", 'SUPER_ADMIN'::"public"."STAFF_ROLES"]))))))) WITH CHECK (((("owner_driver_id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
+   FROM (("public"."Driver" "d"
+     JOIN "public"."User" "u" ON (("u"."id" = "d"."id")))
+     JOIN "public"."User_Account_Status" "uas" ON (("uas"."user_id" = "u"."id")))
+  WHERE (("d"."id" = "auth"."uid"()) AND ("u"."active_role" = 'DRIVER'::"public"."USER_ROLES") AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS"))))) OR (EXISTS ( SELECT 1
+   FROM "public"."STAFF"
+  WHERE (("STAFF"."staff_id" = "auth"."uid"()) AND ("STAFF"."active_status" = true) AND ("STAFF"."role" = ANY (ARRAY['STAFF'::"public"."STAFF_ROLES", 'SUPER_ADMIN'::"public"."STAFF_ROLES"])))))));
+
+
+
+CREATE POLICY "Owner Driver or Staff can update vehicle photos" ON "public"."Vehicle_Photos" FOR UPDATE TO "authenticated" USING (((EXISTS ( SELECT 1
+   FROM ((("public"."Vehicle" "v"
+     JOIN "public"."Driver" "d" ON (("d"."id" = "v"."owner_driver_id")))
+     JOIN "public"."User" "u" ON (("u"."id" = "d"."id")))
+     JOIN "public"."User_Account_Status" "uas" ON (("uas"."user_id" = "u"."id")))
+  WHERE (("v"."id" = "Vehicle_Photos"."vehicle_id") AND ("v"."owner_driver_id" = "auth"."uid"()) AND ("u"."active_role" = 'DRIVER'::"public"."USER_ROLES") AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS")))) OR (EXISTS ( SELECT 1
+   FROM "public"."STAFF"
+  WHERE (("STAFF"."staff_id" = "auth"."uid"()) AND ("STAFF"."active_status" = true) AND ("STAFF"."role" = ANY (ARRAY['STAFF'::"public"."STAFF_ROLES", 'SUPER_ADMIN'::"public"."STAFF_ROLES"]))))))) WITH CHECK (((EXISTS ( SELECT 1
+   FROM ((("public"."Vehicle" "v"
+     JOIN "public"."Driver" "d" ON (("d"."id" = "v"."owner_driver_id")))
+     JOIN "public"."User" "u" ON (("u"."id" = "d"."id")))
+     JOIN "public"."User_Account_Status" "uas" ON (("uas"."user_id" = "u"."id")))
+  WHERE (("v"."id" = "Vehicle_Photos"."vehicle_id") AND ("v"."owner_driver_id" = "auth"."uid"()) AND ("u"."active_role" = 'DRIVER'::"public"."USER_ROLES") AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS")))) OR (EXISTS ( SELECT 1
+   FROM "public"."STAFF"
+  WHERE (("STAFF"."staff_id" = "auth"."uid"()) AND ("STAFF"."active_status" = true) AND ("STAFF"."role" = ANY (ARRAY['STAFF'::"public"."STAFF_ROLES", 'SUPER_ADMIN'::"public"."STAFF_ROLES"])))))));
+
+
+
+CREATE POLICY "Owner can resubmit rejected vehicle verification" ON "public"."Vehicle_Verification" FOR UPDATE TO "authenticated" USING ((("verification_status" = 'REJECTED'::"public"."VERIFICATION_STATUS") AND (EXISTS ( SELECT 1
+   FROM ((("public"."Vehicle" "v"
+     JOIN "public"."Driver" "d" ON (("d"."id" = "v"."owner_driver_id")))
+     JOIN "public"."User" "u" ON (("u"."id" = "d"."id")))
+     JOIN "public"."User_Account_Status" "uas" ON (("uas"."user_id" = "u"."id")))
+  WHERE (("v"."id" = "Vehicle_Verification"."vehicle_id") AND ("v"."owner_driver_id" = "auth"."uid"()) AND ("u"."active_role" = 'DRIVER'::"public"."USER_ROLES") AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS")))))) WITH CHECK ((("verification_status" = 'PENDING'::"public"."VERIFICATION_STATUS") AND (EXISTS ( SELECT 1
+   FROM ((("public"."Vehicle" "v"
+     JOIN "public"."Driver" "d" ON (("d"."id" = "v"."owner_driver_id")))
+     JOIN "public"."User" "u" ON (("u"."id" = "d"."id")))
+     JOIN "public"."User_Account_Status" "uas" ON (("uas"."user_id" = "u"."id")))
+  WHERE (("v"."id" = "Vehicle_Verification"."vehicle_id") AND ("v"."owner_driver_id" = "auth"."uid"()) AND ("u"."active_role" = 'DRIVER'::"public"."USER_ROLES") AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS"))))));
+
+
+
+CREATE POLICY "Owner driver can insert own Vehicle Photos" ON "public"."Vehicle_Photos" FOR INSERT TO "authenticated" WITH CHECK (((EXISTS ( SELECT 1
+   FROM ((("public"."Vehicle" "v"
+     JOIN "public"."Driver" "d" ON (("d"."id" = "v"."owner_driver_id")))
+     JOIN "public"."User" "u" ON (("u"."id" = "d"."id")))
+     JOIN "public"."User_Account_Status" "uas" ON (("uas"."user_id" = "u"."id")))
+  WHERE (("v"."id" = "Vehicle_Photos"."vehicle_id") AND ("v"."owner_driver_id" = "auth"."uid"()) AND ("u"."active_role" = 'DRIVER'::"public"."USER_ROLES") AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS")))) AND ("vehicle_photos_keys" IS NULL) AND ("pending_vehicle_photos_keys" IS NULL)));
+
+
+
 ALTER TABLE "public"."STAFF" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."Shipper" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "Staff only can update vehicle verification" ON "public"."Vehicle_Verification" FOR UPDATE TO "authenticated" USING ((EXISTS ( SELECT 1
+   FROM "public"."STAFF"
+  WHERE (("STAFF"."staff_id" = "auth"."uid"()) AND ("STAFF"."active_status" = true) AND ("STAFF"."role" = ANY (ARRAY['STAFF'::"public"."STAFF_ROLES", 'SUPER_ADMIN'::"public"."STAFF_ROLES"])))))) WITH CHECK ((EXISTS ( SELECT 1
+   FROM "public"."STAFF"
+  WHERE (("STAFF"."staff_id" = "auth"."uid"()) AND ("STAFF"."active_status" = true) AND ("STAFF"."role" = ANY (ARRAY['STAFF'::"public"."STAFF_ROLES", 'SUPER_ADMIN'::"public"."STAFF_ROLES"]))))));
+
 
 
 ALTER TABLE "public"."User" ENABLE ROW LEVEL SECURITY;
@@ -1188,6 +1649,24 @@ ALTER TABLE "public"."User_Account_Status_Audit" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."Vehicle" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "Vehicle owner or Staff can update Vehicle Documents" ON "public"."Vehicle_Documents" FOR UPDATE TO "authenticated" USING (((EXISTS ( SELECT 1
+   FROM ((("public"."Vehicle" "v"
+     JOIN "public"."Driver" "d" ON (("d"."id" = "v"."owner_driver_id")))
+     JOIN "public"."User" "u" ON (("u"."id" = "d"."id")))
+     JOIN "public"."User_Account_Status" "uas" ON (("uas"."user_id" = "u"."id")))
+  WHERE (("v"."id" = "Vehicle_Documents"."vehicle_id") AND ("v"."owner_driver_id" = "auth"."uid"()) AND ("u"."active_role" = 'DRIVER'::"public"."USER_ROLES") AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS")))) OR (EXISTS ( SELECT 1
+   FROM "public"."STAFF"
+  WHERE (("STAFF"."staff_id" = "auth"."uid"()) AND ("STAFF"."active_status" = true) AND ("STAFF"."role" = ANY (ARRAY['STAFF'::"public"."STAFF_ROLES", 'SUPER_ADMIN'::"public"."STAFF_ROLES"]))))))) WITH CHECK (((EXISTS ( SELECT 1
+   FROM ((("public"."Vehicle" "v"
+     JOIN "public"."Driver" "d" ON (("d"."id" = "v"."owner_driver_id")))
+     JOIN "public"."User" "u" ON (("u"."id" = "d"."id")))
+     JOIN "public"."User_Account_Status" "uas" ON (("uas"."user_id" = "u"."id")))
+  WHERE (("v"."id" = "Vehicle_Documents"."vehicle_id") AND ("v"."owner_driver_id" = "auth"."uid"()) AND ("u"."active_role" = 'DRIVER'::"public"."USER_ROLES") AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS")))) OR (EXISTS ( SELECT 1
+   FROM "public"."STAFF"
+  WHERE (("STAFF"."staff_id" = "auth"."uid"()) AND ("STAFF"."active_status" = true) AND ("STAFF"."role" = ANY (ARRAY['STAFF'::"public"."STAFF_ROLES", 'SUPER_ADMIN'::"public"."STAFF_ROLES"])))))));
+
 
 
 ALTER TABLE "public"."Vehicle_Documents" ENABLE ROW LEVEL SECURITY;
@@ -1230,15 +1709,93 @@ GRANT ALL ON FUNCTION "public"."enforce_timestamp_columns"() TO "service_role";
 
 
 
+GRANT ALL ON FUNCTION "public"."enforce_vehicle_documents_update_fields"() TO "anon";
+GRANT ALL ON FUNCTION "public"."enforce_vehicle_documents_update_fields"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."enforce_vehicle_documents_update_fields"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."enforce_vehicle_photos_update_fields"() TO "anon";
+GRANT ALL ON FUNCTION "public"."enforce_vehicle_photos_update_fields"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."enforce_vehicle_photos_update_fields"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."enforce_vehicle_update_fields"() TO "anon";
+GRANT ALL ON FUNCTION "public"."enforce_vehicle_update_fields"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."enforce_vehicle_update_fields"() TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."Driver" TO "anon";
-GRANT ALL ON TABLE "public"."Driver" TO "authenticated";
+GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."Driver" TO "authenticated";
 GRANT ALL ON TABLE "public"."Driver" TO "service_role";
 
 
 
+GRANT UPDATE("firstname") ON TABLE "public"."Driver" TO "authenticated";
+
+
+
+GRANT UPDATE("lastname") ON TABLE "public"."Driver" TO "authenticated";
+
+
+
+GRANT UPDATE("birthday") ON TABLE "public"."Driver" TO "authenticated";
+
+
+
+GRANT UPDATE("driver_img_key") ON TABLE "public"."Driver" TO "authenticated";
+
+
+
+GRANT UPDATE("online_status") ON TABLE "public"."Driver" TO "authenticated";
+
+
+
+GRANT UPDATE("pending_driver_img_key") ON TABLE "public"."Driver" TO "authenticated";
+
+
+
+GRANT UPDATE("pending_driver_img_key_at") ON TABLE "public"."Driver" TO "authenticated";
+
+
+
 GRANT ALL ON TABLE "public"."Driver_Documents" TO "anon";
-GRANT ALL ON TABLE "public"."Driver_Documents" TO "authenticated";
+GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."Driver_Documents" TO "authenticated";
 GRANT ALL ON TABLE "public"."Driver_Documents" TO "service_role";
+
+
+
+GRANT UPDATE("document_number") ON TABLE "public"."Driver_Documents" TO "authenticated";
+
+
+
+GRANT UPDATE("document_img_key") ON TABLE "public"."Driver_Documents" TO "authenticated";
+
+
+
+GRANT UPDATE("document_type") ON TABLE "public"."Driver_Documents" TO "authenticated";
+
+
+
+GRANT UPDATE("expiry_date") ON TABLE "public"."Driver_Documents" TO "authenticated";
+
+
+
+GRANT UPDATE("pending_document_img_key") ON TABLE "public"."Driver_Documents" TO "authenticated";
+
+
+
+GRANT UPDATE("pending_document_img_key_at") ON TABLE "public"."Driver_Documents" TO "authenticated";
+
+
+
+GRANT UPDATE("license_class") ON TABLE "public"."Driver_Documents" TO "authenticated";
+
+
+
+GRANT UPDATE("pending_expiry_date") ON TABLE "public"."Driver_Documents" TO "authenticated";
 
 
 
@@ -1295,20 +1852,96 @@ GRANT ALL ON TABLE "public"."User_Account_Status_Audit" TO "service_role";
 
 
 GRANT ALL ON TABLE "public"."Vehicle" TO "anon";
-GRANT ALL ON TABLE "public"."Vehicle" TO "authenticated";
+GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."Vehicle" TO "authenticated";
 GRANT ALL ON TABLE "public"."Vehicle" TO "service_role";
 
 
 
+GRANT UPDATE("current_driver_id") ON TABLE "public"."Vehicle" TO "authenticated";
+
+
+
+GRANT UPDATE("plate_number") ON TABLE "public"."Vehicle" TO "authenticated";
+
+
+
+GRANT UPDATE("vehicle_type") ON TABLE "public"."Vehicle" TO "authenticated";
+
+
+
+GRANT UPDATE("vehicle_capacity") ON TABLE "public"."Vehicle" TO "authenticated";
+
+
+
+GRANT UPDATE("vehicle_manufacturer") ON TABLE "public"."Vehicle" TO "authenticated";
+
+
+
+GRANT UPDATE("vehicle_model") ON TABLE "public"."Vehicle" TO "authenticated";
+
+
+
+GRANT UPDATE("vehicle_color") ON TABLE "public"."Vehicle" TO "authenticated";
+
+
+
+GRANT UPDATE("vehicle_year") ON TABLE "public"."Vehicle" TO "authenticated";
+
+
+
+GRANT UPDATE("pending_plate_number") ON TABLE "public"."Vehicle" TO "authenticated";
+
+
+
+GRANT UPDATE("pending_vehicle_color") ON TABLE "public"."Vehicle" TO "authenticated";
+
+
+
 GRANT ALL ON TABLE "public"."Vehicle_Documents" TO "anon";
-GRANT ALL ON TABLE "public"."Vehicle_Documents" TO "authenticated";
+GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."Vehicle_Documents" TO "authenticated";
 GRANT ALL ON TABLE "public"."Vehicle_Documents" TO "service_role";
 
 
 
+GRANT UPDATE("document_type") ON TABLE "public"."Vehicle_Documents" TO "authenticated";
+
+
+
+GRANT UPDATE("document_number") ON TABLE "public"."Vehicle_Documents" TO "authenticated";
+
+
+
+GRANT UPDATE("document_img_key") ON TABLE "public"."Vehicle_Documents" TO "authenticated";
+
+
+
+GRANT UPDATE("expiry_date") ON TABLE "public"."Vehicle_Documents" TO "authenticated";
+
+
+
+GRANT UPDATE("pending_document_img_key") ON TABLE "public"."Vehicle_Documents" TO "authenticated";
+
+
+
+GRANT UPDATE("pending_document_img_key_at") ON TABLE "public"."Vehicle_Documents" TO "authenticated";
+
+
+
+GRANT UPDATE("pending_expiry_date") ON TABLE "public"."Vehicle_Documents" TO "authenticated";
+
+
+
 GRANT ALL ON TABLE "public"."Vehicle_Photos" TO "anon";
-GRANT ALL ON TABLE "public"."Vehicle_Photos" TO "authenticated";
+GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."Vehicle_Photos" TO "authenticated";
 GRANT ALL ON TABLE "public"."Vehicle_Photos" TO "service_role";
+
+
+
+GRANT UPDATE("vehicle_photos_keys") ON TABLE "public"."Vehicle_Photos" TO "authenticated";
+
+
+
+GRANT UPDATE("pending_vehicle_photos_keys") ON TABLE "public"."Vehicle_Photos" TO "authenticated";
 
 
 
