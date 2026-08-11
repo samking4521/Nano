@@ -6,7 +6,7 @@ export type OnboardingStackParamList = {
     countryCode: string | null,
     callingCode: string | null,
   };
-  MerchantInfo: {
+  ShipperInfo: {
      mobileNo: string | null,
     email: string | null,
     country: string | null,
@@ -22,7 +22,5 @@ export type OnboardingStackParamList = {
   };
   IdentityVerification: undefined;
   OwnershipStatus: undefined;
-  VehicleInfo: undefined;
-  PaymentInfo: undefined;
-  SubmitScreen: undefined
+  SubmitScreen: undefined;
 }

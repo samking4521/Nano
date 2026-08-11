@@ -1,7 +1,7 @@
-import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View } from 'react-native'
-import { useRef, useState } from 'react'
+import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { useMemo, useRef, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { AntDesign, Feather, MaterialCommunityIcons, SimpleLineIcons } from '@expo/vector-icons'
+import { AntDesign, Feather, FontAwesome, MaterialCommunityIcons, SimpleLineIcons } from '@expo/vector-icons'
 import ProgressLevel from './components/progressLevel'
 import { Colors } from '../../constants/colors'
 import { useNavigation } from '@react-navigation/native'
@@ -9,6 +9,9 @@ import { IdentityVerificationNavigationProp } from '../../Navigation/OnboardingN
 import { driverStorage } from '../../localStorage/driverStorage'
 import BottomSheet from '@gorhom/bottom-sheet'
 import PhotoBottomSheet, { photoTypeData } from './components/PhotoBottomSheet'
+import DatePicker from 'react-native-date-picker'
+import { formatDate } from '../../utils/formatDate'
+import LicenseClassModal from './components/licenseClassModal'
 
 
 type inputFocusType = "nin" | "license";
@@ -18,12 +21,19 @@ export default function IdentityVerification() {
     const [nin, setNin] = useState(() => driverStorage.getString("nin") ?? "");
     const [ninImage, setNinImage] = useState(() => driverStorage.getString("ninImage") ?? "");
     const [driverLicenseNumber, setDriverLicenseNumber] = useState(() => driverStorage.getString("driverLicenseNo") ?? "");
+    const [driverLicenseClass, setDriverLicenseClass] = useState(() => driverStorage.getString("driverLicenseClass") ?? "e.g Class G");
+    const [showLicenseClassModal, setShowLicenseClassModal] = useState(false);
     const [driverLicenseImage, setDriverLicenseImage] = useState(() => driverStorage.getString("driverLicensePhoto") ?? "");
     const [inputFocus, setInputFocus] = useState<inputFocusType | null>(null);
     const [photoType, setPhotoType] = useState<photoTypeData>(null);
-
+    const [open, setOpen] = useState(false)
+    const [licenseExpiryDate, setLicenseExpiryDate] = useState<Date>(() => {
+        const licenseExpiryDateString = driverStorage.getString("licenseExpiryDate");
+        console.log("licenseExpiryDate string", licenseExpiryDateString);
+        return licenseExpiryDateString ? new Date(licenseExpiryDateString) : new Date();
+    });
+    const [datePicked, setDatePicked] = useState(false);
     const [clickedContinue, setClickedContinue] = useState(false);
-
     const navigation = useNavigation<IdentityVerificationNavigationProp>();
     const DATA_LEVEL = useRef(2);
     const DETAILS_LEVEL = DATA_LEVEL.current
@@ -33,6 +43,8 @@ export default function IdentityVerification() {
     const goToPreviousScreen = () => {
         navigation.goBack()
     }
+
+    const driverLocalStorageLicenseExpiryDate = driverStorage.getString("licenseExpiryDate");
 
 
     console.log("type: ", photoType)
@@ -51,8 +63,13 @@ export default function IdentityVerification() {
     const nin_length_err = clickedContinue && nin.length > 0 && nin.length < 11;
     const nin_image_empty = clickedContinue && !ninImage;
     const license_empty = clickedContinue && driverLicenseNumber.length === 0;
+    const license_class_empty = clickedContinue && driverLicenseClass.length === 0;
     const license_length_err = clickedContinue && driverLicenseNumber.length > 0 && driverLicenseNumber.length < 11;
     const license_image_empty = clickedContinue && !driverLicenseImage;
+    const licenseExpiryDate_err = clickedContinue && (!datePicked && !driverLocalStorageLicenseExpiryDate);
+
+
+
 
 
     const deleteNinImage = () => {
@@ -63,33 +80,40 @@ export default function IdentityVerification() {
         setDriverLicenseImage("");
     }
 
-
-    const continueToOwnershipStatus = ()=>{
-        setClickedContinue(true);
-              
-                const hasErrors = [
-                   
-                    nin.length === 0,
-                    nin.length > 0 && nin.length < 11,
-                    !ninImage,
-                    driverLicenseNumber.length === 0,
-                    driverLicenseNumber.length > 0 && driverLicenseNumber.length < 11,
-                   !driverLicenseImage
-                ].some(Boolean);
-        
-                if (hasErrors) return;
-               
-                driverStorage.set("nin", nin);
-                driverStorage.set("ninImage", ninImage);
-                driverStorage.set("driverLicenseNo", driverLicenseNumber);
-                driverStorage.set("driverLicensePhoto", driverLicenseImage);
-               
-                 console.log("navigates")
-        
-                navigation.navigate("OwnershipStatus");
+    const selectLicenseClass = ()=>{
+         setShowLicenseClassModal(true);
     }
-   
-   
+
+
+    const continueToOwnershipStatus = () => {
+        setClickedContinue(true);
+
+        const hasErrors = [
+
+            nin.length === 0,
+            nin.length > 0 && nin.length < 11,
+            !ninImage,
+            driverLicenseNumber.length === 0,
+            driverLicenseClass.length === 0,
+            driverLicenseNumber.length > 0 && driverLicenseNumber.length < 11,
+            !driverLicenseImage,
+            (!datePicked && !driverLocalStorageLicenseExpiryDate)
+
+        ].some(Boolean);
+
+        if (hasErrors) return;
+
+        driverStorage.set("nin", nin);
+        driverStorage.set("ninImage", ninImage);
+        driverStorage.set("driverLicenseNo", driverLicenseNumber);
+        driverStorage.set("driverLicenseClass", driverLicenseClass);
+        driverStorage.set("driverLicensePhoto", driverLicenseImage);
+        driverStorage.set("licenseExpiryDate", licenseExpiryDate.toISOString());
+
+        navigation.navigate("OwnershipStatus");
+    }
+
+
     return (
         <SafeAreaView style={styles.container}>
             <KeyboardAvoidingView
@@ -141,14 +165,14 @@ export default function IdentityVerification() {
                     </View>
 
                     <View>
-                        <View  style={styles.pictureNinCont}>
+                        <View style={styles.pictureNinCont}>
                             <View style={styles.pictureNinHeader}>
                                 <View style={styles.ninIcon}>
                                     <SimpleLineIcons name="picture" size={16} color={Colors.text.black} />
                                 </View>
                                 <View>
                                     <Text style={{ ...styles.mobileLabel, marginBottom: 5 }}>Picture of NIN</Text>
-                                  
+
                                 </View>
                                 {ninImage ? <Pressable onPress={deleteNinImage} style={styles.editBtn}>
                                     <MaterialCommunityIcons name="delete-outline" size={22} color={Colors.text.gray} />
@@ -156,11 +180,11 @@ export default function IdentityVerification() {
                                 </Pressable> : <View style={{ ...styles.editBtn, backgroundColor: undefined }} />}
                             </View>
                             <View>
-                                {ninImage ? <Image style={styles.ninImageStyle} source={{ uri: ninImage }} /> : <Pressable style={{flex: 1}} onPress={showNinBottomSheet}>
-                                                                        <View  style={styles.addNinIcon}>
-                                                                                <AntDesign name="plus" size={24} color={Colors.text.black} />
-                                                                            </View>
-                                                                        </Pressable>
+                                {ninImage ? <Image style={styles.ninImageStyle} source={{ uri: ninImage }} /> : <Pressable style={{ flex: 1 }} onPress={showNinBottomSheet}>
+                                    <View style={styles.addNinIcon}>
+                                        <AntDesign name="plus" size={24} color={Colors.text.black} />
+                                    </View>
+                                </Pressable>
                                 }
                             </View>
 
@@ -193,6 +217,45 @@ export default function IdentityVerification() {
                         </View>}
                     </View>
 
+                    <View style={styles.infoCont}>
+                        <Text style={styles.mobileLabel}>Driver License Class</Text>
+                        <Pressable onPress={selectLicenseClass} style={{ ...styles.inputBoxCont, justifyContent: "center", paddingHorizontal: 10, borderColor: Colors.borderColor }}>
+                            <Text>{driverLicenseClass}</Text>
+                        </Pressable>
+                        {(license_class_empty) && <View style={styles.errorBox}>
+                            <Text style={styles.errorText}>{license_empty && "License class cannot be empty"}</Text>
+                        </View>}
+                    </View>
+
+
+                    <View style={styles.infoCont}>
+                        <Text style={styles.mobileLabel}>Driver License Expiry Date</Text>
+                        <TouchableOpacity onPress={() => setOpen(true)} style={{ ...styles.inputBoxCont, flexDirection: "row", alignItems: "center", borderColor: licenseExpiryDate_err ? Colors.error : Colors.borderColor, paddingHorizontal: 10 }}>
+                            <Text style={{ marginRight: "auto", fontSize: 14, fontWeight: "500", color: Colors.text.gray }}>{(driverLocalStorageLicenseExpiryDate || datePicked) ? formatDate(licenseExpiryDate) : "Enter license expiry date"}</Text>
+                            <FontAwesome name="calendar" size={22} color={Colors.primary} />
+                            {
+                                open && <DatePicker
+                                    modal
+                                    mode="date"
+                                    open={open}
+                                    date={licenseExpiryDate}
+                                    onConfirm={(date) => {
+                                        setOpen(false)
+                                        setLicenseExpiryDate(date)
+                                        setDatePicked(true)
+                                    }}
+                                    onCancel={() => {
+                                        setOpen(false)
+                                    }}
+                                />
+                            }
+                        </TouchableOpacity>
+
+                        {(licenseExpiryDate_err) && <View style={styles.errorBox}>
+                            <Text style={styles.errorText}>{licenseExpiryDate_err && "License expiry cannot be empty"}</Text>
+                        </View>}
+                    </View>
+
                     <View>
                         <View style={styles.pictureNinCont}>
                             <View style={styles.pictureNinHeader}>
@@ -208,12 +271,12 @@ export default function IdentityVerification() {
                                 </Pressable> : <View style={{ ...styles.editBtn, backgroundColor: undefined }} />}
                             </View>
                             <View>
-                                {driverLicenseImage ? <Image style={styles.ninImageStyle} source={{ uri: driverLicenseImage }} /> : 
-                                <Pressable style={{flex: 1}} onPress={showLicenseBottomSheet}>
-                                                                        <View  style={styles.addNinIcon}>
-                                                                                <AntDesign name="plus" size={24} color={Colors.text.black} />
-                                                                            </View>
-                                                                        </Pressable>
+                                {driverLicenseImage ? <Image style={styles.ninImageStyle} source={{ uri: driverLicenseImage }} /> :
+                                    <Pressable style={{ flex: 1 }} onPress={showLicenseBottomSheet}>
+                                        <View style={styles.addNinIcon}>
+                                            <AntDesign name="plus" size={24} color={Colors.text.black} />
+                                        </View>
+                                    </Pressable>
                                 }
                             </View>
 
@@ -226,15 +289,16 @@ export default function IdentityVerification() {
                         </View>}
                     </View>
 
-                      
+
                 </ScrollView>
-                <View style={{paddingVertical: 5}}>
-                                                         <Pressable onPress={continueToOwnershipStatus} style={styles.nextBtn}>
-                                                           <Text style={styles.continueText}>Continue</Text>
-                                                       </Pressable>
-                                                   </View>
+                <View style={{ paddingVertical: 5 }}>
+                    <Pressable onPress={continueToOwnershipStatus} style={styles.nextBtn}>
+                        <Text style={styles.continueText}>Continue</Text>
+                    </Pressable>
+                </View>
             </KeyboardAvoidingView>
-            <PhotoBottomSheet bottomSheetRef={bottomSheetRef} photoType={photoType} setPhotoType={setPhotoType} setNinImage={setNinImage} setDriverLicense={setDriverLicenseImage}/>
+            <PhotoBottomSheet bottomSheetRef={bottomSheetRef} photoType={photoType} setPhotoType={setPhotoType} setNinImage={setNinImage} setDriverLicense={setDriverLicenseImage} />
+            <LicenseClassModal showLicenseClassModal={showLicenseClassModal} setShowLicenseClassModal={setShowLicenseClassModal} setDriverLicenseClass={setDriverLicenseClass}/>
         </SafeAreaView>
     )
 }
@@ -243,11 +307,11 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: Colors.background,
-         paddingTop: Platform.OS == "ios" ? null : StatusBar.currentHeight,
+        paddingTop: Platform.OS == "ios" ? null : StatusBar.currentHeight,
     },
     body: {
         flex: 1,
-       
+
     },
     backBtn: {
         width: 45,
@@ -389,7 +453,7 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         fontSize: 16
     },
-     nextBtn: {
+    nextBtn: {
         height: 50,
         borderRadius: 50,
         justifyContent: "center",

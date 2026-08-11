@@ -6,26 +6,25 @@ import { Feather } from '@expo/vector-icons'
 import { useNavigation } from '@react-navigation/native'
 import { useAuthStore } from '../../Authentication/store/authStore'
 import { driverStorage } from '../../localStorage/driverStorage'
-import { shipperStorage } from '../../localStorage/shipperStorage'
 import { RoleSelectionNavigationProp } from '../../Navigation/OnboardingNavigation'
 import { NativeStackScreenProps } from '@react-navigation/native-stack'
 import { OnboardingStackParamList } from '../onboarding'
 import { signUpDataStorage } from '../../localStorage/signUpDataStorage'
 import { AuthNavigationProp } from '../../Navigation/RootNavigation'
-import { onboardStorage } from '../../localStorage/onboardStorage'
 import { supabase } from '../../lib/supabase'
+import { shipperStorage } from '../../localStorage/shipperStorage'
 
 type Props = NativeStackScreenProps<
     OnboardingStackParamList,
     "RoleSelection"
 >;
 
-type roleType = "Merchant" | "Driver"
+type roleType = "Shipper" | "Driver"
 
 const role_desc_img = require("../../../assets/onboarding/role_desc_img.png");
 
 export default function RoleSelection({ route }: Props) {
-    const [role, setRole] = useState<roleType>("Merchant");
+    const [role, setRole] = useState<roleType>("Shipper");
     const userId = useAuthStore((store) => store.session?.user.id);
     const navigation = useNavigation<RoleSelectionNavigationProp>();
     const replaceNavigation = useNavigation<AuthNavigationProp>();
@@ -38,19 +37,18 @@ export default function RoleSelection({ route }: Props) {
     const callingCode = route.params?.callingCode ?? signUpDataStorage.getString("callingCode");
 
 
+    
+
     const storeSignUpData = () => {
         const localSignUpDataId = signUpDataStorage.getString("id");
         console.log("localSignUpDataId: ", localSignUpDataId);
-        const localNumber = callingCode && mobileNo?.startsWith(callingCode)
-            ? mobileNo.slice(callingCode.length)
-            : mobileNo;
-
+       
         if (localSignUpDataId) {
             if (localSignUpDataId !== userId) {
                 console.log("not equals user");
                 signUpDataStorage.clearAll();
                 signUpDataStorage.set("id", userId ?? "");
-                signUpDataStorage.set("mobileNo", localNumber ?? "");
+                signUpDataStorage.set("mobileNo", mobileNo ?? "");
                 signUpDataStorage.set("email", email ?? "");
                 signUpDataStorage.set("country", country ?? "");
                 signUpDataStorage.set("countryCode", countryCode ?? "");
@@ -59,7 +57,7 @@ export default function RoleSelection({ route }: Props) {
 
         } else {
             signUpDataStorage.set("id", userId ?? "");
-            signUpDataStorage.set("mobileNo", localNumber ?? "");
+            signUpDataStorage.set("mobileNo", mobileNo ?? "");
             signUpDataStorage.set("email", email ?? "");
             signUpDataStorage.set("country", country ?? "");
             signUpDataStorage.set("countryCode", countryCode ?? "");
@@ -98,12 +96,10 @@ export default function RoleSelection({ route }: Props) {
                 {
                     text: "Leave",
                     onPress: () => {
+                        shipperStorage.clearAll();
                         driverStorage.clearAll();
-                        // shipperStorage.clearAll();
-                        onboardStorage.clearAll();
                         signUpDataStorage.clearAll();
                         signOut();
-                        setSession(null);
                         replaceNavigation.replace("Auth");
                     },
                 }
@@ -121,30 +117,10 @@ export default function RoleSelection({ route }: Props) {
             return;
         }
 
-        const localNumber = callingCode && mobileNo?.startsWith(callingCode)
-            ? mobileNo.slice(callingCode.length)
-            : mobileNo;
 
-        if (role === "Merchant") {
-
-            // const localShipperStorageId = shipperStorage.getString("id");
-            // console.log("localShipperStorageId: ", localShipperStorageId);
-            // if (localShipperStorageId) {
-            //     if (localShipperStorageId !== `shipper-${userId}`) {
-            //         console.log("not equals shipper");
-            //         shipperStorage.clearAll();
-            //         shipperStorage.set("id", `shipper-${userId}`);
-            //         shipperStorage.set("role", role);
-            //     }
-
-            // } else {
-            //     shipperStorage.set("id", `shipper-${userId}`);
-            //     shipperStorage.set("role", role);
-            // }
-
-
-            navigation.navigate("MerchantInfo", {
-                mobileNo: localNumber ?? "",
+        if (role === "Shipper") {
+            navigation.navigate("ShipperInfo", {
+                mobileNo: mobileNo ?? "",
                 email: email ?? "",
                 country: country ?? "",
                 countryCode: countryCode ?? "",
@@ -168,7 +144,7 @@ export default function RoleSelection({ route }: Props) {
             }
 
             navigation.navigate("DriverInfo", {
-                mobileNo: localNumber ?? "",
+                mobileNo: mobileNo ?? "",
                 email: email ?? "",
                 country: country ?? "",
                 countryCode: countryCode ?? "",
@@ -195,11 +171,11 @@ export default function RoleSelection({ route }: Props) {
 
                 <View>
 
-                    <Pressable onPress={() => setRole("Merchant")} style={{ ...styles.borderBox, borderColor: role == "Merchant" ? Colors.primary : Colors.borderColor, borderWidth: role == "Merchant" ? 2 : 1 }}>
+                    <Pressable onPress={() => setRole("Shipper")} style={{ ...styles.borderBox, borderColor: role == "Shipper" ? Colors.primary : Colors.borderColor, borderWidth: role == "Shipper" ? 2 : 1 }}>
                         <View>
                             <View style={styles.roleContainer}>
-                                <View style={{ ...styles.roleRadioButton, backgroundColor: role == "Merchant" ? Colors.primary : undefined, borderColor: role == "Merchant" ? undefined : Colors.borderColor, borderWidth: role == "Merchant" ? 0 : 1 }}>
-                                    <View style={{ ...styles.roleButtonInnerCont, backgroundColor: role == "Merchant" ? Colors.text.white : undefined }}></View>
+                                <View style={{ ...styles.roleRadioButton, backgroundColor: role == "Shipper" ? Colors.primary : undefined, borderColor: role == "Shipper" ? undefined : Colors.borderColor, borderWidth: role == "Shipper" ? 0 : 1 }}>
+                                    <View style={{ ...styles.roleButtonInnerCont, backgroundColor: role == "Shipper" ? Colors.text.white : undefined }}></View>
                                 </View>
 
                                 <View>

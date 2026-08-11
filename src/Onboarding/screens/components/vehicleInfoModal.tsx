@@ -1,17 +1,19 @@
-import { FlatList, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View } from 'react-native'
+import { FlatList, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { useRef, useState } from 'react'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
-import { AntDesign, MaterialCommunityIcons, MaterialIcons, SimpleLineIcons } from '@expo/vector-icons'
+import { AntDesign, FontAwesome, MaterialCommunityIcons, MaterialIcons, SimpleLineIcons } from '@expo/vector-icons'
 
 import { Colors } from '../../../constants/colors'
 import { useNavigation } from '@react-navigation/native'
 import BottomSheet from '@gorhom/bottom-sheet'
 import { driverStorage } from '../../../localStorage/driverStorage'
-import { VehicleInfoNavigationProp } from '../../../Navigation/OnboardingNavigation'
 import VehicleInfoBottomSheet from './vehicleInfoBottomSheet'
 import { vehicleType } from '../../../../assets/truck_data'
 import PhotoBottomSheet, { photoTypeData } from './PhotoBottomSheet'
 import { ownershipType } from '../ownershipStatus'
+import DatePicker from 'react-native-date-picker'
+import { formatDate } from '../../../utils/formatDate'
+import { OwnershipStatusNavigationProp } from '../../../Navigation/OnboardingNavigation'
 
 export type vehiclePhotoType = {
     id: string,
@@ -19,7 +21,7 @@ export type vehiclePhotoType = {
 }
 
 
-type inputFocusType = "vehicle_capacity" | "plate_number";
+type inputFocusType = "vehicle_capacity" | "plate_number" | "vehicle_year";
 
 type vehicleModalProps = {
     setOpenVehicleModal: React.Dispatch<React.SetStateAction<boolean>>;
@@ -28,6 +30,8 @@ type vehicleModalProps = {
 
 export default function VehicleInfoModal({ setOpenVehicleModal, setOwnershipStatus }: vehicleModalProps) {
     const [plateNumber, setPlateNumber] = useState(() => driverStorage.getString("plateNumber") ?? "");
+    const [vehicleYear, setVehicleYear] = useState(() => driverStorage.getString("vehicleYear") ?? "");
+
     const [inputFocus, setInputFocus] = useState<inputFocusType | null>(null);
     const [vehicleCapacity, setVehicleCapacity] = useState(() => driverStorage.getString("vehicleCapacity") ?? "");
     const [vehiclePhotos, setVehiclePhotos] = useState<vehiclePhotoType[]>(() => {
@@ -37,6 +41,13 @@ export default function VehicleInfoModal({ setOpenVehicleModal, setOwnershipStat
         return JSON.parse(vehicleArrString);
 
     });
+    const [open, setOpen] = useState(false)
+    const [vehicleRegExpiryDate, setVehicleRegExpiryDate] = useState<Date>(() => {
+        const vehicleRegExpiryDateString = driverStorage.getString("vehicleRegExpiryDate");
+        console.log("vehicleRegExpiryDateString string", vehicleRegExpiryDateString);
+        return vehicleRegExpiryDateString ? new Date(vehicleRegExpiryDateString) : new Date();
+    });
+    const [datePicked, setDatePicked] = useState(false);
 
     const [photoType, setPhotoType] = useState<photoTypeData>(null);
 
@@ -45,13 +56,11 @@ export default function VehicleInfoModal({ setOpenVehicleModal, setOwnershipStat
 
     const [vehicleType, setVehicleType] = useState<vehicleType>(() => (driverStorage.getString("vehicleType") ?? "") as vehicleType);
 
-    const [editVehiclePhotos, setEditVehiclePhotos] = useState(false);
     const [isVehicleBottomSheetOpen, setIsVehicleBottomSheetOpen] = useState<boolean>(false);
-    const navigation = useNavigation<VehicleInfoNavigationProp>();
     const [clickedContinue, setClickedContinue] = useState(false);
     const bottomSheetRef = useRef<BottomSheet>(null);
     const vehicleTypeBottomSheetRef = useRef<BottomSheet>(null);
-
+    const navigation = useNavigation<OwnershipStatusNavigationProp>();
 
     const selectVehicleType = (truck: vehicleType) => {
         setVehicleType(truck);
@@ -74,14 +83,19 @@ export default function VehicleInfoModal({ setOpenVehicleModal, setOwnershipStat
     }
 
 
+    const driverLocalStorageVehicleRegExpiryDate = driverStorage.getString("vehicleRegExpiryDate");
+
 
 
     const vehicle_type_err = clickedContinue && !vehicleType;
     const vehicle_plate_no_err = clickedContinue && plateNumber.trim() == "";
+    const vehicle_year_err = clickedContinue && vehicleYear.trim() == "";
     const vehicle_capacity_err = clickedContinue && vehicleCapacity.trim() == "";
     const vehicle_photo_empty_err = clickedContinue && vehiclePhotos.length == 0;
     const vehicle_photo_length_err = clickedContinue && (vehiclePhotos.length < 2 || vehiclePhotos.length > 2);
     const driver_license_photo_err = clickedContinue && !vehicleLicensePhoto;
+    const vehicleRegExpiryDate_err = clickedContinue && (!datePicked && !driverLocalStorageVehicleRegExpiryDate);
+
 
 
 
@@ -91,6 +105,7 @@ export default function VehicleInfoModal({ setOpenVehicleModal, setOwnershipStat
         const hasErrors = [
             !vehicleType,
             plateNumber.trim() == "",
+            vehicleYear.trim() == "",
             vehicleCapacity.trim() == "",
             vehiclePhotos.length == 0,
             (vehiclePhotos.length < 2 || vehiclePhotos.length > 2),
@@ -102,10 +117,13 @@ export default function VehicleInfoModal({ setOpenVehicleModal, setOwnershipStat
         driverStorage.set("vehicleType", vehicleType ?? "");
         driverStorage.set("vehicleCapacity", vehicleCapacity);
         driverStorage.set("plateNumber", plateNumber);
+        driverStorage.set("vehicleYear", vehicleYear ?? "");
         driverStorage.set("vehiclePhotos", JSON.stringify(vehiclePhotos));
         driverStorage.set("vehicleLicensePhoto", vehicleLicensePhoto);
         driverStorage.set("isVehicleInfoComplete", true);
-        driverStorage.set("ownershipStatus", "OWNER")
+        driverStorage.set("ownershipStatus", "OWNER");
+        driverStorage.set("vehicleRegExpiryDate", vehicleRegExpiryDate.toISOString());
+
 
         setOwnershipStatus("OWNER");
         setOpenVehicleModal(false);
@@ -120,218 +138,271 @@ export default function VehicleInfoModal({ setOpenVehicleModal, setOwnershipStat
     }
 
 
-    const closeVehicleModal = ()=>{
-         setOpenVehicleModal(false);
-        if( driverStorage.getString("vehicleType") && 
-        driverStorage.getString("vehicleCapacity") && 
-        driverStorage.getString("plateNumber") && 
-        driverStorage.getString("vehiclePhotos") && 
-        driverStorage.getString("vehicleLicensePhoto") 
-        
-           ){
-           
-             return;
+    const closeVehicleModal = () => {
+        setOpenVehicleModal(false);
+        if (driverStorage.getString("vehicleType") &&
+            driverStorage.getString("vehicleCapacity") &&
+            driverStorage.getString("plateNumber") &&
+            driverStorage.getString("vehicleYear") &&
+            driverStorage.getString("vehiclePhotos") &&
+            driverStorage.getString("vehicleLicensePhoto") &&
+            driverStorage.getString("vehicleRegExpiryDate")
+
+        ) {
+
+            return;
         }
-       setVehicleType("");
-       setVehicleCapacity("");
-       setPlateNumber("");
-       setVehiclePhotos([]);
-       setVehicleLicensePhoto("");
-       setClickedContinue(false);
-       
+        setVehicleType("");
+        setVehicleCapacity("");
+        setPlateNumber("");
+        setVehicleYear("");
+        setVehiclePhotos([]);
+        setVehicleLicensePhoto("");
+        setVehicleRegExpiryDate(new Date());
+        setClickedContinue(false);
+
     }
 
 
     return (
         <Modal visible={true} onRequestClose={closeVehicleModal} animationType="slide" transparent={false} presentationStyle="fullScreen" >
             <SafeAreaProvider>
-            <SafeAreaView style={styles.container}>
-                <KeyboardAvoidingView
-                    style={{ flex: 1, paddingHorizontal: 15, }}
-                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                <SafeAreaView style={styles.container}>
+                    <KeyboardAvoidingView
+                        style={{ flex: 1, paddingHorizontal: 15, }}
+                        behavior={Platform.OS === "ios" ? "padding" : "height"}
 
-                >
-                    <View style={styles.headerContainer}>
-                        <Pressable onPress={closeVehicleModal} style={styles.backBtn}>
-                            <AntDesign name="close" size={20} color={Colors.text.black} />
-                        </Pressable>
-
-
-                    </View>
-
-
-                    <ScrollView
-                        contentContainerStyle={{ flexGrow: 1 }}
-                        keyboardShouldPersistTaps="never"
-                        showsVerticalScrollIndicator={false}
-                        style={styles.body}>
-
-
-                        <View style={{ marginTop: 20 }}>
-                            <Text style={styles.headerText}>Vehicle Details</Text>
-                        </View>
-
-
-                        <View style={styles.infoCont}>
-                            <Text style={styles.mobileLabel}>Vehicle Type</Text>
-                            <Text style={styles.headerDesc}>Select the type of truck you use for deliveries.</Text>
-                            <Pressable onPress={openBottomSheet} style={{ ...styles.mobileTextInputContainer, borderColor: vehicle_type_err ? Colors.error : Colors.borderColor }}>
-                                <Text style={styles.placeHolderText}>{vehicleType ? vehicleType : "Select Truck"}</Text>
-                                <MaterialIcons name="keyboard-arrow-down" size={24} color={Colors.text.gray} />
+                    >
+                        <View style={styles.headerContainer}>
+                            <Pressable onPress={closeVehicleModal} style={styles.backBtn}>
+                                <AntDesign name="close" size={20} color={Colors.text.black} />
                             </Pressable>
-                            {vehicle_type_err && <View style={styles.errorBox}>
-                                <Text style={styles.errorText}>Select your vehicle type</Text>
-                            </View>}
+
+
                         </View>
 
 
+                        <ScrollView
+                            contentContainerStyle={{ flexGrow: 1 }}
+                            keyboardShouldPersistTaps="never"
+                            showsVerticalScrollIndicator={false}
+                            style={styles.body}>
 
-                        <View style={styles.infoCont}>
-                            <Text style={styles.mobileLabel}>Vehicle Load Capacity (tonnes)</Text>
-                            <View style={{ ...styles.mobileTextInputContainer, borderColor: vehicle_capacity_err ? Colors.error : inputFocus == "vehicle_capacity" ? Colors.primary : Colors.borderColor }}>
-                                <TextInput
-                                    value={vehicleCapacity}
-                                    onChangeText={setVehicleCapacity}
 
-                                    placeholder='2 tonnes'
-                                    keyboardType="decimal-pad"
-                                    style={styles.mobileTextInput}
-                                    onFocus={() => setInputFocus("vehicle_capacity")}
-                                    onBlur={() => setInputFocus(null)}
-
-                                />
+                            <View style={{ marginTop: 20 }}>
+                                <Text style={styles.headerText}>Vehicle Details</Text>
                             </View>
-                            {vehicle_capacity_err && <View style={styles.errorBox}>
-                                <Text style={styles.errorText}>Enter vehicle load capacity</Text>
-                            </View>}
-                        </View>
 
 
-
-                        <View style={styles.infoCont}>
-                            <Text style={styles.mobileLabel}>Vehicle Plate Number</Text>
-                            <View style={{ ...styles.mobileTextInputContainer, borderColor: vehicle_plate_no_err ? Colors.error : inputFocus == "plate_number" ? Colors.primary : Colors.borderColor }}>
-                                <TextInput
-                                    value={plateNumber}
-                                    onChangeText={setPlateNumber}
-
-                                    placeholder='LND-123AB'
-                                    keyboardType="default"
-                                    style={styles.mobileTextInput}
-                                    onFocus={() => setInputFocus("plate_number")}
-                                    onBlur={() => setInputFocus(null)}
-
-                                />
+                            <View style={styles.infoCont}>
+                                <Text style={styles.mobileLabel}>Vehicle Type</Text>
+                                <Text style={styles.headerDesc}>Select the type of truck you use for deliveries.</Text>
+                                <Pressable onPress={openBottomSheet} style={{ ...styles.mobileTextInputContainer, borderColor: vehicle_type_err ? Colors.error : Colors.borderColor }}>
+                                    <Text style={styles.placeHolderText}>{vehicleType ? vehicleType : "Select Truck"}</Text>
+                                    <MaterialIcons name="keyboard-arrow-down" size={24} color={Colors.text.gray} />
+                                </Pressable>
+                                {vehicle_type_err && <View style={styles.errorBox}>
+                                    <Text style={styles.errorText}>Select your vehicle type</Text>
+                                </View>}
                             </View>
-                            {vehicle_plate_no_err && <View style={styles.errorBox}>
-                                <Text style={styles.errorText}>Plate number cannot be empty</Text>
-                            </View>}
-                        </View>
 
 
 
-                        <View>
-                            <View  style={{ ...styles.pictureVehicleCont, borderColor: (vehicle_photo_empty_err || vehicle_photo_length_err) ? Colors.error : Colors.borderColor }}>
-                                <View style={{ ...styles.pictureVehicleHeader, borderBottomColor: (vehicle_photo_empty_err || vehicle_photo_length_err) ? Colors.error : Colors.borderColor }}>
-                                    <View style={styles.vehicleIcon}>
-                                        <SimpleLineIcons name="picture" size={16} color={Colors.text.black} />
+                            <View style={styles.infoCont}>
+                                <Text style={styles.mobileLabel}>Vehicle Load Capacity (tonnes)</Text>
+                                <View style={{ ...styles.mobileTextInputContainer, borderColor: vehicle_capacity_err ? Colors.error : inputFocus == "vehicle_capacity" ? Colors.primary : Colors.borderColor }}>
+                                    <TextInput
+                                        value={vehicleCapacity}
+                                        onChangeText={setVehicleCapacity}
+                                        placeholder='2 tonnes'
+                                        keyboardType="decimal-pad"
+                                        style={styles.mobileTextInput}
+                                        onFocus={() => setInputFocus("vehicle_capacity")}
+                                        onBlur={() => setInputFocus(null)}
+
+                                    />
+                                </View>
+                                {vehicle_capacity_err && <View style={styles.errorBox}>
+                                    <Text style={styles.errorText}>Enter vehicle load capacity</Text>
+                                </View>}
+                            </View>
+
+
+                           
+
+                            <View style={styles.infoCont}>
+                                <Text style={styles.mobileLabel}>Vehicle Plate Number</Text>
+                                <View style={{ ...styles.mobileTextInputContainer, borderColor: vehicle_plate_no_err ? Colors.error : inputFocus == "plate_number" ? Colors.primary : Colors.borderColor }}>
+                                    <TextInput
+                                        value={plateNumber}
+                                        onChangeText={setPlateNumber}
+
+                                        placeholder='LND-123AB'
+                                        keyboardType="default"
+                                        style={styles.mobileTextInput}
+                                        onFocus={() => setInputFocus("plate_number")}
+                                        onBlur={() => setInputFocus(null)}
+
+                                    />
+                                </View>
+                                {vehicle_plate_no_err && <View style={styles.errorBox}>
+                                    <Text style={styles.errorText}>Plate number cannot be empty</Text>
+                                </View>}
+                            </View>
+
+                             <View style={styles.infoCont}>
+                                <Text style={styles.mobileLabel}>Vehicle Production Year</Text>
+                                <View style={{ ...styles.mobileTextInputContainer, borderColor: vehicle_year_err ? Colors.error : inputFocus == "vehicle_year" ? Colors.primary : Colors.borderColor }}>
+                                    <TextInput
+                                        value={vehicleYear}
+                                        onChangeText={setVehicleYear}
+
+                                        placeholder='e.g 2008'
+                                        keyboardType="numeric"
+                                        style={styles.mobileTextInput}
+                                        onFocus={() => setInputFocus("vehicle_year")}
+                                        onBlur={() => setInputFocus(null)}
+
+                                    />
+                                </View>
+                                {vehicle_year_err && <View style={styles.errorBox}>
+                                    <Text style={styles.errorText}>Vehicle year cannot be empty</Text>
+                                </View>}
+                            </View>
+
+
+
+
+                            <View>
+                                <View style={{ ...styles.pictureVehicleCont, borderColor: (vehicle_photo_empty_err || vehicle_photo_length_err) ? Colors.error : Colors.borderColor }}>
+                                    <View style={{ ...styles.pictureVehicleHeader, borderBottomColor: (vehicle_photo_empty_err || vehicle_photo_length_err) ? Colors.error : Colors.borderColor }}>
+                                        <View style={styles.vehicleIcon}>
+                                            <SimpleLineIcons name="picture" size={16} color={Colors.text.black} />
+                                        </View>
+                                        <View>
+                                            <Text style={{ ...styles.mobileLabel, marginBottom: 5 }}>Vehicle Photo</Text>
+                                        </View>
+                                        {vehiclePhotos.length == 1 ? <Pressable onPress={selectVehiclePhotos} style={styles.editBtn}>
+                                            <AntDesign name="plus" size={18} color={Colors.text.black} />
+                                        </Pressable> : <View style={{ ...styles.editBtn, backgroundColor: undefined }} />}
                                     </View>
                                     <View>
-                                        <Text style={{ ...styles.mobileLabel, marginBottom: 5 }}>Vehicle Photo</Text>
-                                    </View>
-                                    {vehiclePhotos.length == 1 ? <Pressable onPress={selectVehiclePhotos} style={styles.editBtn}> 
-                                                    <AntDesign name="plus" size={18} color={Colors.text.black} />
-                                    </Pressable> : <View style={{ ...styles.editBtn, backgroundColor: undefined }} />}
-                                </View>
-                                <View>
-                                    {
-                                        vehiclePhotos.length >= 1 ? <FlatList
-                                            scrollEnabled={false}
-                                            data={vehiclePhotos}
-                                            contentContainerStyle={{ columnGap: "10%" }}
-                                            numColumns={2}
-                                            renderItem={({ item }: { item: vehiclePhotoType }) => (
-                                                <View style={{ width: "50%", height: 150, padding: 10 }}>
+                                        {
+                                            vehiclePhotos.length >= 1 ? <FlatList
+                                                scrollEnabled={false}
+                                                data={vehiclePhotos}
+                                                contentContainerStyle={{ columnGap: "10%" }}
+                                                numColumns={2}
+                                                renderItem={({ item }: { item: vehiclePhotoType }) => (
+                                                    <View style={{ width: "50%", height: 150, padding: 10 }}>
 
-                                                    <View style={{ flex: 1, }}>
-                                                        <Image source={{ uri: item.uri }} style={{ width: "100%", height: "100%", borderRadius: 10 }} resizeMode="cover" />
-                                                        {vehiclePhotos.length >= 1 && <Pressable onPress={() => deleteVehiclePhotos(item)} style={{ ...styles.bottomSheetCloseIconCont, backgroundColor: "rgba(0,0,0,0.8)", position: "absolute", top: 15, left: 10 }}>
-                                                            <AntDesign name="close" size={16} color={Colors.text.white} />
-                                                        </Pressable>}
+                                                        <View style={{ flex: 1, }}>
+                                                            <Image source={{ uri: item.uri }} style={{ width: "100%", height: "100%", borderRadius: 10 }} resizeMode="cover" />
+                                                            {vehiclePhotos.length >= 1 && <Pressable onPress={() => deleteVehiclePhotos(item)} style={{ ...styles.bottomSheetCloseIconCont, backgroundColor: "rgba(0,0,0,0.8)", position: "absolute", top: 15, left: 10 }}>
+                                                                <AntDesign name="close" size={16} color={Colors.text.white} />
+                                                            </Pressable>}
+                                                        </View>
+
                                                     </View>
+                                                )}
 
-                                                </View>
-                                            )}
+                                            /> :
+                                                <Pressable style={{ flex: 1 }} onPress={selectVehiclePhotos}>
+                                                    <View style={styles.addVehicleIcon}>
+                                                        <AntDesign name="plus" size={24} color={Colors.text.black} />
+                                                    </View>
+                                                </Pressable>
 
-                                        /> :
-                                       <Pressable style={{flex: 1}} onPress={selectVehiclePhotos}>
-                                        <View  style={styles.addVehicleIcon}>
-                                                <AntDesign name="plus" size={24} color={Colors.text.black} />
-                                            </View>
-                                        </Pressable>
-                                            
-                                    }
+                                        }
+                                    </View>
                                 </View>
+
+                                {(vehicle_photo_empty_err || vehicle_photo_length_err) && <View style={styles.errorBox}>
+                                    <Text style={styles.errorText}>{vehicle_photo_empty_err ? "Enter your vehicle photos" : "Upload 2 photos of your vehicle, Front and Side View"}</Text>
+                                </View>}
+
                             </View>
 
-                            {(vehicle_photo_empty_err || vehicle_photo_length_err) && <View style={styles.errorBox}>
-                                <Text style={styles.errorText}>{vehicle_photo_empty_err ? "Enter your vehicle photos" : "Upload 2 photos of your vehicle, Front and Side View"}</Text>
-                            </View>}
 
-                        </View>
+                            <View style={styles.infoCont}>
+                                <Text style={styles.mobileLabel}>Vehicle Reg Expiry Date</Text>
+                                <TouchableOpacity onPress={() => setOpen(true)} style={{ ...styles.mobileTextInputContainer, flexDirection: "row", alignItems: "center", borderColor: vehicleRegExpiryDate_err ? Colors.error : Colors.borderColor, paddingHorizontal: 10 }}>
+                                    <Text style={{ marginRight: "auto", fontSize: 14, fontWeight: "500", color: Colors.text.gray }}>{(driverLocalStorageVehicleRegExpiryDate || datePicked) ? formatDate(vehicleRegExpiryDate) : "Enter vehicle reg expiry date"}</Text>
+                                    <FontAwesome name="calendar" size={22} color={Colors.primary} />
+                                    {
+                                        open && <DatePicker
+                                            modal
+                                            mode="date"
+                                            open={open}
+                                            date={vehicleRegExpiryDate}
+                                            onConfirm={(date) => {
+                                                setOpen(false)
+                                                setVehicleRegExpiryDate(date)
+                                                setDatePicked(true)
+                                            }}
+                                            onCancel={() => {
+                                                setOpen(false)
+                                            }}
+                                        />
+                                    }
+                                </TouchableOpacity>
 
+                                {(vehicleRegExpiryDate_err) && <View style={styles.errorBox}>
+                                    <Text style={styles.errorText}>{vehicleRegExpiryDate_err && "Vehicle Reg expiry date cannot be empty"}</Text>
+                                </View>}
+                            </View>
 
-                        <View>
-                            <View style={{ ...styles.pictureVehicleCont, borderColor: driver_license_photo_err ? Colors.error : Colors.borderColor }}>
-                                <View style={{ ...styles.pictureVehicleHeader, borderBottomColor: driver_license_photo_err ? Colors.error : Colors.borderColor }}>
-                                    <View style={styles.vehicleIcon}>
-                                        <SimpleLineIcons name="picture" size={16} color={Colors.text.black} />
+                            <View>
+                                <View style={{ ...styles.pictureVehicleCont, borderColor: driver_license_photo_err ? Colors.error : Colors.borderColor }}>
+                                    <View style={{ ...styles.pictureVehicleHeader, borderBottomColor: driver_license_photo_err ? Colors.error : Colors.borderColor }}>
+                                        <View style={styles.vehicleIcon}>
+                                            <SimpleLineIcons name="picture" size={16} color={Colors.text.black} />
+                                        </View>
+                                        <View>
+                                            <Text style={{ ...styles.mobileLabel, marginBottom: 5 }}>Vehicle Registration Certificate</Text>
+                                        </View>
+                                        {vehicleLicensePhoto ? <Pressable onPress={() => setVehicleLicensePhoto("")} style={styles.editBtn}>
+                                            <MaterialCommunityIcons name="delete-outline" size={22} color={Colors.text.gray} />
+                                        </Pressable> : <View style={{ ...styles.editBtn, backgroundColor: undefined }} />
+                                        }
                                     </View>
                                     <View>
-                                        <Text style={{ ...styles.mobileLabel, marginBottom: 5 }}>Vehicle License Photo</Text>
-                                    </View>
-                                    {vehicleLicensePhoto ? <Pressable onPress={() => setVehicleLicensePhoto("")} style={styles.editBtn}>
-                                        <MaterialCommunityIcons name="delete-outline" size={22} color={Colors.text.gray} />
-                                    </Pressable> : <View style={{ ...styles.editBtn, backgroundColor: undefined }} />
-                                    }
-                                </View>
-                                <View>
-                                    {vehicleLicensePhoto ? <View>
-                                        <Image source={{ uri: vehicleLicensePhoto }} style={{ width: "100%", height: 150, borderBottomLeftRadius: 10, borderBottomRightRadius: 10}} resizeMode="cover" />
-                                    </View> : <Pressable style={{flex: 1}} onPress={selectVehicleLicensePhoto}>
-                                        <View  style={styles.addVehicleIcon}>
+                                        {vehicleLicensePhoto ? <View>
+                                            <Image source={{ uri: vehicleLicensePhoto }} style={{ width: "100%", height: 150, borderBottomLeftRadius: 10, borderBottomRightRadius: 10 }} resizeMode="cover" />
+                                        </View> : <Pressable style={{ flex: 1 }} onPress={selectVehicleLicensePhoto}>
+                                            <View style={styles.addVehicleIcon}>
                                                 <AntDesign name="plus" size={24} color={Colors.text.black} />
                                             </View>
                                         </Pressable>}
+                                    </View>
+
                                 </View>
+                                {driver_license_photo_err && <View style={styles.errorBox}>
+                                    <Text style={styles.errorText}>Upload photo of your driver license</Text>
+                                </View>}
 
                             </View>
-                            {driver_license_photo_err && <View style={styles.errorBox}>
-                                <Text style={styles.errorText}>Upload photo of your driver license</Text>
-                            </View>}
 
+
+
+
+
+
+                        </ScrollView>
+                        <View style={{ paddingVertical: 10 }}>
+                            <Pressable onPress={continueToSubmitScreen} style={styles.nextBtn}>
+                                <Text style={styles.continueText}>Continue</Text>
+                            </Pressable>
                         </View>
 
 
+                    </KeyboardAvoidingView>
 
-                       
+                    <VehicleInfoBottomSheet vehicleTypeBottomSheetRef={vehicleTypeBottomSheetRef} isVehicleBottomSheetOpen={isVehicleBottomSheetOpen} setIsVehicleBottomSheetOpen={setIsVehicleBottomSheetOpen} selectVehicleType={selectVehicleType} parentVehicleType={vehicleType} />
+                    <PhotoBottomSheet bottomSheetRef={bottomSheetRef} photoType={photoType} setPhotoType={setPhotoType} setVehiclePhotos={setVehiclePhotos} setVehicleLicensePhoto={setVehicleLicensePhoto} />
 
-
-                    </ScrollView>
-                    <View style={{paddingVertical: 10}}>
-                          <Pressable onPress={continueToSubmitScreen} style={styles.nextBtn}>
-                            <Text style={styles.continueText}>Continue</Text>
-                        </Pressable>
-                    </View>
-                    
-
-                </KeyboardAvoidingView>
-
-                <VehicleInfoBottomSheet vehicleTypeBottomSheetRef={vehicleTypeBottomSheetRef} isVehicleBottomSheetOpen={isVehicleBottomSheetOpen} setIsVehicleBottomSheetOpen={setIsVehicleBottomSheetOpen} selectVehicleType={selectVehicleType} parentVehicleType={vehicleType} />
-                <PhotoBottomSheet bottomSheetRef={bottomSheetRef} photoType={photoType} setPhotoType={setPhotoType} setVehiclePhotos={setVehiclePhotos} setVehicleLicensePhoto={setVehicleLicensePhoto} />
-
-            </SafeAreaView>
-       </SafeAreaProvider>
+                </SafeAreaView>
+            </SafeAreaProvider>
         </Modal>
     )
 }
@@ -459,7 +530,7 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
         backgroundColor: Colors.primary,
-       
+
     },
     continueText: {
         color: Colors.text.white,

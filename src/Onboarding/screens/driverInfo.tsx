@@ -11,6 +11,10 @@ import { driverStorage } from '../../localStorage/driverStorage'
 import { DriverInfoNavigationProp, DriverInfoRouteProp } from '../../Navigation/OnboardingNavigation'
 import PhotoBottomSheet, { photoTypeData } from './components/PhotoBottomSheet'
 import BottomSheet from '@gorhom/bottom-sheet'
+import { formatDate } from '../../utils/formatDate'
+import { uniqueColumn } from './components/checkUniqueModal'
+import { supabase } from '../../lib/supabase'
+import { useAuthStore } from '../../Authentication/store/authStore'
 
 
 type Props = {
@@ -30,6 +34,7 @@ const countryPickerProps = {
 type inputFocusType = "mobile_number" | "email" | "first_name" | "last_name" | "birthday" | "nin";
 
 export default function DriverInfo({ route }: Props) {
+      const session = useAuthStore((store) => store.session);
     const { mobileNo: phone_number, email: emailVal, country: countryNameVal, countryCode: countryCodeVal, callingCode: callingCodeVal } = route.params;
     const [country, setCountry] = useState<Country | null>(() => {
         const jsonCountry = driverStorage.getString("country");
@@ -73,9 +78,8 @@ export default function DriverInfo({ route }: Props) {
 
     const callingCode = country?.callingCode[0] ?? "234";
     const countryCode = country?.cca2 ?? 'NG';
-    const countryName = typeof country?.name === 'string'
-        ? country.name
-        : country?.name?.common ?? 'Nigeria'
+   
+
 
     const onSelect = (country: Country) => {
         console.log("country: ", country);
@@ -83,33 +87,34 @@ export default function DriverInfo({ route }: Props) {
 
     }
 
-    const formatDate = (date: Date) => {
-        const day = date.getDate();
+    function stripCountryCode(fullPhone: string | null | undefined, callingCode: string | null | undefined) {
+        if (!fullPhone) return "";
+        if (!callingCode) return fullPhone;
+        return fullPhone.replace(`+${callingCode}`, '');
+    }
 
-        const getOrdinal = (n: number) => {
-            if (n > 3 && n < 21) return `${n}th`;
+    const formatNigerianPhone = (input: string, callingCode: string): string => {
+        let phone = input.trim().replace(/\s+/g, "");
 
-            switch (n % 10) {
-                case 1:
-                    return `${n}st`;
-                case 2:
-                    return `${n}nd`;
-                case 3:
-                    return `${n}rd`;
-                default:
-                    return `${n}th`;
-            }
-        };
+        // strip a leading + if present, we'll re-add it consistently
+        if (phone.startsWith("+")) {
+            phone = phone.slice(1);
+        }
 
-        const month = date.toLocaleString("en-US", {
-            month: "short",
-        });
+        // strip callingCode if already present
+        if (phone.startsWith(callingCode)) {
+            phone = phone.slice(callingCode.length);
+        }
 
-        const year = date.getFullYear();
+        // now strip a leading 0 (handles both "0907..." and "+2340907..." cases)
+        if (phone.startsWith("0")) {
+            phone = phone.slice(1);
+        }
 
-        return `${getOrdinal(day)} ${month}, ${year}`;
+        return `+${callingCode}${phone}`;
     };
 
+    
     const goToPreviousScreen = () => {
         navigation.goBack()
     }
@@ -154,9 +159,9 @@ export default function DriverInfo({ route }: Props) {
 
 
 
-    const continueToVehicleInfo = () => {
+    const continueToVehicleInfo = async () => {
         setClickedContinue(true);
-        const phone = phone_number || mobileNo;
+        const phone = phone_number || formatNigerianPhone(mobileNo, callingCode);
         const mail = emailVal || email;
         const isMailValid = isValidEmail(mail);
         const isAgeValid = isAtLeast18YearsOld(dob);
@@ -169,9 +174,6 @@ export default function DriverInfo({ route }: Props) {
             mail.length > 0 && !isMailValid,
             (!datePicked && !driverLocalStorageDob),
             datePicked && !isAgeValid,
-            // nin.length === 0,
-            // nin.length > 0 && nin.length < 11,
-            // !ninImage,
             !driverImage,
         ].some(Boolean);
 
@@ -186,17 +188,12 @@ export default function DriverInfo({ route }: Props) {
         driverStorage.set("lastname", lastname);
         driverStorage.set("mobileNo", phone);
         driverStorage.set("email", mail);
-        driverStorage.set("dob", dob.toISOString());
-        // driverStorage.set("nin", nin);
+        driverStorage.set("dob", dob.toISOString().slice(0, 10));
         driverStorage.set("driverImage", driverImage);
-        // driverStorage.set("ninImage", ninImage);
         driverStorage.set("country", countryObj);
-
 
         navigation.navigate("IdentityVerification");
     };
-
-
 
 
 
@@ -210,7 +207,7 @@ export default function DriverInfo({ route }: Props) {
     }
 
 
-
+    
 
     return (
         <SafeAreaView style={styles.container}>
@@ -312,15 +309,15 @@ export default function DriverInfo({ route }: Props) {
                             <View style={{ ...styles.mobileCodeCont, borderRightColor: mobile_no_err ? Colors.error : inputFocus == "mobile_number" ? Colors.primary : Colors.borderColor }}>
                                 <CountryPicker
                                     {...countryPickerProps}
-                                    countryCode={countryCodeVal as CountryCode ?? countryCode}
+                                    countryCode={countryCodeVal as CountryCode || countryCode}
                                     onSelect={onSelect}
 
                                 />
                             </View>
                             <View style={styles.mobileInputCont}>
-                                <Text style={styles.mobileCodeText}>+{callingCodeVal ?? callingCode}</Text>
+                                <Text style={styles.mobileCodeText}>+{callingCodeVal || callingCode}</Text>
                                 <TextInput
-                                    value={phone_number || mobileNo}
+                                    value={stripCountryCode(phone_number, callingCodeVal) || mobileNo}
                                     onChangeText={setMobileNo}
                                     placeholder='Enter number here'
                                     keyboardType="phone-pad"
@@ -393,7 +390,7 @@ export default function DriverInfo({ route }: Props) {
                 </ScrollView>
 
                     <View style={{paddingVertical: 5}}>
-                          <Pressable onPress={continueToVehicleInfo} style={styles.nextBtn}>
+                          <Pressable  onPress={continueToVehicleInfo} style={styles.nextBtn}>
                             <Text style={styles.continueText}>Continue</Text>
                         </Pressable>
                     </View>

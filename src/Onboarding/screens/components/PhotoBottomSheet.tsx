@@ -11,6 +11,7 @@ import LicenseDesc from './licenseDesc';
 import { vehiclePhotoType } from './vehicleInfoModal';
 import VehicleLicenseDesc from './vehicleLicenseDesc';
 import VehiclePhotoDesc from './vehiclePhotoDesc';
+import { CompressToLimit } from '../../../utils/imageCompressor';
 
 export type photoTypeData = "DriverPhoto" | "DriverLicense" | "NinPhoto" | "VehiclePhotos" | "VehicleLicensePhoto" | null;
 
@@ -68,18 +69,18 @@ function PhotoBottomSheet({ bottomSheetRef, photoType, setDriverImage, setPhotoT
 
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ['images'],
-            allowsMultipleSelection: photoType === "VehiclePhotos"? true : undefined,
+            allowsMultipleSelection: photoType === "VehiclePhotos" ? true : undefined,
             allowsEditing: photoType == "DriverPhoto" ? true : undefined,
             aspect: photoType == "DriverPhoto" ? [4, 3] : undefined,
             quality: 0.8,
         });
 
-        if(result.canceled){
+        if (result.canceled) {
             return null;
-        }else {
-            
-                return result.assets
-           
+        } else {
+
+            return result.assets
+
         }
 
     }
@@ -114,37 +115,59 @@ function PhotoBottomSheet({ bottomSheetRef, photoType, setDriverImage, setPhotoT
 
 
     const handleCamera = async () => {
-         closeBottomSheet();
+        closeBottomSheet();
         try {
             const image = await takePhoto();
 
             if (image) {
                 if (photoType == "DriverPhoto" && setDriverImage) {
+                    const compressedImage = await CompressToLimit(image.uri, {
+                        maxSizeBytes: 2 * 1024 * 1024,
+                    });
 
-                    setDriverImage(image.uri);
-                   
+                    console.log("compressed Image: ", compressedImage);
+                    setDriverImage(compressedImage.uri);
+
                 }
                 if (photoType == "NinPhoto" && setNinImage) {
+                         const compressedImage = await CompressToLimit(image.uri, {
+                        maxSizeBytes: 8 * 1024 * 1024,
+                    });
 
-                    setNinImage(image.uri);
-                    
+                    console.log("compressed Image: ", compressedImage);
+                    setNinImage(compressedImage.uri);
+
                 }
                 if (photoType == "DriverLicense" && setDriverLicense) {
+                    const compressedImage = await CompressToLimit(image.uri, {
+                        maxSizeBytes: 8 * 1024 * 1024,
+                    });
 
-                    setDriverLicense(image.uri);
-                    
+                    console.log("compressed Image: ", compressedImage);
+                    setDriverLicense(compressedImage.uri);
+
                 }
 
-                if(photoType == "VehiclePhotos" && setVehiclePhotos){
-                          const imgObj = {
-                            id : Crypto.randomUUID(),
-                            uri: image.uri
-                          }
-                       setVehiclePhotos((prev)=> [...prev, imgObj]);
+                if (photoType == "VehiclePhotos" && setVehiclePhotos) {
+                    const compressedImage = await CompressToLimit(image.uri, {
+                        maxSizeBytes: 2 * 1024 * 1024,
+                    });
+
+                    console.log("compressed Image: ", compressedImage);
+                    const imgObj = {
+                        id: Crypto.randomUUID(),
+                        uri: compressedImage.uri
+                    }
+                    setVehiclePhotos((prev) => [...prev, imgObj]);
                 }
-                if(photoType == "VehicleLicensePhoto" && setVehicleLicensePhoto){
-                      setVehicleLicensePhoto(image.uri);
-                      
+                if (photoType == "VehicleLicensePhoto" && setVehicleLicensePhoto) {
+                    const compressedImage = await CompressToLimit(image.uri, {
+                        maxSizeBytes: 8 * 1024 * 1024,
+                    });
+
+                    console.log("compressed Image: ", compressedImage);
+                    setVehicleLicensePhoto(compressedImage.uri);
+
                 }
 
             }
@@ -161,47 +184,75 @@ function PhotoBottomSheet({ bottomSheetRef, photoType, setDriverImage, setPhotoT
     };
 
     const handleGallery = async () => {
-       closeBottomSheet();
+        closeBottomSheet();
         try {
             const image = await pickImageFromGallery();
 
             if (image) {
                 if (photoType == "DriverPhoto" && setDriverImage) {
+                    const compressedImage = await CompressToLimit(image[0].uri, {
+                        maxSizeBytes: 2 * 1024 * 1024,
+                    });
 
-                    setDriverImage(image[0].uri);
-                   
+                    console.log("compressed Image: ", compressedImage);
+                    setDriverImage(compressedImage.uri);
+
                 }
-                 if (photoType == "NinPhoto" && setNinImage) {
+                if (photoType == "NinPhoto" && setNinImage) {
+ const compressedImage = await CompressToLimit(image[0].uri, {
+                        maxSizeBytes: 8 * 1024 * 1024,
+                    });
 
-                    setNinImage(image[0].uri);
-                    
+                    console.log("compressed Image: ", compressedImage);
+                    setNinImage(compressedImage.uri);
+
                 }
                 if (photoType == "DriverLicense" && setDriverLicense) {
-                    setDriverLicense(image[0].uri);
-                    
-                   
+                    const compressedImage = await CompressToLimit(image[0].uri, {
+                        maxSizeBytes: 8 * 1024 * 1024,
+                    });
+
+                    console.log("compressed Image: ", compressedImage);
+                    setDriverLicense(compressedImage.uri);
+
+
                 }
-                if(photoType === "VehiclePhotos" && setVehiclePhotos ){
-                    const idImgs = image.map((item) => ({
+                if (photoType === "VehiclePhotos" && setVehiclePhotos) {
+                    const compressedImageArr = await Promise.all(
+                        image.map(async (item) =>
+                            CompressToLimit(item.uri, {
+                                maxSizeBytes: 2 * 1024 * 1024,
+                            })
+                        )
+                    );
+
+                    console.log("compressed Images: ", compressedImageArr);
+                    const idImgs = compressedImageArr.map((compressedImage) => ({
                         id: Crypto.randomUUID(),
-                        uri: item.uri
+                        uri: compressedImage.uri
                     }));
                     setVehiclePhotos((prev) => [...prev, ...idImgs]);
-                   
+
                 }
-                if(photoType === "VehicleLicensePhoto" && setVehicleLicensePhoto){
-                    setVehicleLicensePhoto(image[0].uri)
-                    
+                if (photoType === "VehicleLicensePhoto" && setVehicleLicensePhoto) {
+                     const compressedImage = await CompressToLimit(image[0].uri, {
+                        maxSizeBytes: 8 * 1024 * 1024,
+                    });
+
+                    console.log("compressed Image: ", compressedImage);
+                    setVehicleLicensePhoto(compressedImage.uri)
+
                 }
 
             }
-            
+
         } catch (error) {
+            console.log("error mesage: ", error)
             Alert.alert(
                 'Gallery Unavailable',
                 'Unable to open the gallery. Please try again.',
             );
-           
+
             return null
 
         }
@@ -234,18 +285,18 @@ function PhotoBottomSheet({ bottomSheetRef, photoType, setDriverImage, setPhotoT
 
 
                 <View style={styles.bottomSheetContHeader}>
-                    <TouchableOpacity style={{alignSelf: "flex-end"}} onPress={closeBottomSheet}>
-                    <Text style={styles.closeText}>Close</Text>
-                </TouchableOpacity>
+                    <TouchableOpacity style={{ alignSelf: "flex-end" }} onPress={closeBottomSheet}>
+                        <Text style={styles.closeText}>Close</Text>
+                    </TouchableOpacity>
                 </View>
-                
+
                 <BottomSheetScrollView
                     style={styles.bottomSheetCont}
                     showsVerticalScrollIndicator={false}
 
                 >
                     <View style={styles.bottomSheetViewCont}>
-                        {photoType === "DriverPhoto" ? <PhotoDesc /> : photoType === "NinPhoto"? <NinDesc /> : photoType === "DriverLicense"? <LicenseDesc/> : photoType === "VehicleLicensePhoto"? <VehicleLicenseDesc/> : <VehiclePhotoDesc/>}
+                        {photoType === "DriverPhoto" ? <PhotoDesc /> : photoType === "NinPhoto" ? <NinDesc /> : photoType === "DriverLicense" ? <LicenseDesc /> : photoType === "VehicleLicensePhoto" ? <VehicleLicenseDesc /> : <VehiclePhotoDesc />}
 
                         <View style={{ paddingBottom: 50 }}>
                             <TouchableOpacity onPress={handleCamera} style={styles.takePhotoBtns}>
