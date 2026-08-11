@@ -25,11 +25,10 @@ export async function uploadToStorage(
         });
 
     if (error) {
-        console.log(`Upload to ${bucket} failed: ${error.message}`)
         throw new Error(`Upload to ${bucket} failed: ${error.message}`);
     }
 
-    console.log("Driver image uploaded successfully")
+    console.log(`Image uploaded successfully to ${bucket}`)
 
     return data.path;
 }
