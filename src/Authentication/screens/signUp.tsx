@@ -10,7 +10,7 @@ import CountryPicker, { Country } from 'react-native-country-picker-modal'
 import { useAuthStore } from '../store/authStore'
 import { SignUpScreenNavigationProp } from '../../Navigation/AuthUserNavigation'
 import { AuthNavigationProp } from '../../Navigation/RootNavigation'
-import { onboardStorage } from '../../localStorage/onboardStorage'
+import { USER_ROLES } from '../../constants/shared_user'
 
 const countryPickerProps = {
     withFilter: true,
@@ -59,7 +59,7 @@ export default function SignUp() {
             return;
         }
 
-        const phone_number = formatNigerianPhone(mobileNo);
+        const phone_number = formatNigerianPhone(mobileNo, callingCode);
         console.log("phone_number: ", phone_number);
         setLoading(true)
         const { data, error } = await supabase.auth.signInWithOtp({
@@ -78,9 +78,8 @@ export default function SignUp() {
         console.log("OTP sent successfully:", data);
 
         setLoading(false);
-        const formatedPhoneNumber = removePlus(phone_number);
         navigation.navigate("VerificationCode", {
-            mobileNo: formatedPhoneNumber,
+            mobileNo: phone_number,
             country: countryName,
             countryCode: countryCode,
             callingCode: callingCode
@@ -92,34 +91,28 @@ export default function SignUp() {
 
 
 
-    function removePlus(phone: string) {
-        return phone.replace(/^\+/, "");
-    }
 
-    const formatNigerianPhone = (input: string) => {
-        let phone = input.trim();
 
-        // remove spaces
-        phone = phone.replace(/\s+/g, "");
+    const formatNigerianPhone = (input: string, callingCode: string): string => {
+        let phone = input.trim().replace(/\s+/g, "");
 
-        // if starts with 0 → remove it
+        // strip a leading + if present, we'll re-add it consistently
+        if (phone.startsWith("+")) {
+            phone = phone.slice(1);
+        }
+
+        // strip callingCode if already present
+        if (phone.startsWith(callingCode)) {
+            phone = phone.slice(callingCode.length);
+        }
+
+        // now strip a leading 0 (handles both "0907..." and "+2340907..." cases)
         if (phone.startsWith("0")) {
             phone = phone.slice(1);
         }
 
-        // if already starts with callingCode → don't double add
-        if (phone.startsWith(callingCode)) {
-            return `+${phone}`;
-        }
-
-        // if already has +
-        if (phone.startsWith("+")) {
-            return phone;
-        }
-
-        // default case → add +callingCode
         return `+${callingCode}${phone}`;
-    }
+    };
 
     const goToPreviousScreen = () => {
         navigation.goBack()
@@ -164,20 +157,52 @@ export default function SignUp() {
 
             if (sessionError) throw sessionError;
 
+            console.log("session", sessionData?.user.id)
+            console.log("user logged in successfully")
 
-            setSession(sessionData.session);
+            const { data: select_user_data, error: select_user_data_err } = await supabase
+                .from("User")
+                .select("*")
+                .eq("id", sessionData?.user.id)
+                .maybeSingle();
 
-            console.log("Signed in:", sessionData.session?.user?.email);
-             onboardStorage.set("isOnBoardComplete", false);
+            if (select_user_data_err) {
+                console.log(`Error querying if User exists: ${select_user_data_err.message}`);
+                Alert.alert(
+                    "Connection Problem",
+                    "Please check your internet connection and try again."
+                );
+                return;
+            }
 
-            replaceNavigation.replace("Onboard" , {
-                 mobileNo: null,
-                email: sessionData.session?.user?.email || null,
-                country: null,
-                countryCode: null,
-                callingCode: null,
-            })
-
+            if (select_user_data) {
+                if (select_user_data.active_role === USER_ROLES.SHIPPER && select_user_data.has_shipper_profile) {
+                    setSession(sessionData.session);
+                    replaceNavigation.replace("Shipper");
+                }
+                else if (select_user_data.active_role === USER_ROLES.DRIVER && select_user_data.has_driver_profile) {
+                    setSession(sessionData.session);
+                    replaceNavigation.replace("Driver");
+                } else {
+                    setSession(sessionData.session);
+                    replaceNavigation.replace("Onboard", {
+                        mobileNo: null,
+                        email: sessionData.session?.user?.email || null,
+                        country: null,
+                        countryCode: null,
+                        callingCode: null,
+                    })
+                }
+            } else {
+                setSession(sessionData.session);
+                replaceNavigation.replace("Onboard", {
+                    mobileNo: null,
+                    email: sessionData.session?.user?.email || null,
+                    country: null,
+                    countryCode: null,
+                    callingCode: null,
+                })
+            }
 
         } catch (err) {
             console.error("Google sign-in failed:", err);
@@ -196,6 +221,8 @@ export default function SignUp() {
             setError(null);
         }
     }, [error, mobileNo])
+
+
 
 
     return (
@@ -275,6 +302,8 @@ export default function SignUp() {
                                 <Text style={styles.actionBtnText}>Continue with Google</Text>
                             </Pressable>
                         </View>
+
+
                     </View>
 
 

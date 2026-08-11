@@ -8,8 +8,8 @@ import { useNavigation } from '@react-navigation/native'
 import * as WebBrowser from "expo-web-browser";
 import { useAuthStore } from '../store/authStore'
 import { VerificationCodeNavigationProp, VerificationCodeRouteProp } from '../../Navigation/AuthUserNavigation'
-import { onboardStorage } from '../../localStorage/onboardStorage'
 import { AuthNavigationProp } from '../../Navigation/RootNavigation'
+import { USER_ROLES } from '../../constants/shared_user'
 
 
 type Props = {
@@ -86,12 +86,12 @@ export default function VerificationCode({ route }: Props) {
         if (loading) return;
         setLoading(true);
 
-        console.log("edit phonenumber : ", mobileNo);
+        const formattedPhoneNo = removePlus(mobileNo);
         const {
             data: { session },
             error,
         } = await supabase.auth.verifyOtp({
-            phone: mobileNo,
+            phone: formattedPhoneNo,
             token: otp,
             type: 'sms',
         })
@@ -108,19 +108,69 @@ export default function VerificationCode({ route }: Props) {
 
 
 
-        console.log("session", session)
+        console.log("session", session?.user.id)
         console.log("user logged in successfully")
-        onboardStorage.set("isOnBoardComplete", false);
-        setSession(session);
-        setLoading(false);
 
-        replaceNavigation.replace("Onboard", {
-            mobileNo: mobileNo,
-            email: null,
-            country: country,
-            countryCode: countryCode,
-            callingCode: callingCode,
-        })
+        const { data: select_user_data, error: select_user_data_err } = await supabase
+            .from("User")
+            .select("*")
+            .eq("id", session?.user.id)
+            .maybeSingle();
+
+        if (select_user_data_err) {
+            console.log(`Error querying if User exists: ${select_user_data_err.message}`);
+            Alert.alert(
+                "Connection Problem",
+                "Please check your internet connection and try again."
+            );
+            setLoading(false);
+            return
+        }
+
+        if (select_user_data) {
+            if (select_user_data.active_role === USER_ROLES.SHIPPER && select_user_data.has_shipper_profile) {
+                setSession(session);
+                setLoading(false);
+                replaceNavigation.replace("Shipper");
+
+            } else if (select_user_data.active_role === USER_ROLES.DRIVER && select_user_data.has_driver_profile) {
+                setSession(session);
+                setLoading(false);
+                replaceNavigation.replace("Driver");
+            }
+            else {
+                setSession(session);
+                setLoading(false);
+
+                replaceNavigation.replace("Onboard", {
+                    mobileNo: mobileNo,
+                    email: null,
+                    country: country,
+                    countryCode: countryCode,
+                    callingCode: callingCode,
+                })
+            }
+
+        } else {
+            setSession(session);
+            setLoading(false);
+
+            replaceNavigation.replace("Onboard", {
+                mobileNo: mobileNo,
+                email: null,
+                country: country,
+                countryCode: countryCode,
+                callingCode: callingCode,
+            })
+        }
+
+    }
+
+
+
+
+    function removePlus(phone: string) {
+        return phone.replace(/^\+/, "");
     }
 
 
@@ -207,7 +257,7 @@ export default function VerificationCode({ route }: Props) {
                     <View>
                         <View style={styles.headerLabel}>
                             <Text style={styles.headerText}>Enter Verification Code</Text>
-                            <Text style={styles.headerDesc}>Enter the 6-digit verification code sent to your phone at +{mobileNo} to proceed to login. This code expires in 10 minutes.</Text>
+                            <Text style={styles.headerDesc}>Enter the 6-digit verification code sent to your phone at {mobileNo} to proceed to login. This code expires in 10 minutes.</Text>
                         </View>
 
                         <View style={styles.infoCont}>
