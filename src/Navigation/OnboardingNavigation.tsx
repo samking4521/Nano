@@ -2,10 +2,8 @@ import { createNativeStackNavigator, NativeStackNavigationProp, NativeStackScree
 import { RouteProp } from "@react-navigation/native";
 import { OnboardingStackParamList } from "../Onboarding/onboarding";
 import RoleSelection from "../Onboarding/screens/roleSelection";
-import MerchantInfo from "../Onboarding/screens/merchantInfo";
+import ShipperInfo from "../Onboarding/screens/shipperInfo";
 import DriverInfo from "../Onboarding/screens/driverInfo";
-import VehicleInfo from "../Onboarding/screens/vehicleInfo";
-import PaymentInfo from "../Onboarding/screens/paymentInfo";
 import SubmitScreen from "../Onboarding/screens/submitScreen";
 import { RootNavigationStackParamList } from "./RootNav";
 import IdentityVerification from "../Onboarding/screens/identityVerification";
@@ -21,21 +19,21 @@ export type DriverInfoRouteProp = RouteProp<
 >;
 
 
-export type MerchantInfoNavigationProp = NativeStackNavigationProp<OnboardingStackParamList, "MerchantInfo">;
-export type MerchantInfoRouteProp = RouteProp<
+export type ShipperInfoNavigationProp = NativeStackNavigationProp<OnboardingStackParamList, "ShipperInfo">;
+export type ShipperInfoRouteProp = RouteProp<
   OnboardingStackParamList,
-  "MerchantInfo"
+  "ShipperInfo"
 >;
 export type OwnershipStatusNavigationProp = NativeStackNavigationProp<OnboardingStackParamList, "OwnershipStatus">;
 
 export type IdentityVerificationNavigationProp = NativeStackNavigationProp<OnboardingStackParamList, "IdentityVerification">;
 
+export type SubmitScreenNavigationProp = NativeStackNavigationProp<OnboardingStackParamList, "SubmitScreen">;
+
 type Props = NativeStackScreenProps<RootNavigationStackParamList, "Onboard">;
 
 export type RoleSelectionNavigationProp = NativeStackNavigationProp<OnboardingStackParamList, "RoleSelection">;
 
-export type VehicleInfoNavigationProp = NativeStackNavigationProp<OnboardingStackParamList, "VehicleInfo">;
-export type PaymentInfoNavigationProp = NativeStackNavigationProp<OnboardingStackParamList, "PaymentInfo">;
 
 
 export function OnboardingNavigation({ route }: Props) {
@@ -43,13 +41,13 @@ export function OnboardingNavigation({ route }: Props) {
   return (
     <Stack.Navigator initialRouteName="RoleSelection" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="RoleSelection" component={RoleSelection} initialParams={route.params} />
-      <Stack.Screen name="MerchantInfo" component={MerchantInfo} />
+      <Stack.Screen name="ShipperInfo" component={ShipperInfo} />
       <Stack.Screen name="DriverInfo" component={DriverInfo} />
-      <Stack.Screen name="VehicleInfo" component={VehicleInfo} />
-      <Stack.Screen name="PaymentInfo" component={PaymentInfo} />
       <Stack.Screen name="SubmitScreen" component={SubmitScreen} />
       <Stack.Screen name="IdentityVerification" component={IdentityVerification} />
       <Stack.Screen name="OwnershipStatus" component={OwnershipStatus} />
+
+
 
 
     </Stack.Navigator>

@@ -7,4 +7,6 @@ export type RootNavigationStackParamList = {
     countryCode: string | null,
     callingCode: string | null,
   };
+  Shipper: undefined;
+  Driver: undefined;
 }
