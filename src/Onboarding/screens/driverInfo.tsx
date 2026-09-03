@@ -1,7 +1,7 @@
 import { Platform, ScrollView, StatusBar, StyleSheet, KeyboardAvoidingView, View, Pressable, Text, Image, TextInput, TouchableOpacity } from 'react-native'
 import React, { useCallback, useMemo, useRef, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Colors } from '../../constants/colors'
+import { Colors } from '../../constants/theme/colors'
 import { AntDesign, Feather, FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons'
 import { useNavigation } from '@react-navigation/native'
 import CountryPicker, { Country, CountryCode } from 'react-native-country-picker-modal'
@@ -12,9 +12,8 @@ import { DriverInfoNavigationProp, DriverInfoRouteProp } from '../../Navigation/
 import PhotoBottomSheet, { photoTypeData } from './components/PhotoBottomSheet'
 import BottomSheet from '@gorhom/bottom-sheet'
 import { formatDate } from '../../utils/formatDate'
-import { uniqueColumn } from './components/checkUniqueModal'
-import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../Authentication/store/authStore'
+import { BORDER_RADIUS, FONT_SIZES, FONTS, ICON_SIZES, SPACING } from '../../constants/theme/font'
 
 
 type Props = {
@@ -34,7 +33,7 @@ const countryPickerProps = {
 type inputFocusType = "mobile_number" | "email" | "first_name" | "last_name" | "birthday" | "nin";
 
 export default function DriverInfo({ route }: Props) {
-      const session = useAuthStore((store) => store.session);
+    const session = useAuthStore((store) => store.session);
     const { mobileNo: phone_number, email: emailVal, country: countryNameVal, countryCode: countryCodeVal, callingCode: callingCodeVal } = route.params;
     const [country, setCountry] = useState<Country | null>(() => {
         const jsonCountry = driverStorage.getString("country");
@@ -62,7 +61,7 @@ export default function DriverInfo({ route }: Props) {
     // ref
     const bottomSheetRef = useRef<BottomSheet>(null);
 
-    
+
 
 
 
@@ -78,7 +77,7 @@ export default function DriverInfo({ route }: Props) {
 
     const callingCode = country?.callingCode[0] ?? "234";
     const countryCode = country?.cca2 ?? 'NG';
-   
+
 
 
     const onSelect = (country: Country) => {
@@ -114,7 +113,7 @@ export default function DriverInfo({ route }: Props) {
         return `+${callingCode}${phone}`;
     };
 
-    
+
     const goToPreviousScreen = () => {
         navigation.goBack()
     }
@@ -207,10 +206,10 @@ export default function DriverInfo({ route }: Props) {
     }
 
 
-    
+
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView edges={["top", "bottom"]} style={styles.container}>
             <KeyboardAvoidingView
                 style={{ flex: 1, paddingHorizontal: 15, }}
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -218,7 +217,7 @@ export default function DriverInfo({ route }: Props) {
             >
                 <View style={styles.headerContainer}>
                     <Pressable onPress={goToPreviousScreen} style={styles.backBtn}>
-                        <Feather name="arrow-left" size={22} color={Colors.text.black} />
+                        <Feather name="arrow-left" size={ICON_SIZES.lg} color={Colors.text.black} />
                     </Pressable>
                     <Text style={styles.headerText}>Details</Text>
                     <View style={{ ...styles.backBtn, backgroundColor: undefined }}>
@@ -229,7 +228,7 @@ export default function DriverInfo({ route }: Props) {
 
 
                 <ScrollView
-                    contentContainerStyle={{ flexGrow: 1 }}
+                    contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
                     keyboardShouldPersistTaps="never"
                     showsVerticalScrollIndicator={false}
                     style={styles.body}>
@@ -242,8 +241,7 @@ export default function DriverInfo({ route }: Props) {
 
                     <View style={{ marginVertical: 10 }}>
                         <View >
-                            {driver_photo_empty ? <Text style={{ ...styles.mobileLabel, color: Colors.error }}>Add your photo</Text> : <Text style={styles.mobileLabel}>{driverImage ? "" : "Take your photo"}</Text>
-                            }
+                            {driver_photo_empty ? <Text style={[styles.mobileLabel, { color: Colors.error }]}>Add your photo</Text> : <Text style={styles.mobileLabel}>{driverImage ? "" : "Take your photo"}</Text>}
                         </View>
                         <View style={{ width: "100%", justifyContent: "center", alignItems: "center" }}>
                             <View style={styles.driverImageCont}>
@@ -260,12 +258,14 @@ export default function DriverInfo({ route }: Props) {
                     <View style={styles.nameBoxContainer}>
                         <View style={{ flex: 1, marginRight: 5, }}>
                             <Text style={styles.mobileLabel}>First name</Text>
-                            <View style={{ ...styles.inputBoxCont, height: 50, borderColor: firstname_err ? Colors.error : inputFocus == "first_name" ? Colors.primary : Colors.borderColor }}>
+                            <View style={[styles.inputBoxCont, { height: 50, borderColor: firstname_err ? Colors.error : inputFocus == "first_name" ? Colors.primary : Colors.borderColor }]}>
                                 <TextInput
                                     value={firstname}
                                     onChangeText={setFirstName}
                                     placeholder='John'
                                     keyboardType="default"
+                                    placeholderTextColor={Colors.text.placeholder}
+                                    selectionColor={Colors.primary}
                                     style={styles.mobileTextInput}
                                     onFocus={() => setInputFocus("first_name")}
                                     onBlur={() => setInputFocus(null)}
@@ -280,13 +280,14 @@ export default function DriverInfo({ route }: Props) {
 
                         <View style={{ flex: 1, marginLeft: 5, }}>
                             <Text style={styles.mobileLabel}>Last name</Text>
-                            <View style={{ ...styles.inputBoxCont, height: 50, borderColor: lastname_err ? Colors.error : inputFocus == "last_name" ? Colors.primary : Colors.borderColor }}>
-
+                            <View style={[styles.inputBoxCont, { height: 50, borderColor: lastname_err ? Colors.error : inputFocus == "last_name" ? Colors.primary : Colors.borderColor }]}>
                                 <TextInput
                                     value={lastname}
                                     onChangeText={setLastName}
                                     placeholder='Doe'
                                     keyboardType="default"
+                                    placeholderTextColor={Colors.text.placeholder}
+                                    selectionColor={Colors.primary}
                                     style={styles.mobileTextInput}
                                     onFocus={() => setInputFocus("last_name")}
                                     onBlur={() => setInputFocus(null)}
@@ -306,12 +307,11 @@ export default function DriverInfo({ route }: Props) {
                     <View style={styles.infoCont}>
                         <Text style={styles.mobileLabel}>Mobile Number</Text>
                         <View pointerEvents={phone_number ? "none" : "auto"} style={{ ...styles.mobileTextInputContainer, borderColor: mobile_no_err ? Colors.error : inputFocus == "mobile_number" ? Colors.primary : Colors.borderColor }}>
-                            <View style={{ ...styles.mobileCodeCont, borderRightColor: mobile_no_err ? Colors.error : inputFocus == "mobile_number" ? Colors.primary : Colors.borderColor }}>
+                            <View style={[styles.mobileCodeCont, { borderRightColor: mobile_no_err ? Colors.error : inputFocus == "mobile_number" ? Colors.primary : Colors.borderColor }]}>
                                 <CountryPicker
                                     {...countryPickerProps}
                                     countryCode={countryCodeVal as CountryCode || countryCode}
                                     onSelect={onSelect}
-
                                 />
                             </View>
                             <View style={styles.mobileInputCont}>
@@ -320,7 +320,9 @@ export default function DriverInfo({ route }: Props) {
                                     value={stripCountryCode(phone_number, callingCodeVal) || mobileNo}
                                     onChangeText={setMobileNo}
                                     placeholder='Enter number here'
-                                    keyboardType="phone-pad"
+                                    placeholderTextColor={Colors.text.placeholder}
+                                    selectionColor={Colors.primary}
+                                    keyboardType="number-pad"
                                     style={styles.mobileTextInput}
                                     onFocus={() => setInputFocus("mobile_number")}
                                     onBlur={() => setInputFocus(null)}
@@ -336,16 +338,17 @@ export default function DriverInfo({ route }: Props) {
 
                     <View style={styles.infoCont}>
                         <Text style={styles.mobileLabel}>Email</Text>
-                        <View pointerEvents={emailVal ? "none" : "auto"} style={{ ...styles.inputBoxCont, borderColor: (email_length_err || email_valid_err) ? Colors.error : inputFocus == "email" ? Colors.primary : Colors.borderColor }}>
+                        <View pointerEvents={emailVal ? "none" : "auto"} style={[styles.inputBoxCont, { borderColor: (email_length_err || email_valid_err) ? Colors.error : inputFocus == "email" ? Colors.primary : Colors.borderColor }]}>
                             <TextInput
                                 value={emailVal || email}
                                 onChangeText={setEmail}
                                 placeholder='johndoe@gmail.com'
                                 keyboardType="email-address"
+                                placeholderTextColor={Colors.text.placeholder}
+                                selectionColor={Colors.primary}
                                 style={styles.mobileTextInput}
                                 onFocus={() => setInputFocus("email")}
                                 onBlur={() => setInputFocus(null)}
-
                             />
                         </View>
                         {(email_length_err || email_valid_err) && <View style={styles.errorBox}>
@@ -355,8 +358,8 @@ export default function DriverInfo({ route }: Props) {
 
                     <View style={styles.infoCont}>
                         <Text style={styles.mobileLabel}>Birthday</Text>
-                        <TouchableOpacity onPress={() => setOpen(true)} style={{ ...styles.inputBoxCont, flexDirection: "row", alignItems: "center", borderColor: dob_err ? Colors.error : Colors.borderColor, paddingHorizontal: 10 }}>
-                            <Text style={{ marginRight: "auto", fontSize: 14, fontWeight: "500", color: Colors.text.gray }}>{(driverLocalStorageDob || datePicked) ? formatDate(dob) : "Enter your birthday"}</Text>
+                        <TouchableOpacity onPress={() => setOpen(true)} style={[styles.inputBoxCont, { flexDirection: "row", alignItems: "center", borderColor: dob_err ? Colors.error : Colors.borderColor, paddingHorizontal: 10 }]}>
+                            <Text style={[styles.birthdayText, { color: (driverLocalStorageDob || datePicked) ? Colors.text.gray : Colors.text.placeholder }]}>{(driverLocalStorageDob || datePicked) ? formatDate(dob) : "Enter your birthday"}</Text>
                             <FontAwesome name="calendar" size={22} color={Colors.primary} />
                             {
                                 open && <DatePicker
@@ -385,20 +388,20 @@ export default function DriverInfo({ route }: Props) {
 
 
 
-                    
+
 
                 </ScrollView>
 
-                    <View style={{paddingVertical: 5}}>
-                          <Pressable  onPress={continueToVehicleInfo} style={styles.nextBtn}>
-                            <Text style={styles.continueText}>Continue</Text>
-                        </Pressable>
-                    </View>
-                    
+                <View style={{ paddingVertical: 15 }}>
+                    <Pressable onPress={continueToVehicleInfo} style={styles.nextBtn}>
+                        <Text style={styles.continueText}>Continue</Text>
+                    </Pressable>
+                </View>
+
 
             </KeyboardAvoidingView>
 
-            <PhotoBottomSheet bottomSheetRef={bottomSheetRef} photoType={photoType} setDriverImage={setDriverImage} setPhotoType={setPhotoType}/>
+            <PhotoBottomSheet bottomSheetRef={bottomSheetRef} photoType={photoType} setDriverImage={setDriverImage} setPhotoType={setPhotoType} />
 
         </SafeAreaView>
     )
@@ -412,10 +415,6 @@ const styles = StyleSheet.create({
     },
     body: {
         flex: 1,
-
-        paddingTop: Platform.OS == "ios" ? null : StatusBar.currentHeight,
-
-
     },
 
     backBtn: {
@@ -432,13 +431,11 @@ const styles = StyleSheet.create({
         justifyContent: "space-between"
     },
     headerText: {
-        fontSize: 18,
-        fontWeight: "bold",
+        fontSize: FONT_SIZES.lg,
+        fontFamily: FONTS.semiBold,
         color: Colors.text.black
-
     },
     driverImageCont: {
-
         width: 140,
         height: 140,
         borderRadius: 140,
@@ -476,10 +473,10 @@ const styles = StyleSheet.create({
         flexDirection: "row", alignItems: "flex-start", marginTop: 15
     },
     mobileLabel: {
-        marginBottom: 10,
-        fontSize: 14,
+        marginBottom: SPACING.sm,
+        fontSize: FONT_SIZES.sm,
         color: Colors.text.black,
-        fontWeight: "600"
+        fontFamily: FONTS.medium
     },
     inputBoxCont: {
         height: 50,
@@ -491,22 +488,21 @@ const styles = StyleSheet.create({
         flex: 1,
         height: 50,
         paddingHorizontal: 10,
-
-
-
+        color: Colors.text.gray,
+        fontSize: FONT_SIZES.sm,
+        fontFamily: FONTS.semiBold,
     },
-    errorBox: {
+     errorBox: {
         marginTop: 10,
         width: "100%",
         padding: 10,
         backgroundColor: Colors.errorBackground,
-        borderRadius: 12
-
+        borderRadius: BORDER_RADIUS.lg
     },
     errorText: {
         color: Colors.error,
-        fontSize: 12,
-        fontWeight: "500"
+        fontSize: FONT_SIZES.xs,
+        fontFamily: FONTS.medium,
     },
     infoCont: {
         marginTop: 20
@@ -527,14 +523,17 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
         flexDirection: "row",
-        paddingHorizontal: 10
+        paddingLeft: 12
     },
     mobileInputCont: {
-        flexDirection: "row", alignItems: "center"
+           flex: 1,
+        flexShrink: 1,
+        flexDirection: "row",
+        alignItems: "center"
     },
     mobileCodeText: {
         fontSize: 12,
-        fontWeight: "600",
+        fontFamily: FONTS.semiBold,
         color: Colors.text.gray,
         padding: 5
     },
@@ -543,13 +542,13 @@ const styles = StyleSheet.create({
         width: "100%",
         padding: 10,
         backgroundColor: "#FFF4EB",
-        borderRadius: 12
+        borderRadius: BORDER_RADIUS.lg
 
     },
     discountText: {
         color: Colors.primary,
-        fontSize: 12,
-        fontWeight: "500"
+        fontSize: FONT_SIZES.xs,
+        fontFamily: FONTS.medium,
     },
     ninIcon: {
         width: 30,
@@ -574,7 +573,6 @@ const styles = StyleSheet.create({
         marginTop: 20,
         borderWidth: 1,
         borderColor: Colors.borderColor,
-
         borderRadius: 10
     },
     headerDesc: {
@@ -583,7 +581,10 @@ const styles = StyleSheet.create({
         color: Colors.text.gray
     },
     editText: {
-        marginLeft: 5, fontSize: 12, color: Colors.text.gray, fontWeight: "600"
+        marginLeft: 5,
+        fontSize: 12,
+        color: Colors.text.gray,
+        fontWeight: "600"
     },
     pictureNinHeader: {
         flexDirection: "row",
@@ -593,9 +594,7 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         paddingVertical: 10,
         paddingHorizontal: 5
-
     },
-
     addNinIcon: {
         width: 70,
         height: 70,
@@ -615,15 +614,19 @@ const styles = StyleSheet.create({
     },
     continueText: {
         color: Colors.text.white,
-        fontWeight: "600",
-        fontSize: 16
+        fontFamily: FONTS.semiBold,
+        fontSize: FONT_SIZES.md
     },
-
 
     ninImageStyle: {
         width: "100%",
         height: 200,
         resizeMode: "cover",
+    },
+    birthdayText: {
+        marginRight: "auto",
+        fontSize: FONT_SIZES.sm,
+        fontFamily: FONTS.semiBold,
+        color: Colors.text.gray
     }
-
 })

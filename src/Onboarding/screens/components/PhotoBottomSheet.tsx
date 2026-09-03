@@ -4,7 +4,7 @@ import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet'
 import * as ImagePicker from 'expo-image-picker';
 import * as Crypto from 'expo-crypto';
 import { RefObject } from 'react';
-import { Colors } from '../../../constants/colors';
+import { Colors } from '../../../constants/theme/colors';
 import PhotoDesc from './photoDesc';
 import NinDesc from './ninDesc';
 import LicenseDesc from './licenseDesc';
@@ -12,6 +12,7 @@ import { vehiclePhotoType } from './vehicleInfoModal';
 import VehicleLicenseDesc from './vehicleLicenseDesc';
 import VehiclePhotoDesc from './vehiclePhotoDesc';
 import { CompressToLimit } from '../../../utils/imageCompressor';
+import { FONT_SIZES, FONTS } from '../../../constants/theme/font';
 
 export type photoTypeData = "DriverPhoto" | "DriverLicense" | "NinPhoto" | "VehiclePhotos" | "VehicleLicensePhoto" | null;
 
@@ -115,10 +116,10 @@ function PhotoBottomSheet({ bottomSheetRef, photoType, setDriverImage, setPhotoT
 
 
     const handleCamera = async () => {
-        closeBottomSheet();
+        
         try {
             const image = await takePhoto();
-
+            closeBottomSheet();
             if (image) {
                 if (photoType == "DriverPhoto" && setDriverImage) {
                     const compressedImage = await CompressToLimit(image.uri, {
@@ -130,7 +131,7 @@ function PhotoBottomSheet({ bottomSheetRef, photoType, setDriverImage, setPhotoT
 
                 }
                 if (photoType == "NinPhoto" && setNinImage) {
-                         const compressedImage = await CompressToLimit(image.uri, {
+                    const compressedImage = await CompressToLimit(image.uri, {
                         maxSizeBytes: 8 * 1024 * 1024,
                     });
 
@@ -184,10 +185,10 @@ function PhotoBottomSheet({ bottomSheetRef, photoType, setDriverImage, setPhotoT
     };
 
     const handleGallery = async () => {
-        closeBottomSheet();
+       
         try {
             const image = await pickImageFromGallery();
-
+             closeBottomSheet();
             if (image) {
                 if (photoType == "DriverPhoto" && setDriverImage) {
                     const compressedImage = await CompressToLimit(image[0].uri, {
@@ -199,7 +200,7 @@ function PhotoBottomSheet({ bottomSheetRef, photoType, setDriverImage, setPhotoT
 
                 }
                 if (photoType == "NinPhoto" && setNinImage) {
- const compressedImage = await CompressToLimit(image[0].uri, {
+                    const compressedImage = await CompressToLimit(image[0].uri, {
                         maxSizeBytes: 8 * 1024 * 1024,
                     });
 
@@ -235,7 +236,7 @@ function PhotoBottomSheet({ bottomSheetRef, photoType, setDriverImage, setPhotoT
 
                 }
                 if (photoType === "VehicleLicensePhoto" && setVehicleLicensePhoto) {
-                     const compressedImage = await CompressToLimit(image[0].uri, {
+                    const compressedImage = await CompressToLimit(image[0].uri, {
                         maxSizeBytes: 8 * 1024 * 1024,
                     });
 
@@ -291,6 +292,7 @@ function PhotoBottomSheet({ bottomSheetRef, photoType, setDriverImage, setPhotoT
                 </View>
 
                 <BottomSheetScrollView
+                    contentContainerStyle={{flexGrow: 1}}
                     style={styles.bottomSheetCont}
                     showsVerticalScrollIndicator={false}
 
@@ -347,8 +349,8 @@ const styles = StyleSheet.create({
     },
     takePhotoBtnText: {
         color: Colors.text.white,
-        fontWeight: "600",
-        fontSize: 16
+        fontFamily: FONTS.semiBold,
+        fontSize: FONT_SIZES.md
     },
     bottomSheetContHeader: {
         paddingHorizontal: 15,
@@ -359,8 +361,8 @@ const styles = StyleSheet.create({
     },
     closeText: {
         color: Colors.text.gray,
-        fontWeight: "500",
-        fontSize: 15,
+        fontFamily: FONTS.medium ,
+        fontSize: FONT_SIZES.sm,
         alignSelf: "flex-end",
 
     }

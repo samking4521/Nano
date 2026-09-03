@@ -1,7 +1,7 @@
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useEffect, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Colors } from '../../constants/colors'
+import { Colors } from '../../constants/theme/colors'
 import { Feather } from '@expo/vector-icons'
 import { useNavigation } from '@react-navigation/native'
 import { useAuthStore } from '../../Authentication/store/authStore'
@@ -13,6 +13,7 @@ import { signUpDataStorage } from '../../localStorage/signUpDataStorage'
 import { AuthNavigationProp } from '../../Navigation/RootNavigation'
 import { supabase } from '../../lib/supabase'
 import { shipperStorage } from '../../localStorage/shipperStorage'
+import { BORDER_RADIUS, FONT_SIZES, FONTS, ICON_SIZES, SPACING } from '../../constants/theme/font'
 
 type Props = NativeStackScreenProps<
     OnboardingStackParamList,
@@ -28,7 +29,7 @@ export default function RoleSelection({ route }: Props) {
     const userId = useAuthStore((store) => store.session?.user.id);
     const navigation = useNavigation<RoleSelectionNavigationProp>();
     const replaceNavigation = useNavigation<AuthNavigationProp>();
-    const setSession = useAuthStore((store)=> store.setSession);
+    const setSession = useAuthStore((store) => store.setSession);
 
     const mobileNo = route.params?.mobileNo ?? signUpDataStorage.getString("mobileNo");
     const email = route.params?.email ?? signUpDataStorage.getString("email");
@@ -37,12 +38,12 @@ export default function RoleSelection({ route }: Props) {
     const callingCode = route.params?.callingCode ?? signUpDataStorage.getString("callingCode");
 
 
-    
+
 
     const storeSignUpData = () => {
         const localSignUpDataId = signUpDataStorage.getString("id");
         console.log("localSignUpDataId: ", localSignUpDataId);
-       
+
         if (localSignUpDataId) {
             if (localSignUpDataId !== userId) {
                 console.log("not equals user");
@@ -76,11 +77,11 @@ export default function RoleSelection({ route }: Props) {
     const signOut = async () => {
         const { error } = await supabase.auth.signOut({ scope: "local" })
         if (error) {
-           console.log("error signing out");
-           return;
+            console.log("error signing out");
+            return;
         }
         console.log("Sign out successful")
-       
+
     }
 
     const goToPreviousScreen = () => {
@@ -154,33 +155,33 @@ export default function RoleSelection({ route }: Props) {
     }
 
     return (
-        <SafeAreaView style={styles.container}>
-            <ScrollView showsVerticalScrollIndicator={false} style={styles.body}>
+        <SafeAreaView edges={["top", "bottom"]} style={styles.container}>
+            <ScrollView contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false} style={styles.body}>
                 <Pressable onPress={goToPreviousScreen} style={styles.backBtn}>
-                    <Feather name="arrow-left" size={22} color={Colors.text.black} />
+                    <Feather name="arrow-left" size={ICON_SIZES.lg} color={Colors.text.black} />
                 </Pressable>
 
                 <View style={{ marginTop: 20 }}>
-                    <Text style={styles.headerText}>What are you using{"\n"} Nano for?</Text>
+                    <Text style={styles.headerText}>What are you using{"\n"}Nano for?</Text>
                     <Text style={styles.headerDesc}>Select your role to personalize your experience</Text>
                 </View>
 
-                  <View style={styles.imageCont}>
-                                        <Image source={role_desc_img} style={styles.image} />
-                                    </View>
+                <View style={styles.imageCont}>
+                    <Image source={role_desc_img} style={styles.image} />
+                </View>
 
                 <View>
 
-                    <Pressable onPress={() => setRole("Shipper")} style={{ ...styles.borderBox, borderColor: role == "Shipper" ? Colors.primary : Colors.borderColor, borderWidth: role == "Shipper" ? 2 : 1 }}>
+                    <Pressable onPress={() => setRole("Shipper")} style={[styles.borderBox, {borderColor: role == "Shipper" ? Colors.primary : Colors.borderColor, borderWidth: role == "Shipper" ? 2 : 1 }]}>
                         <View>
                             <View style={styles.roleContainer}>
-                                <View style={{ ...styles.roleRadioButton, backgroundColor: role == "Shipper" ? Colors.primary : undefined, borderColor: role == "Shipper" ? undefined : Colors.borderColor, borderWidth: role == "Shipper" ? 0 : 1 }}>
-                                    <View style={{ ...styles.roleButtonInnerCont, backgroundColor: role == "Shipper" ? Colors.text.white : undefined }}></View>
+                                <View style={[styles.roleRadioButton, {backgroundColor: role == "Shipper" ? Colors.primary : undefined, borderColor: role == "Shipper" ? undefined : Colors.borderColor, borderWidth: role == "Shipper" ? 0 : 1 }]}>
+                                    <View style={[styles.roleButtonInnerCont, {backgroundColor: role == "Shipper" ? Colors.text.white : undefined }]}></View>
                                 </View>
 
-                                <View>
+                                <View style={styles.viewTextCont}>
                                     <Text style={styles.roleText}>Shipper</Text>
-                                    <View>
+                                    <View >
                                         <Text style={styles.headerDesc}>
                                             Find available trucks on demand
                                         </Text>
@@ -198,14 +199,14 @@ export default function RoleSelection({ route }: Props) {
 
 
 
-                    <Pressable onPress={() => setRole("Driver")} style={{ ...styles.borderBox, borderColor: role == "Driver" ? Colors.primary : Colors.borderColor, borderWidth: role == "Driver" ? 2 : 1 }}>
+                    <Pressable onPress={() => setRole("Driver")} style={[styles.borderBox, {borderColor: role == "Driver" ? Colors.primary : Colors.borderColor, borderWidth: role == "Driver" ? 2 : 1 }]}>
                         <View >
                             <View style={styles.roleContainer}>
-                                <View style={{ ...styles.roleRadioButton, backgroundColor: role == "Driver" ? Colors.primary : undefined, borderRadius: 20, marginRight: 10, borderColor: role == "Driver" ? undefined : Colors.borderColor, borderWidth: role == "Driver" ? 0 : 1 }}>
-                                    <View style={{ ...styles.roleButtonInnerCont, backgroundColor: role == "Driver" ? Colors.text.white : undefined }}></View>
+                                <View style={[styles.roleRadioButton, {backgroundColor: role == "Driver" ? Colors.primary : undefined, borderRadius: 20, marginRight: 10, borderColor: role == "Driver" ? undefined : Colors.borderColor, borderWidth: role == "Driver" ? 0 : 1 }]}>
+                                    <View style={[styles.roleButtonInnerCont, {backgroundColor: role == "Driver" ? Colors.text.white : undefined }]}></View>
                                 </View>
 
-                                <View>
+                                <View style={styles.viewTextCont}>
                                     <Text style={styles.roleText}>Driver</Text>
                                     <View>
                                         <Text style={styles.headerDesc}>
@@ -225,13 +226,13 @@ export default function RoleSelection({ route }: Props) {
 
 
                 </View>
-               
+
             </ScrollView>
-             <View style={{ paddingHorizontal: 15 }}>
-                    <Pressable onPress={navigateToUserDetailsScreen} style={styles.nextBtn}>
-                        <Text style={styles.nextText}>Next</Text>
-                    </Pressable>
-                </View>
+            <View style={styles.footerCont}>
+                <Pressable onPress={navigateToUserDetailsScreen} style={styles.nextBtn}>
+                    <Text style={styles.nextText}>Next</Text>
+                </Pressable>
+            </View>
         </SafeAreaView>
 
     )
@@ -242,7 +243,6 @@ const styles = StyleSheet.create({
         flex: 1
     },
     body: {
-        flex: 1,
         padding: 15,
     },
     backBtn: {
@@ -254,21 +254,21 @@ const styles = StyleSheet.create({
         alignItems: "center"
     },
     headerText: {
-        fontSize: 25,
-        fontWeight: "bold",
+        fontSize: FONT_SIZES.xxl,
+        fontFamily: FONTS.semiBold,
         color: Colors.text.black
+
     },
     headerDesc: {
-        fontSize: 14,
-        fontWeight: "600",
-        marginTop: 10,
-        color: Colors.text.gray
+        fontSize: FONT_SIZES.sm,
+        fontFamily: FONTS.medium,
+        marginTop: SPACING.xs,
+        color: Colors.text.gray,
     },
     borderBox: {
         marginTop: 20,
         padding: 10,
-        borderRadius: 10,
-
+        borderRadius: BORDER_RADIUS.lg,
     },
     nextBtn: {
         width: "100%",
@@ -280,22 +280,32 @@ const styles = StyleSheet.create({
     },
     nextText: {
         color: Colors.text.white,
-        fontWeight: "bold",
-        fontSize: 16
+        fontFamily: FONTS.semiBold,
+        fontSize: FONT_SIZES.md
     },
     roleContainer: {
-        flexDirection: "row", alignItems: "flex-start"
+        flexDirection: "row", 
+        alignItems: "flex-start"
     },
     roleRadioButton: {
-        justifyContent: "center", alignItems: "center", width: 20, height: 20, borderRadius: 20, marginRight: 10,
+        justifyContent: "center", 
+        alignItems: "center", 
+        width: 20, 
+        height: 20, 
+        borderRadius: 20, 
+        marginRight: 10,
     },
     roleButtonInnerCont: {
-        width: 10, height: 10, borderRadius: 10,
+        width: 10, 
+        height: 10, 
+        borderRadius: 10,
     },
     roleText: {
-        fontWeight: "600", color: Colors.text.black, fontSize: 15
+        fontFamily: FONTS.semiBold, 
+        color: Colors.text.black, 
+        fontSize: FONT_SIZES.md
     },
-     imageCont: {
+    imageCont: {
         width: "100%",
         height: 200,
         borderRadius: 10,
@@ -305,6 +315,15 @@ const styles = StyleSheet.create({
         width: "100%",
         height: "100%",
         resizeMode: "cover",
-        borderRadius: 10
+        borderRadius: BORDER_RADIUS.lg
     },
+    viewTextCont: {
+      
+        flexShrink: 1
+    },
+    footerCont: {
+        paddingHorizontal: 15, 
+        paddingTop: 10, 
+        paddingBottom: 20
+    }
 })

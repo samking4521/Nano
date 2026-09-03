@@ -11,7 +11,7 @@ import Animated, {
   useAnimatedStyle,
 } from 'react-native-reanimated'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Colors } from '../../constants/colors'
+import { Colors } from '../../constants/theme/colors'
 import { AntDesign } from '@expo/vector-icons'
 import { useNavigation, usePreventRemove } from '@react-navigation/native'
 import { supabase } from '../../lib/supabase'
@@ -26,6 +26,7 @@ import { deleteFileIfExists } from '../../utils/deletePhoto'
 import { uploadUser } from '../../utils/uploadUser'
 import { DriverAppNavigationProp } from '../../Navigation/RootNavigation'
 import { signUpDataStorage } from '../../localStorage/signUpDataStorage'
+import { FONT_SIZES, FONTS, SPACING } from '../../constants/theme/font'
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle)
 const AnimatedTextInput = Animated.createAnimatedComponent(TextInput)
@@ -262,7 +263,7 @@ export default function SubmitScreen() {
     }
 
     const vehicle_img_paths = await uploadVehiclePhotos(select_vehicle?.id, signal);
-    
+
     if (signal.aborted) return;
 
     if (!vehicle_img_paths || vehicle_img_paths.length === 0) {
@@ -371,7 +372,7 @@ export default function SubmitScreen() {
 
 
   const uploadDriverInfo = async (signal: AbortSignal) => {
-     if (signal.aborted) return;
+    if (signal.aborted) return;
     const firstname = driverStorage.getString("firstname");
     const lastname = driverStorage.getString("lastname");
     const birthday = driverStorage.getString("dob");
@@ -455,7 +456,7 @@ export default function SubmitScreen() {
 
 
     const imagePath = await uploadDriverPhoto(signal);
-     if (signal.aborted) return;
+    if (signal.aborted) return;
 
     const { error: err_update_Driver } = await supabase
       .from("Driver")
@@ -490,7 +491,7 @@ export default function SubmitScreen() {
   }
 
   const uploadNIN = async (signal: AbortSignal) => {
-     if (signal.aborted) return;
+    if (signal.aborted) return;
     const nin = driverStorage.getString("nin");
 
     const { data: select_driver_nin_data, error: select_driver_nin_data_err } = await supabase
@@ -539,7 +540,7 @@ export default function SubmitScreen() {
     }
 
     const imagePath = await uploadNINPhoto(signal);
-     if (signal.aborted) return;
+    if (signal.aborted) return;
 
     const { error: err_update_Driver_Documents } = await supabase
       .from("Driver_Documents")
@@ -710,16 +711,14 @@ export default function SubmitScreen() {
 
   useEffect(() => {
     submitOnboarding();
-  }, [])
+  }, []);
 
   const submitOnboarding = async () => {
-
     const controller = new AbortController();
     controllerRef.current = controller;
-
     try {
       startAnimation("personal");
-       if (controller.signal.aborted) return;
+      if (controller.signal.aborted) return;
       await uploadPersonalInfo(controller.signal);
       if (controller.signal.aborted) return;
       animateTo(ownershipStatus === "OWNER" ? 30 : 40);
@@ -727,13 +726,12 @@ export default function SubmitScreen() {
       stopAnimation("personal");
       startAnimation("identity");
       setIdentityInfoUploading("loading");
-       if (controller.signal.aborted) return;
+      if (controller.signal.aborted) return;
       await uploadIdentityInfo(controller.signal);
       if (controller.signal.aborted) return;
       animateTo(ownershipStatus === "OWNER" ? 55 : 100);
       setIdentityInfoUploading("done");
       stopAnimation("identity");
-
 
       if (driverStorage.getString("ownershipStatus") === "HIRED") {
         console.log("Success onboarding hired driver");
@@ -744,14 +742,13 @@ export default function SubmitScreen() {
           driver_navigation.replace("Driver");
           driverStorage.clearAll();
         });
-
         return;
       }
       startAnimation("vehicle");
       setVehicleInfoUploading("loading");
-       if (controller.signal.aborted) return;
+      if (controller.signal.aborted) return;
       await uploadDriverVehicle(controller.signal);
-       if (controller.signal.aborted) return;
+      if (controller.signal.aborted) return;
       animateTo(100);
       setVehicleInfoUploading("done");
       stopAnimation("vehicle");
@@ -763,25 +760,23 @@ export default function SubmitScreen() {
         driver_navigation.replace("Driver");
         driverStorage.clearAll();
       });
-
-
     } catch (error) {
-       if (controller.signal.aborted) {
-                console.log("controller abort error")
-                return;
-            }
+      if (controller.signal.aborted) {
+        console.log("controller abort error")
+        return;
+      }
       console.log(error);
       setIsSubmitting(false);
-        animateTo(0);
-              cancelAnimation(personalInfoValue);
-              cancelAnimation(identityInfoValue);
-              cancelAnimation(vehicleInfoValue);
-              personalInfoValue.value = 1;
-              identityInfoValue.value = 1;
-              vehicleInfoValue.value = 1;
-              setPersonalInfoUploading("initial");
-              setIdentityInfoUploading("initial");
-              setVehicleInfoUploading("initial");
+      animateTo(0);
+      cancelAnimation(personalInfoValue);
+      cancelAnimation(identityInfoValue);
+      cancelAnimation(vehicleInfoValue);
+      personalInfoValue.value = 1;
+      identityInfoValue.value = 1;
+      vehicleInfoValue.value = 1;
+      setPersonalInfoUploading("initial");
+      setIdentityInfoUploading("initial");
+      setVehicleInfoUploading("initial");
 
       Alert.alert(
         "Submission Failed",
@@ -814,7 +809,7 @@ export default function SubmitScreen() {
           },
         ]
       );
-            
+
     }
 
   }
@@ -940,7 +935,7 @@ export default function SubmitScreen() {
 
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={["top", "bottom"]} style={styles.container}>
       <View style={styles.body}>
         <View>
           <Text style={styles.headerText}>Creating your driver account</Text>
@@ -1039,7 +1034,7 @@ export default function SubmitScreen() {
 
         </View>
 
-        <Text style={[styles.headerDesc, { marginTop: "auto", marginBottom: 40, color: Colors.primary }]}>Please don't leave until the upload is complete. This usually takes less than a minute.</Text>
+        <Text style={styles.footerText}>Please don't leave until the upload is complete. This usually takes less than a minute.</Text>
       </View>
 
     </SafeAreaView>
@@ -1052,11 +1047,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-    paddingTop: Platform.OS == "ios" ? null : StatusBar.currentHeight,
   },
   body: {
     flex: 1,
-
     paddingHorizontal: 15
   },
 
@@ -1064,28 +1057,25 @@ const styles = StyleSheet.create({
     marginTop: 0
   },
   headerText: {
-    fontSize: 18,
-    fontWeight: "bold",
+    fontSize: FONT_SIZES.lg,
+    fontFamily: FONTS.semiBold,
     color: Colors.text.black,
     textAlign: "center"
-
   },
   headerDesc: {
-    fontSize: 14,
-    fontWeight: "500",
-    marginTop: 5,
+    fontSize: FONT_SIZES.sm,
+    fontFamily: FONTS.medium,
+    marginTop: SPACING.xs,
     color: Colors.text.gray,
+    lineHeight: 20,
     textAlign: "center"
-
   },
   uploadText: {
     marginLeft: 10,
-    fontSize: 14,
-    fontWeight: "500",
+    fontSize: FONT_SIZES.sm,
+    fontFamily: FONTS.medium,
     marginTop: 5,
     color: Colors.text.black,
-
-
   },
   svgCont: {
     alignSelf: "center", marginVertical: 20
@@ -1093,7 +1083,7 @@ const styles = StyleSheet.create({
   animatedText: {
     fontSize: radius / 3,
     color: color,
-    fontWeight: '900',
+    fontFamily: FONTS.black,
     textAlign: 'center',
   },
   infoCont: {
@@ -1109,7 +1099,7 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   initialUploadingText: {
-    fontSize: 14, fontWeight: "500", color: Colors.borderColor
+    fontSize: FONT_SIZES.sm, fontFamily: FONTS.medium, color: Colors.borderColor
   },
   dividerCont: {
     width: 2,
@@ -1130,5 +1120,14 @@ const styles = StyleSheet.create({
     width: 25,
     height: 25,
     borderRadius: 25
+  },
+  footerText: {
+    fontSize: FONT_SIZES.sm,
+    fontFamily: FONTS.medium,
+    lineHeight: 20,
+    textAlign: "center",
+    marginTop: "auto",
+    marginBottom: 40,
+    color: Colors.primary
   }
 })

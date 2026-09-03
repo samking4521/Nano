@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native'
 import { RefObject, useMemo } from 'react'
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet'
-import { Colors } from '../../../constants/colors'
+import { Colors } from '../../../constants/theme/colors'
 import VehicleType from './vehicleType'
 import { vehicleType } from '../../../../assets/truck_data'
 

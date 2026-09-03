@@ -1,11 +1,12 @@
 import { Image, StyleSheet, Text, View } from 'react-native'
-import { Colors } from '../../../constants/colors';
+import { Colors } from '../../../constants/theme/colors';
 import { AntDesign } from '@expo/vector-icons';
+import { BORDER_RADIUS, FONT_SIZES, FONTS, SPACING } from '../../../constants/theme/font';
 
 const vehicle_license_img = require("../../../../assets/onboarding/vehicle_license_photo_desc.png");
 export default function VehicleLicenseDesc() {
     return (
-        <View style={styles.container}>
+        <View>
             <View>
                 <Text style={styles.headerText}>Vehicle License</Text>
             </View>
@@ -30,34 +31,33 @@ export default function VehicleLicenseDesc() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-
-    },
-    headerText: {
-        fontSize: 25,
-        fontWeight: "bold",
-        color: Colors.text.black
-
-    },
-    headerDesc: {
-        fontSize: 14,
-        fontWeight: "500",
-        marginTop: 10,
-        color: Colors.text.gray
-    },
-    imageCont: {
-        width: "100%",
-        height: 300,
-         marginVertical: 20
-
-    },
-    image: {
-        width: "100%",
-        height: "100%",
-        resizeMode: "contain"
-    },
-    descCont: {
-        flexDirection: "row",
-        alignItems: "center",
-    }
+   headerText: {
+              fontSize: FONT_SIZES.lg,
+              fontFamily: FONTS.semiBold,
+              color: Colors.text.black
+      
+          },
+          headerDesc: {
+              fontSize: FONT_SIZES.sm,
+              fontFamily: FONTS.medium,
+              marginTop: SPACING.xs,
+              color: Colors.text.gray,
+              lineHeight: 20,
+              flexShrink: 1
+          },
+          imageCont: {
+              width: "100%",
+              height: 300,
+              marginVertical: 20
+          },
+          image: {
+              width: "100%",
+              height: "100%",
+              resizeMode: "contain",
+              borderRadius: BORDER_RADIUS.xl
+          },
+          descCont: {
+              flexDirection: "row",
+              alignItems: "center",
+          }
 })

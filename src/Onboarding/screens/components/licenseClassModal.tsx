@@ -1,8 +1,9 @@
 import { StyleSheet, Text, View, Modal, Platform, StatusBar, FlatList, TouchableOpacity, Pressable } from 'react-native'
 import React, { useCallback } from 'react'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
-import { Colors } from '../../../constants/colors'
+import { Colors } from '../../../constants/theme/colors'
 import { AntDesign } from '@expo/vector-icons'
+import { FONT_SIZES, FONTS } from '../../../constants/theme/font'
 
 export type licenseClassType = 'CLASS A' | 'CLASS B' | 'CLASS C' | 'CLASS D' | 'CLASS E' | 'CLASS F' | 'CLASS G' | 'CLASS H' | 'CLASS I' | 'CLASS J' | 'CLASS V'
 const license_class_arr: licenseClassType[] = [
@@ -25,7 +26,7 @@ const LicenseClass = ({ item, index, setShowLicenseClassModal, setDriverLicenseC
         setShowLicenseClassModal(false)
     }
     return (
-        <Pressable onPress={submitLicenseClass} style={styles.licenseTextCont} key={`${item}-${index}`}>
+        <Pressable onPress={submitLicenseClass} style={[styles.licenseTextCont, {borderBottomWidth: index == (license_class_arr.length - 1)? undefined: 1}]} key={`${item}-${index}`}>
             <Text style={styles.licenceClassText}>{item}</Text>
         </Pressable>
     )
@@ -95,9 +96,9 @@ const styles = StyleSheet.create({
         marginBottom: 10
     },
     selectLicenseText: {
-        fontSize: 16,
+        fontSize: FONT_SIZES.md,
+        fontFamily: FONTS.semiBold,
         color: Colors.text.black,
-        fontWeight: "600",
         textAlign: "center"
     },
     closeBtnCont: {
@@ -114,8 +115,8 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1
     },
     licenceClassText: {
-        fontSize: 16,
+        fontFamily: FONTS.semiBold,
         color: Colors.text.black,
-        fontWeight: "600"
+        fontSize: FONT_SIZES.md
     }
 })

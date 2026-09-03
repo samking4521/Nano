@@ -1,8 +1,9 @@
 import { FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import React, { useCallback, useMemo, useState } from 'react'
-import { Colors } from '../../../constants/colors'
+import { Colors } from '../../../constants/theme/colors'
 import { AntDesign, MaterialCommunityIcons } from '@expo/vector-icons'
 import { vehicleTypeData, vehicleDataType, vehicleType } from '../../../../assets/truck_data'
+import { FONT_SIZES, FONTS } from '../../../constants/theme/font'
 
 type VehicleTypeItemProps = {
     item: vehicleDataType;
@@ -95,8 +96,8 @@ const styles = StyleSheet.create({
 
     },
     headerDesc: {
-        fontSize: 14,
-        fontWeight: "500",
+        fontSize: FONT_SIZES.sm,
+        fontFamily: FONTS.medium,
         marginTop: 10,
         color: Colors.text.gray
     },
@@ -115,8 +116,8 @@ const styles = StyleSheet.create({
         alignItems: "center"
     },
     headerText: {
-        fontSize: 18,
-        fontWeight: "bold",
+        fontSize: FONT_SIZES.lg,
+        fontFamily: FONTS.semiBold,
         color: Colors.text.black
 
     },

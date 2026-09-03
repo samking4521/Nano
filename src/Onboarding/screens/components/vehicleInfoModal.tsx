@@ -3,17 +3,18 @@ import { useRef, useState } from 'react'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { AntDesign, FontAwesome, MaterialCommunityIcons, MaterialIcons, SimpleLineIcons } from '@expo/vector-icons'
 
-import { Colors } from '../../../constants/colors'
+import { Colors } from '../../../constants/theme/colors'
 import { useNavigation } from '@react-navigation/native'
 import BottomSheet from '@gorhom/bottom-sheet'
 import { driverStorage } from '../../../localStorage/driverStorage'
 import VehicleInfoBottomSheet from './vehicleInfoBottomSheet'
 import { vehicleType } from '../../../../assets/truck_data'
 import PhotoBottomSheet, { photoTypeData } from './PhotoBottomSheet'
-import { ownershipType } from '../ownershipStatus'
+import { ownershipType } from '../OwnershipStatus'
 import DatePicker from 'react-native-date-picker'
 import { formatDate } from '../../../utils/formatDate'
 import { OwnershipStatusNavigationProp } from '../../../Navigation/OnboardingNavigation'
+import { FONT_SIZES, FONTS, SPACING } from '../../../constants/theme/font'
 
 export type vehiclePhotoType = {
     id: string,
@@ -197,8 +198,8 @@ export default function VehicleInfoModal({ setOpenVehicleModal, setOwnershipStat
                             <View style={styles.infoCont}>
                                 <Text style={styles.mobileLabel}>Vehicle Type</Text>
                                 <Text style={styles.headerDesc}>Select the type of truck you use for deliveries.</Text>
-                                <Pressable onPress={openBottomSheet} style={{ ...styles.mobileTextInputContainer, borderColor: vehicle_type_err ? Colors.error : Colors.borderColor }}>
-                                    <Text style={styles.placeHolderText}>{vehicleType ? vehicleType : "Select Truck"}</Text>
+                                <Pressable onPress={openBottomSheet} style={[styles.mobileTextInputContainer, { borderColor: vehicle_type_err ? Colors.error : Colors.borderColor }]}>
+                                    <Text style={[styles.placeHolderText, { color: vehicleType ? Colors.text.gray : Colors.text.placeholder }]}>{vehicleType ? vehicleType : "Select Truck"}</Text>
                                     <MaterialIcons name="keyboard-arrow-down" size={24} color={Colors.text.gray} />
                                 </Pressable>
                                 {vehicle_type_err && <View style={styles.errorBox}>
@@ -210,12 +211,14 @@ export default function VehicleInfoModal({ setOpenVehicleModal, setOwnershipStat
 
                             <View style={styles.infoCont}>
                                 <Text style={styles.mobileLabel}>Vehicle Load Capacity (tonnes)</Text>
-                                <View style={{ ...styles.mobileTextInputContainer, borderColor: vehicle_capacity_err ? Colors.error : inputFocus == "vehicle_capacity" ? Colors.primary : Colors.borderColor }}>
+                                <View style={[styles.mobileTextInputContainer, { borderColor: vehicle_capacity_err ? Colors.error : inputFocus == "vehicle_capacity" ? Colors.primary : Colors.borderColor }]}>
                                     <TextInput
                                         value={vehicleCapacity}
                                         onChangeText={setVehicleCapacity}
                                         placeholder='2 tonnes'
                                         keyboardType="decimal-pad"
+                                        placeholderTextColor={Colors.text.placeholder}
+                                        selectionColor={Colors.primary}
                                         style={styles.mobileTextInput}
                                         onFocus={() => setInputFocus("vehicle_capacity")}
                                         onBlur={() => setInputFocus(null)}
@@ -228,21 +231,21 @@ export default function VehicleInfoModal({ setOpenVehicleModal, setOwnershipStat
                             </View>
 
 
-                           
+
 
                             <View style={styles.infoCont}>
                                 <Text style={styles.mobileLabel}>Vehicle Plate Number</Text>
-                                <View style={{ ...styles.mobileTextInputContainer, borderColor: vehicle_plate_no_err ? Colors.error : inputFocus == "plate_number" ? Colors.primary : Colors.borderColor }}>
+                                <View style={[styles.mobileTextInputContainer, { borderColor: vehicle_plate_no_err ? Colors.error : inputFocus == "plate_number" ? Colors.primary : Colors.borderColor }]}>
                                     <TextInput
                                         value={plateNumber}
                                         onChangeText={setPlateNumber}
-
                                         placeholder='LND-123AB'
                                         keyboardType="default"
+                                        placeholderTextColor={Colors.text.placeholder}
+                                        selectionColor={Colors.primary}
                                         style={styles.mobileTextInput}
                                         onFocus={() => setInputFocus("plate_number")}
                                         onBlur={() => setInputFocus(null)}
-
                                     />
                                 </View>
                                 {vehicle_plate_no_err && <View style={styles.errorBox}>
@@ -250,15 +253,16 @@ export default function VehicleInfoModal({ setOpenVehicleModal, setOwnershipStat
                                 </View>}
                             </View>
 
-                             <View style={styles.infoCont}>
+                            <View style={styles.infoCont}>
                                 <Text style={styles.mobileLabel}>Vehicle Production Year</Text>
-                                <View style={{ ...styles.mobileTextInputContainer, borderColor: vehicle_year_err ? Colors.error : inputFocus == "vehicle_year" ? Colors.primary : Colors.borderColor }}>
+                                <View style={[styles.mobileTextInputContainer, { borderColor: vehicle_year_err ? Colors.error : inputFocus == "vehicle_year" ? Colors.primary : Colors.borderColor }]}>
                                     <TextInput
                                         value={vehicleYear}
                                         onChangeText={setVehicleYear}
-
                                         placeholder='e.g 2008'
                                         keyboardType="numeric"
+                                        placeholderTextColor={Colors.text.placeholder}
+                                        selectionColor={Colors.primary}
                                         style={styles.mobileTextInput}
                                         onFocus={() => setInputFocus("vehicle_year")}
                                         onBlur={() => setInputFocus(null)}
@@ -274,13 +278,13 @@ export default function VehicleInfoModal({ setOpenVehicleModal, setOwnershipStat
 
 
                             <View>
-                                <View style={{ ...styles.pictureVehicleCont, borderColor: (vehicle_photo_empty_err || vehicle_photo_length_err) ? Colors.error : Colors.borderColor }}>
-                                    <View style={{ ...styles.pictureVehicleHeader, borderBottomColor: (vehicle_photo_empty_err || vehicle_photo_length_err) ? Colors.error : Colors.borderColor }}>
+                                <View style={[styles.pictureVehicleCont, { borderColor: (vehicle_photo_empty_err || vehicle_photo_length_err) ? Colors.error : Colors.borderColor }]}>
+                                    <View style={[styles.pictureVehicleHeader, { borderBottomColor: (vehicle_photo_empty_err || vehicle_photo_length_err) ? Colors.error : Colors.borderColor }]}>
                                         <View style={styles.vehicleIcon}>
                                             <SimpleLineIcons name="picture" size={16} color={Colors.text.black} />
                                         </View>
                                         <View>
-                                            <Text style={{ ...styles.mobileLabel, marginBottom: 5 }}>Vehicle Photo</Text>
+                                            <Text style={styles.mobileLabel}>Vehicle Photo</Text>
                                         </View>
                                         {vehiclePhotos.length == 1 ? <Pressable onPress={selectVehiclePhotos} style={styles.editBtn}>
                                             <AntDesign name="plus" size={18} color={Colors.text.black} />
@@ -327,7 +331,7 @@ export default function VehicleInfoModal({ setOpenVehicleModal, setOwnershipStat
                             <View style={styles.infoCont}>
                                 <Text style={styles.mobileLabel}>Vehicle Reg Expiry Date</Text>
                                 <TouchableOpacity onPress={() => setOpen(true)} style={{ ...styles.mobileTextInputContainer, flexDirection: "row", alignItems: "center", borderColor: vehicleRegExpiryDate_err ? Colors.error : Colors.borderColor, paddingHorizontal: 10 }}>
-                                    <Text style={{ marginRight: "auto", fontSize: 14, fontWeight: "500", color: Colors.text.gray }}>{(driverLocalStorageVehicleRegExpiryDate || datePicked) ? formatDate(vehicleRegExpiryDate) : "Enter vehicle reg expiry date"}</Text>
+                                    <Text style={[styles.vehicleRegExpiry, { color: (driverLocalStorageVehicleRegExpiryDate || datePicked) ? Colors.text.gray : Colors.text.placeholder }]}>{(driverLocalStorageVehicleRegExpiryDate || datePicked) ? formatDate(vehicleRegExpiryDate) : "Enter vehicle reg expiry date"}</Text>
                                     <FontAwesome name="calendar" size={22} color={Colors.primary} />
                                     {
                                         open && <DatePicker
@@ -411,7 +415,6 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: Colors.background,
-        paddingTop: Platform.OS == "ios" ? null : StatusBar.currentHeight,
     },
     body: {
         flex: 1,
@@ -431,13 +434,12 @@ const styles = StyleSheet.create({
         justifyContent: "space-between"
     },
     headerText: {
-        fontSize: 18,
-        fontWeight: "bold",
+        fontSize: FONT_SIZES.lg,
+        fontFamily: FONTS.semiBold,
         color: Colors.text.black
 
     },
     mobileTextInputContainer: {
-
         marginTop: 10,
         width: "100%",
         height: 50,
@@ -453,16 +455,15 @@ const styles = StyleSheet.create({
         marginTop: 20
     },
     mobileLabel: {
-        fontSize: 14,
+        fontSize: FONT_SIZES.sm,
         color: Colors.text.black,
-        fontWeight: "600"
+        fontFamily: FONTS.medium
     },
     headerDesc: {
-        fontSize: 14,
-        fontWeight: "500",
-        marginTop: 5,
+        fontSize: FONT_SIZES.sm,
+        fontFamily: FONTS.medium,
+        marginTop: SPACING.xs,
         color: Colors.text.gray,
-
     },
     placeHolderText: {
         color: Colors.text.gray,
@@ -474,9 +475,9 @@ const styles = StyleSheet.create({
         flex: 1,
         height: 50,
         paddingHorizontal: 10,
-
-
-
+        color: Colors.text.gray,
+        fontSize: FONT_SIZES.sm,
+        fontFamily: FONTS.semiBold,
     },
     pictureVehicleCont: {
         marginTop: 20,
@@ -606,6 +607,12 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: "500"
     },
+    vehicleRegExpiry: {
+        marginRight: "auto",
+        fontSize: FONT_SIZES.sm,
+        fontFamily: FONTS.semiBold,
+        color: Colors.text.gray
+    }
 
 
 })

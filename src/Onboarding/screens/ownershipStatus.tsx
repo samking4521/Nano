@@ -1,13 +1,14 @@
 import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native'
-import React, { useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons'
-import { Colors } from '../../constants/colors'
+import { Colors } from '../../constants/theme/colors'
 import ProgressLevel from './components/progressLevel'
 import { useNavigation } from '@react-navigation/native'
 import { OwnershipStatusNavigationProp } from '../../Navigation/OnboardingNavigation'
 import VehicleInfoModal from './components/vehicleInfoModal'
 import { driverStorage } from '../../localStorage/driverStorage'
+import { FONT_SIZES, FONTS, ICON_SIZES, SPACING } from '../../constants/theme/font'
 
 const ownership_status_img = require("../../../assets/onboarding/ownership_status_img.png");
 
@@ -53,7 +54,7 @@ export default function OwnershipStatus() {
     }
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView edges={["top", "bottom"]} style={styles.container}>
             <KeyboardAvoidingView
                 style={{ flex: 1, paddingHorizontal: 15, }}
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -61,7 +62,7 @@ export default function OwnershipStatus() {
             >
                 <View style={styles.headerContainer}>
                     <Pressable onPress={goToPreviousScreen} style={styles.backBtn}>
-                        <Feather name="arrow-left" size={22} color={Colors.text.black} />
+                        <Feather name="arrow-left" size={ICON_SIZES.lg} color={Colors.text.black} />
                     </Pressable>
                     <Text style={styles.headerText}>Details</Text>
                     <View style={{ ...styles.backBtn, backgroundColor: undefined }}>
@@ -95,20 +96,19 @@ export default function OwnershipStatus() {
                             </View>
                             <View>
                                 <Text style={styles.roleText}>Owner Driver</Text>
-                                <Text style={styles.headerDesc}>I own the truck i drive</Text>
+                                <Text style={[styles.headerDesc, { lineHeight: undefined }]}>I own the truck i drive</Text>
                                 <View>
                                     <View style={{ marginTop: 10 }}>
                                         <View style={styles.roleDescCont}>
-                                            <Feather name="check-circle" size={20} color={isVehicleInfoComplete ? Colors.primary : "black"} />
+                                            <Feather name="check-circle" size={20} color={isVehicleInfoComplete ? Colors.primary : Colors.text.black} />
                                             <Text style={styles.roleDesc}>Add your truck details</Text>
                                         </View>
                                         <View style={styles.roleDescCont}>
-                                            <Feather name="check-circle" size={20} color="black" />
+                                            <Feather name="check-circle" size={20} color={Colors.text.black} />
                                             <Text style={styles.roleDesc}>Assign yourself or another verified driver</Text>
-
                                         </View>
                                         <View style={styles.roleDescCont}>
-                                            <Feather name="check-circle" size={20} color="black" />
+                                            <Feather name="check-circle" size={20} color={Colors.text.black} />
                                             <Text style={styles.roleDesc}>Choose who receives payments</Text>
 
                                         </View>
@@ -127,20 +127,20 @@ export default function OwnershipStatus() {
                             </View>
                             <View>
                                 <Text style={styles.roleText}>Hired Driver</Text>
-                                <Text style={styles.headerDesc}>I drive the truck owned by someone else.</Text>
+                                <Text style={[styles.headerDesc, { lineHeight: undefined }]}>I drive the truck owned by someone else.</Text>
                                 <View>
                                     <View style={{ marginTop: 10 }}>
                                         <View style={styles.roleDescCont}>
-                                            <Feather name="check-circle" size={20} color="black" />
+                                            <Feather name="check-circle" size={20} color={Colors.text.black} />
                                             <Text style={styles.roleDesc}>Receive truck assignments from owners.</Text>
                                         </View>
                                         <View style={styles.roleDescCont}>
-                                            <Feather name="check-circle" size={20} color="black" />
+                                            <Feather name="check-circle" size={20} color={Colors.text.black} />
                                             <Text style={styles.roleDesc}>Accept or decline assignments</Text>
 
                                         </View>
                                         <View style={styles.roleDescCont}>
-                                            <Feather name="check-circle" size={20} color="black" />
+                                            <Feather name="check-circle" size={20} color={Colors.text.black} />
                                             <Text style={styles.roleDesc}>Start delivering after verification</Text>
 
                                         </View>
@@ -173,8 +173,7 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.background,
     },
     body: {
-        flex: 1,
-        paddingTop: Platform.OS == "ios" ? null : StatusBar.currentHeight,
+        flex: 1
     },
     backBtn: {
         width: 45,
@@ -190,20 +189,20 @@ const styles = StyleSheet.create({
         justifyContent: "space-between"
     },
     headerText: {
-        fontSize: 18,
-        fontWeight: "bold",
+        fontSize: FONT_SIZES.lg,
+        fontFamily: FONTS.semiBold,
         color: Colors.text.black
 
     },
+    headerDesc: {
+        fontSize: FONT_SIZES.sm,
+        fontFamily: FONTS.medium,
+        marginTop: SPACING.xs,
+        color: Colors.text.gray,
+        lineHeight: 20
+    },
     infoCont: {
         marginTop: 10
-    },
-    headerDesc: {
-        fontSize: 14,
-        fontWeight: "500",
-        marginTop: 5,
-        color: Colors.text.gray,
-
     },
     imageCont: {
         width: "100%",
@@ -253,14 +252,17 @@ const styles = StyleSheet.create({
         marginBottom: 10
     },
     roleText: {
-        fontWeight: "600", color: Colors.text.black, fontSize: 15
+        fontFamily: FONTS.semiBold,
+        color: Colors.text.black,
+        fontSize: FONT_SIZES.sm
 
     },
     roleDesc: {
-        fontSize: 14,
-        fontWeight: "500",
-        color: Colors.text.black,
-        marginLeft: 10
+        fontSize: FONT_SIZES.sm,
+        fontFamily: FONTS.medium,
+        color: Colors.text.gray,
+        marginLeft: 10,
+        flexShrink: 1
     },
     roleDescCont: {
         flexDirection: "row",
@@ -277,8 +279,8 @@ const styles = StyleSheet.create({
     },
     continueText: {
         color: Colors.text.white,
-        fontWeight: "600",
-        fontSize: 16
+        fontFamily: FONTS.semiBold,
+        fontSize: FONT_SIZES.md
     },
 
 })

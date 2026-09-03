@@ -5,7 +5,7 @@ import { Feather, FontAwesome } from '@expo/vector-icons'
 import { useNavigation, usePreventRemove } from '@react-navigation/native'
 import CountryPicker, { Country, CountryCode } from 'react-native-country-picker-modal'
 import DatePicker from 'react-native-date-picker'
-import { Colors } from '../../constants/colors'
+import { Colors } from '../../constants/theme/colors'
 import { shipperStorage } from '../../localStorage/shipperStorage'
 import { ShipperInfoNavigationProp, ShipperInfoRouteProp } from '../../Navigation/OnboardingNavigation'
 import { useAuthStore } from '../../Authentication/store/authStore'
@@ -15,6 +15,7 @@ import { uploadUser } from '../../utils/uploadUser'
 import { ShipperAppNavigationProp } from '../../Navigation/RootNavigation'
 import { signUpDataStorage } from '../../localStorage/signUpDataStorage'
 import LoadingSpinner from '../../utils/loadingSpinner'
+import { BORDER_RADIUS, FONT_SIZES, FONTS, ICON_SIZES, SPACING } from '../../constants/theme/font'
 
 
 
@@ -69,9 +70,7 @@ export default function ShipperInfo({ route }: Props) {
 
     const callingCode = country?.callingCode[0] ?? "234";
     const countryCode = country?.cca2 ?? 'NG';
-    const countryName = typeof country?.name === 'string'
-        ? country.name
-        : country?.name?.common ?? 'Nigeria'
+
 
     const onSelect = (country: Country) => {
         console.log("country: ", country);
@@ -346,7 +345,7 @@ export default function ShipperInfo({ route }: Props) {
 
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView edges={["top", "bottom"]} style={styles.container}>
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -357,7 +356,7 @@ export default function ShipperInfo({ route }: Props) {
                     style={styles.body}>
 
                     <Pressable onPress={goToPreviousScreen} style={styles.backBtn}>
-                        <Feather name="arrow-left" size={22} color="#111827" />
+                        <Feather name="arrow-left" size={ICON_SIZES.lg} color="#111827" />
                     </Pressable>
                     <View>
                         <View style={styles.headerLabel}>
@@ -370,16 +369,17 @@ export default function ShipperInfo({ route }: Props) {
                             <View style={styles.nameBoxContainer}>
                                 <View style={{ flex: 1, marginRight: 5, }}>
                                     <Text style={styles.mobileLabel}>First name</Text>
-                                    <View style={{ ...styles.inputBoxCont, height: 50, borderColor: firstname_err ? Colors.error : inputFocus == "first_name" ? Colors.primary : Colors.borderColor }}>
+                                    <View style={[styles.inputBoxCont, { height: 50, borderColor: firstname_err ? Colors.error : inputFocus == "first_name" ? Colors.primary : Colors.borderColor }]}>
                                         <TextInput
                                             value={firstname}
                                             onChangeText={setFirstName}
                                             placeholder='John'
                                             keyboardType="default"
+                                            placeholderTextColor={Colors.text.placeholder}
+                                            selectionColor={Colors.primary}
                                             style={styles.mobileTextInput}
                                             onFocus={() => setInputFocus("first_name")}
                                             onBlur={() => setInputFocus(null)}
-
                                         />
                                     </View>
                                     {firstname_err && <View style={styles.errorBox}>
@@ -390,13 +390,15 @@ export default function ShipperInfo({ route }: Props) {
 
                                 <View style={{ flex: 1, marginLeft: 5, }}>
                                     <Text style={styles.mobileLabel}>Last name</Text>
-                                    <View style={{ ...styles.inputBoxCont, height: 50, borderColor: lastname_err ? Colors.error : inputFocus == "last_name" ? Colors.primary : Colors.borderColor }}>
+                                    <View style={[styles.inputBoxCont, { height: 50, borderColor: lastname_err ? Colors.error : inputFocus == "last_name" ? Colors.primary : Colors.borderColor }]}>
 
                                         <TextInput
                                             value={lastname}
                                             onChangeText={setLastName}
                                             placeholder='Doe'
                                             keyboardType="default"
+                                            placeholderTextColor={Colors.text.placeholder}
+                                            selectionColor={Colors.primary}
                                             style={styles.mobileTextInput}
                                             onFocus={() => setInputFocus("last_name")}
                                             onBlur={() => setInputFocus(null)}
@@ -414,7 +416,7 @@ export default function ShipperInfo({ route }: Props) {
                             <View style={styles.infoCont}>
                                 <Text style={styles.mobileLabel}>Mobile Number</Text>
                                 <View pointerEvents={phone_number ? "none" : "auto"} style={{ ...styles.mobileTextInputContainer, borderColor: mobile_no_err ? Colors.error : inputFocus == "mobile_number" ? Colors.primary : Colors.borderColor }}>
-                                    <View style={{ ...styles.mobileCodeCont, borderRightColor: mobile_no_err ? Colors.error : inputFocus == "mobile_number" ? Colors.primary : Colors.borderColor }}>
+                                    <View style={[styles.mobileCodeCont, { borderRightColor: mobile_no_err ? Colors.error : inputFocus == "mobile_number" ? Colors.primary : Colors.borderColor }]}>
                                         <CountryPicker
                                             {...countryPickerProps}
                                             countryCode={countryCodeVal as CountryCode || countryCode}
@@ -428,11 +430,12 @@ export default function ShipperInfo({ route }: Props) {
                                             value={stripCountryCode(phone_number, callingCodeVal) || mobileNo}
                                             onChangeText={setMobileNo}
                                             placeholder='Enter number here'
-                                            keyboardType="phone-pad"
+                                            placeholderTextColor={Colors.text.placeholder}
+                                            keyboardType="number-pad"
+                                            selectionColor={Colors.primary}
                                             style={styles.mobileTextInput}
                                             onFocus={() => setInputFocus("mobile_number")}
                                             onBlur={() => setInputFocus(null)}
-
                                         />
                                     </View>
 
@@ -444,12 +447,14 @@ export default function ShipperInfo({ route }: Props) {
 
                             <View style={styles.infoCont}>
                                 <Text style={styles.mobileLabel}>Email</Text>
-                                <View pointerEvents={emailVal ? "none" : "auto"} style={{ ...styles.inputBoxCont, borderColor: (email_length_err || email_valid_err) ? Colors.error : inputFocus == "email" ? Colors.primary : Colors.borderColor }}>
+                                <View pointerEvents={emailVal ? "none" : "auto"} style={[styles.inputBoxCont, { borderColor: (email_length_err || email_valid_err) ? Colors.error : inputFocus == "email" ? Colors.primary : Colors.borderColor }]}>
                                     <TextInput
                                         value={emailVal || email}
                                         onChangeText={setEmail}
                                         placeholder='johndoe@gmail.com'
                                         keyboardType="email-address"
+                                        placeholderTextColor={Colors.text.placeholder}
+                                        selectionColor={Colors.primary}
                                         style={styles.mobileTextInput}
                                         onFocus={() => setInputFocus("email")}
                                         onBlur={() => setInputFocus(null)}
@@ -463,12 +468,14 @@ export default function ShipperInfo({ route }: Props) {
 
                             <View style={styles.infoCont}>
                                 <Text style={styles.mobileLabel}>Business name (optional)</Text>
-                                <View style={{ ...styles.inputBoxCont, borderColor: error == "empty_business" ? Colors.error : inputFocus == "business_name" ? Colors.primary : Colors.borderColor }}>
+                                <View style={[styles.inputBoxCont, { borderColor: error == "empty_business" ? Colors.error : inputFocus == "business_name" ? Colors.primary : Colors.borderColor }]}>
                                     <TextInput
                                         value={businessName}
                                         onChangeText={setBusinessName}
                                         placeholder='John Furnitures'
                                         keyboardType="default"
+                                        placeholderTextColor={Colors.text.placeholder}
+                                        selectionColor={Colors.primary}
                                         style={styles.mobileTextInput}
                                         onFocus={() => setInputFocus("business_name")}
                                         onBlur={() => setInputFocus(null)}
@@ -480,9 +487,9 @@ export default function ShipperInfo({ route }: Props) {
 
                             <View style={styles.infoCont}>
                                 <Text style={styles.mobileLabel}>Birthday</Text>
-                                <TouchableOpacity onPress={() => setOpen(true)} style={{ ...styles.inputBoxCont, flexDirection: "row", alignItems: "center", borderColor: dob_err ? Colors.error : Colors.borderColor, paddingHorizontal: 10 }}>
-                                    <Text style={{ marginRight: "auto", fontSize: 14, fontWeight: "500", color: Colors.text.gray }}>{(shipperLocalStorageDob || datePicked) ? formatDate(dob) : "Enter your birthday"}</Text>
-                                    <FontAwesome name="calendar" size={22} color={Colors.primary} />
+                                <TouchableOpacity onPress={() => setOpen(true)} style={[styles.inputBoxCont, { flexDirection: "row", alignItems: "center", borderColor: dob_err ? Colors.error : Colors.borderColor, paddingHorizontal: 10 }]}>
+                                    <Text style={[styles.birthdayText, { color: (shipperLocalStorageDob || datePicked) ? Colors.text.gray : Colors.text.placeholder }]}>{(shipperLocalStorageDob || datePicked) ? formatDate(dob) : "Enter your birthday"}</Text>
+                                    <FontAwesome name="calendar" size={ICON_SIZES.lg} color={Colors.primary} />
                                     {
                                         open && <DatePicker
                                             modal
@@ -511,14 +518,21 @@ export default function ShipperInfo({ route }: Props) {
 
                         </View>
 
-                        <Pressable onPress={continueToHomeScreen} style={styles.nextBtn}>
-                            <Text style={styles.continueText}>Continue</Text>
-                        </Pressable>
 
-                        <Text style={{ ...styles.headerDesc, marginTop: 20 }}>By signing up, you agree to Nano's Terms and Privacy Policy.</Text>
                     </View>
+
                 </ScrollView>
+                <View style={styles.footerCont}>
+                    <Pressable onPress={continueToHomeScreen} style={styles.nextBtn}>
+                        <Text style={styles.continueText}>Continue</Text>
+                    </Pressable>
+
+                </View>
+
+
             </KeyboardAvoidingView>
+            <Text style={styles.footerText}>By signing up, you agree to Nano's Terms and Privacy Policy.</Text>
+
             {
                 loading && <LoadingSpinner text={"Creating your profile"} />
             }
@@ -533,7 +547,8 @@ const styles = StyleSheet.create({
     },
     body: {
         flex: 1,
-        padding: 15
+        padding: 15,
+        paddingBottom: 50
     },
     backBtn: {
         width: 45,
@@ -547,25 +562,26 @@ const styles = StyleSheet.create({
         marginTop: 20,
     },
     headerText: {
-        fontSize: 25,
-        fontWeight: "bold",
+        fontSize: FONT_SIZES.xxl,
+        fontFamily: FONTS.semiBold,
         color: Colors.text.black
 
     },
     headerDesc: {
-        fontSize: 14,
-        fontWeight: "500",
-        marginTop: 10,
-        color: Colors.text.gray
+        fontSize: FONT_SIZES.sm,
+        fontFamily: FONTS.medium,
+        marginTop: SPACING.xs,
+        color: Colors.text.gray,
+        lineHeight: 20
     },
     infoCont: {
         marginTop: 20
     },
     mobileLabel: {
-        marginBottom: 10,
-        fontSize: 14,
+        marginBottom: SPACING.sm,
+        fontSize: FONT_SIZES.sm,
         color: Colors.text.black,
-        fontWeight: "600"
+        fontFamily: FONTS.medium
     },
     mobileTextInputContainer: {
         width: "100%",
@@ -589,11 +605,11 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
         flexDirection: "row",
-        paddingHorizontal: 10
+        paddingLeft: 12
     },
     mobileCodeText: {
         fontSize: 12,
-        fontWeight: "600",
+        fontFamily: FONTS.semiBold,
         color: Colors.text.gray,
         padding: 5
     },
@@ -601,45 +617,49 @@ const styles = StyleSheet.create({
         flex: 1,
         height: 50,
         paddingHorizontal: 10,
-
-
-
+        color: Colors.text.gray,
+        fontSize: FONT_SIZES.sm,
+        fontFamily: FONTS.semiBold,
     },
     mobileInputCont: {
-        flexDirection: "row", alignItems: "center"
+        flex: 1,
+        flexShrink: 1,
+        flexDirection: "row",
+        alignItems: "center"
     },
     nameBoxContainer: {
-        flexDirection: "row", alignItems: "flex-start"
+        flexDirection: "row",
+        alignItems: "flex-start"
     },
     errorBox: {
         marginTop: 10,
         width: "100%",
         padding: 10,
         backgroundColor: Colors.errorBackground,
-        borderRadius: 12
+        borderRadius: BORDER_RADIUS.lg
 
     },
     errorText: {
         color: Colors.error,
-        fontSize: 12,
-        fontWeight: "500"
+        fontSize: FONT_SIZES.xs,
+        fontFamily: FONTS.medium,
     },
     discountBox: {
         marginTop: 10,
         width: "100%",
         padding: 10,
         backgroundColor: "#FFF4EB",
-        borderRadius: 12
+        borderRadius: BORDER_RADIUS.lg
 
     },
     discountText: {
         color: Colors.primary,
-        fontSize: 12,
-        fontWeight: "500"
+        fontSize: FONT_SIZES.xs,
+        fontFamily: FONTS.medium,
     },
     nextBtn: {
         height: 50,
-        borderRadius: 50,
+        borderRadius: BORDER_RADIUS.round,
         justifyContent: "center",
         alignItems: "center",
         backgroundColor: Colors.primary,
@@ -647,7 +667,27 @@ const styles = StyleSheet.create({
     },
     continueText: {
         color: Colors.text.white,
-        fontWeight: "600",
-        fontSize: 16
+        fontFamily: FONTS.semiBold,
+        fontSize: FONT_SIZES.md
     },
+    birthdayText: {
+        marginRight: "auto",
+        fontSize: FONT_SIZES.sm,
+        fontFamily: FONTS.semiBold,
+        color: Colors.text.gray
+    },
+    footerText: {
+        fontSize: FONT_SIZES.xs,
+        fontFamily: FONTS.medium,
+        marginTop: 5,
+        color: Colors.text.gray,
+        paddingHorizontal: 15,
+        textAlign: "center"
+    },
+    footerCont: {
+        paddingHorizontal: 15,
+        paddingTop: 0,
+        padding: 10
+    }
+
 })

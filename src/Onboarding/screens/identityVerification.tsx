@@ -3,7 +3,7 @@ import { useMemo, useRef, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { AntDesign, Feather, FontAwesome, MaterialCommunityIcons, SimpleLineIcons } from '@expo/vector-icons'
 import ProgressLevel from './components/progressLevel'
-import { Colors } from '../../constants/colors'
+import { Colors } from '../../constants/theme/colors'
 import { useNavigation } from '@react-navigation/native'
 import { IdentityVerificationNavigationProp } from '../../Navigation/OnboardingNavigation'
 import { driverStorage } from '../../localStorage/driverStorage'
@@ -12,6 +12,7 @@ import PhotoBottomSheet, { photoTypeData } from './components/PhotoBottomSheet'
 import DatePicker from 'react-native-date-picker'
 import { formatDate } from '../../utils/formatDate'
 import LicenseClassModal from './components/licenseClassModal'
+import { BORDER_RADIUS, FONT_SIZES, FONTS, ICON_SIZES, SPACING } from '../../constants/theme/font'
 
 
 type inputFocusType = "nin" | "license";
@@ -21,7 +22,7 @@ export default function IdentityVerification() {
     const [nin, setNin] = useState(() => driverStorage.getString("nin") ?? "");
     const [ninImage, setNinImage] = useState(() => driverStorage.getString("ninImage") ?? "");
     const [driverLicenseNumber, setDriverLicenseNumber] = useState(() => driverStorage.getString("driverLicenseNo") ?? "");
-    const [driverLicenseClass, setDriverLicenseClass] = useState(() => driverStorage.getString("driverLicenseClass") ?? "e.g Class G");
+    const [driverLicenseClass, setDriverLicenseClass] = useState(() => driverStorage.getString("driverLicenseClass") ?? "");
     const [showLicenseClassModal, setShowLicenseClassModal] = useState(false);
     const [driverLicenseImage, setDriverLicenseImage] = useState(() => driverStorage.getString("driverLicensePhoto") ?? "");
     const [inputFocus, setInputFocus] = useState<inputFocusType | null>(null);
@@ -80,8 +81,8 @@ export default function IdentityVerification() {
         setDriverLicenseImage("");
     }
 
-    const selectLicenseClass = ()=>{
-         setShowLicenseClassModal(true);
+    const selectLicenseClass = () => {
+        setShowLicenseClassModal(true);
     }
 
 
@@ -115,7 +116,7 @@ export default function IdentityVerification() {
 
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView edges={["top", "bottom"]} style={styles.container}>
             <KeyboardAvoidingView
                 style={{ flex: 1, paddingHorizontal: 15, }}
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -123,7 +124,7 @@ export default function IdentityVerification() {
             >
                 <View style={styles.headerContainer}>
                     <Pressable onPress={goToPreviousScreen} style={styles.backBtn}>
-                        <Feather name="arrow-left" size={22} color={Colors.text.black} />
+                        <Feather name="arrow-left" size={ICON_SIZES.lg} color={Colors.text.black} />
                     </Pressable>
                     <Text style={styles.headerText}>Details</Text>
                     <View style={{ ...styles.backBtn, backgroundColor: undefined }}>
@@ -146,17 +147,18 @@ export default function IdentityVerification() {
                     </View>
                     <View style={styles.infoCont}>
                         <Text style={styles.mobileLabel}>NIN</Text>
-                        <View style={{ ...styles.inputBoxCont, borderColor: (nin_empty || nin_length_err) ? Colors.error : inputFocus == "nin" ? Colors.primary : Colors.borderColor }}>
+                        <View style={[styles.inputBoxCont, { borderColor: (nin_empty || nin_length_err) ? Colors.error : inputFocus == "nin" ? Colors.primary : Colors.borderColor }]}>
                             <TextInput
                                 value={nin}
                                 onChangeText={setNin}
                                 maxLength={11}
                                 placeholder='12345678901'
                                 keyboardType="decimal-pad"
+                                placeholderTextColor={Colors.text.placeholder}
+                                selectionColor={Colors.primary}
                                 style={styles.mobileTextInput}
                                 onFocus={() => setInputFocus("nin")}
                                 onBlur={() => setInputFocus(null)}
-
                             />
                         </View>
                         {(nin_empty || nin_length_err) && <View style={styles.errorBox}>
@@ -171,7 +173,7 @@ export default function IdentityVerification() {
                                     <SimpleLineIcons name="picture" size={16} color={Colors.text.black} />
                                 </View>
                                 <View>
-                                    <Text style={{ ...styles.mobileLabel, marginBottom: 5 }}>Picture of NIN</Text>
+                                    <Text style={styles.mobileLabel}>Picture of NIN</Text>
 
                                 </View>
                                 {ninImage ? <Pressable onPress={deleteNinImage} style={styles.editBtn}>
@@ -199,13 +201,15 @@ export default function IdentityVerification() {
 
                     <View style={styles.infoCont}>
                         <Text style={styles.mobileLabel}>Driver License Number</Text>
-                        <View style={{ ...styles.inputBoxCont, borderColor: (license_empty || license_length_err) ? Colors.error : inputFocus == "license" ? Colors.primary : Colors.borderColor }}>
+                        <View style={[styles.inputBoxCont, {borderColor: (license_empty || license_length_err) ? Colors.error : inputFocus == "license" ? Colors.primary : Colors.borderColor }]}>
                             <TextInput
                                 value={driverLicenseNumber}
                                 onChangeText={setDriverLicenseNumber}
                                 maxLength={12}
                                 placeholder='ABC123456789'
                                 keyboardType="default"
+                                  placeholderTextColor={Colors.text.placeholder}
+                                selectionColor={Colors.primary}
                                 style={styles.mobileTextInput}
                                 onFocus={() => setInputFocus("license")}
                                 onBlur={() => setInputFocus(null)}
@@ -219,8 +223,8 @@ export default function IdentityVerification() {
 
                     <View style={styles.infoCont}>
                         <Text style={styles.mobileLabel}>Driver License Class</Text>
-                        <Pressable onPress={selectLicenseClass} style={{ ...styles.inputBoxCont, justifyContent: "center", paddingHorizontal: 10, borderColor: Colors.borderColor }}>
-                            <Text>{driverLicenseClass}</Text>
+                        <Pressable onPress={selectLicenseClass} style={[styles.inputBoxCont, {justifyContent: "center", paddingHorizontal: 10, borderColor: Colors.borderColor }]}>
+                            <Text style={[styles.licenseText, {color: driverLicenseClass? Colors.text.gray : Colors.text.placeholder }]}>{driverLicenseClass || "e.g Class G"}</Text>
                         </Pressable>
                         {(license_class_empty) && <View style={styles.errorBox}>
                             <Text style={styles.errorText}>{license_empty && "License class cannot be empty"}</Text>
@@ -230,8 +234,8 @@ export default function IdentityVerification() {
 
                     <View style={styles.infoCont}>
                         <Text style={styles.mobileLabel}>Driver License Expiry Date</Text>
-                        <TouchableOpacity onPress={() => setOpen(true)} style={{ ...styles.inputBoxCont, flexDirection: "row", alignItems: "center", borderColor: licenseExpiryDate_err ? Colors.error : Colors.borderColor, paddingHorizontal: 10 }}>
-                            <Text style={{ marginRight: "auto", fontSize: 14, fontWeight: "500", color: Colors.text.gray }}>{(driverLocalStorageLicenseExpiryDate || datePicked) ? formatDate(licenseExpiryDate) : "Enter license expiry date"}</Text>
+                        <TouchableOpacity onPress={() => setOpen(true)} style={[styles.inputBoxCont, { flexDirection: "row", alignItems: "center", borderColor: licenseExpiryDate_err ? Colors.error : Colors.borderColor, paddingHorizontal: 10 }]}>
+                            <Text style={[styles.licenseExpiryDate, {color: (driverLocalStorageLicenseExpiryDate || datePicked)? Colors.text.gray : Colors.text.placeholder }]}>{(driverLocalStorageLicenseExpiryDate || datePicked) ? formatDate(licenseExpiryDate) : "Enter license expiry date"}</Text>
                             <FontAwesome name="calendar" size={22} color={Colors.primary} />
                             {
                                 open && <DatePicker
@@ -298,7 +302,7 @@ export default function IdentityVerification() {
                 </View>
             </KeyboardAvoidingView>
             <PhotoBottomSheet bottomSheetRef={bottomSheetRef} photoType={photoType} setPhotoType={setPhotoType} setNinImage={setNinImage} setDriverLicense={setDriverLicenseImage} />
-            <LicenseClassModal showLicenseClassModal={showLicenseClassModal} setShowLicenseClassModal={setShowLicenseClassModal} setDriverLicenseClass={setDriverLicenseClass}/>
+            <LicenseClassModal showLicenseClassModal={showLicenseClassModal} setShowLicenseClassModal={setShowLicenseClassModal} setDriverLicenseClass={setDriverLicenseClass} />
         </SafeAreaView>
     )
 }
@@ -306,9 +310,8 @@ export default function IdentityVerification() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.background,
-        paddingTop: Platform.OS == "ios" ? null : StatusBar.currentHeight,
-    },
+        backgroundColor: Colors.background
+        },
     body: {
         flex: 1,
 
@@ -327,27 +330,18 @@ const styles = StyleSheet.create({
         justifyContent: "space-between"
     },
     headerText: {
-        fontSize: 18,
-        fontWeight: "bold",
+        fontSize: FONT_SIZES.lg,
+        fontFamily: FONTS.semiBold,
         color: Colors.text.black
-
     },
-
     infoCont: {
         marginTop: 20
     },
-    headerDesc: {
-        fontSize: 14,
-        fontWeight: "500",
-        marginTop: 5,
-        color: Colors.text.gray,
-
-    },
     mobileLabel: {
-        marginBottom: 10,
-        fontSize: 14,
+        marginBottom: SPACING.sm,
+        fontSize: FONT_SIZES.sm,
         color: Colors.text.black,
-        fontWeight: "600"
+        fontFamily: FONTS.medium
     },
     inputBoxCont: {
         height: 50,
@@ -356,26 +350,29 @@ const styles = StyleSheet.create({
         borderRadius: 50,
     },
     mobileTextInput: {
-        flex: 1,
+         flex: 1,
         height: 50,
         paddingHorizontal: 10,
-
-
-
+        color: Colors.text.gray,
+        fontSize: FONT_SIZES.sm,
+        fontFamily: FONTS.semiBold,
     },
-    errorBox: {
-        marginTop: 10,
-        width: "100%",
-        padding: 10,
-        backgroundColor: Colors.errorBackground,
-        borderRadius: 12
-
+    licenseText: {
+        fontSize: FONT_SIZES.sm,
+        fontFamily: FONTS.semiBold,
     },
-    errorText: {
-        color: Colors.error,
-        fontSize: 12,
-        fontWeight: "500"
-    },
+      errorBox: {
+            marginTop: 10,
+            width: "100%",
+            padding: 10,
+            backgroundColor: Colors.errorBackground,
+            borderRadius: BORDER_RADIUS.lg
+        },
+        errorText: {
+            color: Colors.error,
+            fontSize: FONT_SIZES.xs,
+            fontFamily: FONTS.medium,
+        },
     pictureNinCont: {
         marginTop: 20,
         borderWidth: 1,
@@ -465,6 +462,11 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         fontSize: 16
     },
-
+   licenseExpiryDate: {
+     marginRight: "auto",
+        fontSize: FONT_SIZES.sm,
+        fontFamily: FONTS.semiBold,
+        color: Colors.text.gray
+   }
 
 })

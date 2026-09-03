@@ -1,11 +1,12 @@
 import { Image, StyleSheet, Text, View } from 'react-native'
-import { Colors } from '../../../constants/colors';
+import { Colors } from '../../../constants/theme/colors';
 import { AntDesign } from '@expo/vector-icons';
+import { FONT_SIZES, FONTS, SPACING } from '../../../constants/theme/font';
 
 const vehicle_photo_img = require("../../../../assets/onboarding/vehicle_photo_img_desc.png");
 export default function VehiclePhotoDesc() {
     return (
-        <View style={styles.container}>
+        <View>
             <View>
                 <Text style={styles.headerText}>Vehicle Photos</Text>
             </View>
@@ -30,34 +31,33 @@ export default function VehiclePhotoDesc() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-
-    },
+   
     headerText: {
-        fontSize: 25,
-        fontWeight: "bold",
-        color: Colors.text.black
-
-    },
-    headerDesc: {
-        fontSize: 14,
-        fontWeight: "500",
-        marginTop: 10,
-        color: Colors.text.gray
-    },
-    imageCont: {
-        width: "100%",
-        height: 300,
-         marginVertical: 20
-
-    },
-    image: {
-        width: "100%",
-        height: "100%",
-        resizeMode: "contain"
-    },
-    descCont: {
-        flexDirection: "row",
-        alignItems: "center",
-    }
+           fontSize: FONT_SIZES.lg,
+           fontFamily: FONTS.semiBold,
+           color: Colors.text.black
+   
+       },
+       headerDesc: {
+           fontSize: FONT_SIZES.sm,
+           fontFamily: FONTS.medium,
+           marginTop: SPACING.xs,
+           color: Colors.text.gray,
+           lineHeight: 20,
+           flexShrink: 1
+       },
+       imageCont: {
+           width: "100%",
+           height: 300,
+           marginVertical: 20
+       },
+       image: {
+           width: "100%",
+           height: "100%",
+           resizeMode: "contain"
+       },
+       descCont: {
+           flexDirection: "row",
+           alignItems: "center",
+       }
 })
