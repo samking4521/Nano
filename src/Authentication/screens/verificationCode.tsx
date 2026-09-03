@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, Text, TextInput, View, StatusBar, ScrollView, Ac
 import React, { useEffect, useRef, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons'
-import { Colors } from '../../constants/colors'
+import { Colors } from '../../constants/theme/colors'
 import { supabase } from '../../lib/supabase'
 import { useNavigation } from '@react-navigation/native'
 import * as WebBrowser from "expo-web-browser";
@@ -10,6 +10,7 @@ import { useAuthStore } from '../store/authStore'
 import { VerificationCodeNavigationProp, VerificationCodeRouteProp } from '../../Navigation/AuthUserNavigation'
 import { AuthNavigationProp } from '../../Navigation/RootNavigation'
 import { USER_ROLES } from '../../constants/shared_user'
+import { BORDER_RADIUS, FONT_SIZES, FONTS, ICON_SIZES, SPACING } from '../../constants/theme/font'
 
 
 type Props = {
@@ -36,7 +37,6 @@ export default function VerificationCode({ route }: Props) {
     const [inputFocus, setInputFocus] = useState(false);
     const isMounted = useRef(true);
 
-    console.log("mobileNo", mobileNo);
     useEffect(() => {
         startTimer()
     }, []);
@@ -241,7 +241,7 @@ export default function VerificationCode({ route }: Props) {
     }, [otp, error]);
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView edges={["top"]} style={styles.container}>
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -251,7 +251,7 @@ export default function VerificationCode({ route }: Props) {
                     keyboardShouldPersistTaps="handled"
                     style={styles.body}>
                     <Pressable onPress={goToPreviousScreen} style={styles.backBtn}>
-                        <Feather name="arrow-left" size={22} color={Colors.text.black} />
+                        <Feather name="arrow-left" size={ICON_SIZES.xl} color={Colors.text.black} />
                     </Pressable>
 
                     <View>
@@ -262,14 +262,16 @@ export default function VerificationCode({ route }: Props) {
 
                         <View style={styles.infoCont}>
                             <Text style={styles.otpLabel}>Enter Code</Text>
-                            <View style={{ ...styles.otpTextInputContainer, borderColor: error ? Colors.error : inputFocus ? Colors.primary : Colors.borderColor }}>
+                            <View style={[styles.otpTextInputContainer, { borderColor: error ? Colors.error : inputFocus ? Colors.primary : Colors.borderColor }]}>
 
                                 <TextInput
                                     value={otp}
                                     onChangeText={setOtp}
                                     placeholder='Enter 6 digit code'
+                                    placeholderTextColor={Colors.text.placeholder}
+                                    selectionColor={Colors.primary}
                                     keyboardType="number-pad"
-                                    style={{ ...styles.otpTextInput, paddingHorizontal: 10 }}
+                                    style={styles.otpTextInput}
                                     maxLength={6}
                                     autoFocus={true}
                                     onFocus={() => setInputFocus(true)}
@@ -294,7 +296,7 @@ export default function VerificationCode({ route }: Props) {
                     <View style={styles.footerCont}>
                         <Text style={styles.footerText}>Didn't receive code? </Text>
                         <TouchableOpacity onPress={resendVerificationCode}>
-                            {resendCode ? <View style={styles.resendLoading}><ActivityIndicator size={"small"} color={Colors.text.gray} /><Text style={styles.resendText}>Resending</Text></View> : <Text style={{ ...styles.resendText, color: countDownTime <= 0 ? Colors.primary : Colors.text.gray }}>Resend Code {countDownTime <= 0 ? "" : "in "}</Text>}
+                            {resendCode ? <View style={styles.resendLoading}><ActivityIndicator size={"small"} color={Colors.text.gray} /><Text style={styles.resendText}>Resending</Text></View> : <Text style={[styles.resendText, { color: countDownTime <= 0 ? Colors.primary : Colors.text.gray }]}>Resend Code {countDownTime <= 0 ? "" : "in "}</Text>}
                         </TouchableOpacity>
                         {countDownTime > 0 && <Text style={styles.timerText}>{formatTime(countDownTime)}</Text>}
                     </View>
@@ -314,27 +316,26 @@ const styles = StyleSheet.create({
     },
     body: {
         flex: 1,
-
         paddingHorizontal: 15,
-
-        paddingTop: Platform.OS == "ios" ? null : StatusBar.currentHeight
-
     },
     otpTextInputContainer: {
         width: "100%",
         height: 50,
         borderWidth: 1,
         backgroundColor: Colors.borderBackground,
-        borderRadius: 50,
+        borderRadius: BORDER_RADIUS.round,
         flexDirection: "row",
         alignItems: "center",
     },
     otpTextInput: {
         flex: 1,
         height: 50,
-        paddingHorizontal: 5,
-
-
+        borderTopRightRadius: BORDER_RADIUS.round,
+        borderBottomRightRadius: BORDER_RADIUS.round,
+        paddingHorizontal: 15,
+        color: Colors.text.black,
+        fontSize: FONT_SIZES.md,
+        fontFamily: FONTS.semiBold
     },
     backBtn: {
         width: 45,
@@ -348,29 +349,30 @@ const styles = StyleSheet.create({
         marginTop: 20,
     },
     headerText: {
-        fontSize: 25,
-        fontWeight: "bold",
+        fontSize: FONT_SIZES.xxl,
+        fontFamily: FONTS.semiBold,
         color: Colors.text.black
 
     },
     headerDesc: {
-        fontSize: 14,
-        fontWeight: "500",
-        marginTop: 10,
-        color: Colors.text.gray
+        fontSize: FONT_SIZES.sm,
+        fontFamily: FONTS.medium,
+        marginTop: SPACING.xs,
+        color: Colors.text.gray,
+        lineHeight: 20
     },
     infoCont: {
         marginTop: 20
     },
     otpLabel: {
-        marginBottom: 10,
-        fontSize: 16,
+        marginBottom: SPACING.sm,
+        fontSize: FONT_SIZES.md,
         color: Colors.text.black,
-        fontWeight: "600"
+        fontFamily: FONTS.semiBold
     },
     nextBtn: {
         height: 50,
-        borderRadius: 50,
+        borderRadius: BORDER_RADIUS.round,
         justifyContent: "center",
         alignItems: "center",
         backgroundColor: Colors.primary,
@@ -378,17 +380,19 @@ const styles = StyleSheet.create({
     },
     verifyText: {
         color: Colors.text.white,
-        fontWeight: "600",
-        fontSize: 16
+        fontFamily: FONTS.semiBold,
+        fontSize: FONT_SIZES.md
     },
     footerText: {
-        fontSize: 14,
-        fontWeight: "500",
+        fontSize: FONT_SIZES.sm,
+        fontFamily: FONTS.medium,
         color: Colors.text.gray
     },
     resendText: {
-        fontWeight: "600",
-        color: Colors.text.gray
+         fontSize: FONT_SIZES.sm,
+         fontFamily: FONTS.semiBold,
+        color: Colors.text.gray,
+        marginLeft: 5
     },
     footerCont: {
         flexDirection: "row",
@@ -397,17 +401,17 @@ const styles = StyleSheet.create({
         marginTop: 30
     },
     errorBox: {
-        marginTop: 10,
+         marginTop: 10,
         width: "100%",
         padding: 10,
         backgroundColor: Colors.errorBackground,
-        borderRadius: 12
+        borderRadius: BORDER_RADIUS.lg
 
     },
     errorText: {
-        color: Colors.error,
-        fontSize: 12,
-        fontWeight: "500"
+         color: Colors.error,
+        fontSize: FONT_SIZES.xs,
+        fontFamily: FONTS.medium
     },
     resendLoading: {
         flexDirection: "row",
@@ -415,7 +419,9 @@ const styles = StyleSheet.create({
         marginRight: 5
     },
     timerText: {
-        color: Colors.primary, fontWeight: "600"
+        color: Colors.primary,  
+        fontFamily: FONTS.semiBold, 
+        letterSpacing: 0.5
     }
 
 })

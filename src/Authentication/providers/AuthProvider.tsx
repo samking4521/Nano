@@ -48,8 +48,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setInitialRouteName("Onboard")
           }
 
-
-
         }
 
         setLoading(false);

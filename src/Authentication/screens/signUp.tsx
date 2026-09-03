@@ -1,8 +1,8 @@
-import { Pressable, StyleSheet, Text, TextInput, View, Image, StatusBar, ScrollView, ActivityIndicator, Alert, Platform, KeyboardAvoidingView } from 'react-native'
-import React, { useEffect, useState } from 'react'
+import { Pressable, StyleSheet, Text, TextInput, View, Image, ScrollView, ActivityIndicator, Alert, Platform, KeyboardAvoidingView } from 'react-native'
+import { useEffect, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons'
-import { Colors } from '../../constants/colors'
+import { Colors } from '../../constants/theme/colors'
 import { supabase } from '../../lib/supabase'
 import { useNavigation } from '@react-navigation/native'
 import * as WebBrowser from "expo-web-browser";
@@ -11,6 +11,8 @@ import { useAuthStore } from '../store/authStore'
 import { SignUpScreenNavigationProp } from '../../Navigation/AuthUserNavigation'
 import { AuthNavigationProp } from '../../Navigation/RootNavigation'
 import { USER_ROLES } from '../../constants/shared_user'
+import { StatusBar } from 'expo-status-bar'
+import { BORDER_RADIUS, FONT_SIZES, FONTS, ICON_SIZES, SPACING } from '../../constants/theme/font'
 
 const countryPickerProps = {
     withFilter: true,
@@ -213,9 +215,6 @@ export default function SignUp() {
         }
     };
 
-
-
-
     useEffect(() => {
         if (error == "emptyMobileNo" && mobileNo.length == 1) {
             setError(null);
@@ -226,7 +225,8 @@ export default function SignUp() {
 
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView edges={["top"]} style={styles.container}>
+            <StatusBar style="auto" />
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -238,7 +238,7 @@ export default function SignUp() {
 
 
                     <Pressable onPress={goToPreviousScreen} style={styles.backBtn}>
-                        <Feather name="arrow-left" size={22} color={Colors.text.black} />
+                        <Feather name="arrow-left" size={ICON_SIZES.xl} color={Colors.text.black} />
                     </Pressable>
 
                     <View>
@@ -251,13 +251,12 @@ export default function SignUp() {
 
                             <View style={styles.infoCont}>
                                 <Text style={styles.mobileLabel}>Mobile Number</Text>
-                                <View style={{ ...styles.mobileTextInputContainer, borderColor: error == "emptyMobileNo" ? Colors.error : inputFocus ? Colors.primary : Colors.borderColor }}>
-                                    <View style={{ ...styles.mobileCodeCont, borderRightColor: error == "emptyMobileNo" ? Colors.error : inputFocus ? Colors.primary : Colors.borderColor }}>
+                                <View style={[styles.mobileTextInputContainer, { borderColor: error == "emptyMobileNo" ? Colors.error : inputFocus ? Colors.primary : Colors.borderColor }]}>
+                                    <View style={[styles.mobileCodeCont, { borderRightColor: error == "emptyMobileNo" ? Colors.error : inputFocus ? Colors.primary : Colors.borderColor }]}>
                                         <CountryPicker
                                             {...countryPickerProps}
                                             countryCode={countryCode}
                                             onSelect={onSelect}
-
                                         />
                                     </View>
                                     <View style={styles.mobileInputCont}>
@@ -266,12 +265,15 @@ export default function SignUp() {
                                             value={mobileNo}
                                             onChangeText={setMobileNo}
                                             placeholder='Enter number here'
-                                            keyboardType="phone-pad"
+                                            placeholderTextColor={Colors.text.placeholder}
+                                            keyboardType="number-pad"
+                                            selectionColor={Colors.primary}           
                                             style={styles.mobileTextInput}
                                             onFocus={() => setInputFocus(true)}
                                             onBlur={() => setInputFocus(false)}
 
                                         />
+
                                     </View>
 
                                 </View>
@@ -306,8 +308,6 @@ export default function SignUp() {
 
                     </View>
 
-
-
                 </ScrollView>
 
             </KeyboardAvoidingView>
@@ -324,15 +324,13 @@ const styles = StyleSheet.create({
     body: {
         flex: 1,
         paddingHorizontal: 15,
-        paddingTop: Platform.OS == "ios" ? null : StatusBar.currentHeight
-
     },
     mobileTextInputContainer: {
         width: "100%",
         height: 50,
         borderWidth: 1,
         backgroundColor: Colors.borderBackground,
-        borderRadius: 50,
+        borderRadius: BORDER_RADIUS.round,
         flexDirection: "row",
         alignItems: "center",
     },
@@ -343,20 +341,23 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
         flexDirection: "row",
-        paddingHorizontal: 10
+        paddingLeft: 12
     },
     mobileCodeText: {
         fontSize: 12,
-        fontWeight: "600",
+        fontFamily: FONTS.semiBold,
         color: Colors.text.gray,
         padding: 5
     },
     mobileTextInput: {
         flex: 1,
         height: 50,
+        borderTopRightRadius: BORDER_RADIUS.round,
+        borderBottomRightRadius: BORDER_RADIUS.round,
         paddingHorizontal: 5,
-
-
+        color: Colors.text.black,
+        fontSize: FONT_SIZES.md,
+        fontFamily: FONTS.semiBold
     },
     backBtn: {
         width: 45,
@@ -370,28 +371,32 @@ const styles = StyleSheet.create({
         marginTop: 20,
     },
     headerText: {
-        fontSize: 25,
-        fontWeight: "bold",
+        fontSize: FONT_SIZES.xxl,
+        fontFamily: FONTS.semiBold,
         color: Colors.text.black
 
     },
     headerDesc: {
-        fontSize: 14,
-        fontWeight: "500",
-        marginTop: 10,
-        color: Colors.text.gray
+        fontSize: FONT_SIZES.sm,
+        fontFamily: FONTS.medium,
+        marginTop: SPACING.xs,
+        color: Colors.text.gray,
+        lineHeight: 20
     },
     infoCont: {
         marginTop: 20
     },
     mobileInputCont: {
-        flexDirection: "row", alignItems: "center"
+        flex: 1,
+        flexShrink: 1,
+        flexDirection: "row",
+        alignItems: "center"
     },
     mobileLabel: {
-        marginBottom: 10,
-        fontSize: 16,
+        marginBottom: SPACING.sm,
+        fontSize: FONT_SIZES.md,
         color: Colors.text.black,
-        fontWeight: "600"
+        fontFamily: FONTS.semiBold
     },
     nextBtn: {
         height: 50,
@@ -403,13 +408,13 @@ const styles = StyleSheet.create({
     },
     continueText: {
         color: Colors.text.white,
-        fontWeight: "600",
-        fontSize: 16
+        fontFamily: FONTS.semiBold,
+        fontSize: FONT_SIZES.md
     },
     horizontalLine: {
         width: "20%",
         height: 1,
-        backgroundColor: Colors.text.gray
+        backgroundColor: Colors.text.placeholder
     },
     horizontalLineCont: {
         flexDirection: "row",
@@ -419,8 +424,8 @@ const styles = StyleSheet.create({
     },
     orText: {
         marginHorizontal: 10,
-        fontSize: 14,
-        fontWeight: "500",
+        fontSize: FONT_SIZES.sm,
+        fontFamily: FONTS.medium,
         color: Colors.text.gray
     },
     googleIcon: {
@@ -438,12 +443,13 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "center",
         alignItems: "center",
+        backgroundColor: Colors.borderBackground
 
     },
     actionBtnText: {
         marginLeft: 10,
-        fontSize: 14,
-        fontWeight: "500",
+        fontSize: FONT_SIZES.sm,
+        fontFamily: FONTS.medium,
         color: Colors.text.gray
     },
     errorBox: {
@@ -451,13 +457,13 @@ const styles = StyleSheet.create({
         width: "100%",
         padding: 10,
         backgroundColor: Colors.errorBackground,
-        borderRadius: 12
+        borderRadius: BORDER_RADIUS.lg
 
     },
     errorText: {
         color: Colors.error,
-        fontSize: 12,
-        fontWeight: "500"
+        fontSize: FONT_SIZES.xs,
+        fontFamily: FONTS.medium
     }
 
 })
