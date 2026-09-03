@@ -1,10 +1,10 @@
 import { createNativeStackNavigator, NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Welcome from "../Authentication/screens/Welcome";
-import SignUp from "../Authentication/screens/signUp";
+import SignUp from "../Authentication/screens/SignUp";
 import { RootAuthStackParamList } from "../Authentication/auth";
 import { RouteProp } from "@react-navigation/native";
 
-import VerificationCode from "../Authentication/screens/verificationCode";
+import VerificationCode from "../Authentication/screens/VerificationCode";
 
 const Stack = createNativeStackNavigator<RootAuthStackParamList>();
 

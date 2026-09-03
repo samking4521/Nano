@@ -1,13 +1,13 @@
 import { createNativeStackNavigator, NativeStackNavigationProp, NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RouteProp } from "@react-navigation/native";
 import { OnboardingStackParamList } from "../Onboarding/onboarding";
-import RoleSelection from "../Onboarding/screens/roleSelection";
-import ShipperInfo from "../Onboarding/screens/shipperInfo";
-import DriverInfo from "../Onboarding/screens/driverInfo";
-import SubmitScreen from "../Onboarding/screens/submitScreen";
+import RoleSelection from "../Onboarding/screens/RoleSelection";
+import ShipperInfo from "../Onboarding/screens/ShipperInfo";
+import DriverInfo from "../Onboarding/screens/DriverInfo";
+import SubmitScreen from "../Onboarding/screens/SubmitScreen";
 import { RootNavigationStackParamList } from "./RootNav";
-import IdentityVerification from "../Onboarding/screens/identityVerification";
-import OwnershipStatus from "../Onboarding/screens/ownershipStatus";
+import IdentityVerification from "../Onboarding/screens/IdentityVerification";
+import OwnershipStatus from "../Onboarding/screens/OwnershipStatus";
 
 
 
@@ -46,10 +46,6 @@ export function OnboardingNavigation({ route }: Props) {
       <Stack.Screen name="SubmitScreen" component={SubmitScreen} />
       <Stack.Screen name="IdentityVerification" component={IdentityVerification} />
       <Stack.Screen name="OwnershipStatus" component={OwnershipStatus} />
-
-
-
-
     </Stack.Navigator>
   );
 }

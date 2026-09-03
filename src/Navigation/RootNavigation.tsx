@@ -43,8 +43,6 @@ export function RootNavigation() {
             <Stack.Screen name="Onboard" component={OnboardingNavigation} />
             <Stack.Screen name="Shipper" component={ShipperNavigation} />
             <Stack.Screen name="Driver" component={DriverNavigation} />
-
-
         </Stack.Navigator>
     );
 }
