@@ -2,7 +2,7 @@ import { Dimensions, StyleSheet, Text, View } from 'react-native'
 import { useEffect } from 'react'
 import Svg, { Circle, G } from 'react-native-svg';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
-import { Colors } from '../constants/colors';
+import { Colors } from '../constants/theme/colors';
 
 const width = Dimensions.get("window").width;
 const radius = (20 / 100 * width) / 2;
