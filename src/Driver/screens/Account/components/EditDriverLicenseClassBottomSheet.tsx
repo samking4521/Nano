@@ -129,7 +129,7 @@ export default function EditDriverLicenseBottomSheet({ setOpenEditDriverLicenseC
             data={license_class_arr}
             renderItem={renderItem}
             contentContainerStyle={{ gap: 10, paddingBottom: 200 }}
-            showsVerticalScrollIndicator={false}
+           showsVerticalScrollIndicator={false}
           />
         </View>
 
