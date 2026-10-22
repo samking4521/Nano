@@ -17,11 +17,11 @@ type PendingPhotoBottomSheetProps = {
     setPendingDriverImgUrl: React.Dispatch<React.SetStateAction<string | null>>
      setPendingDriverImgKey: React.Dispatch<React.SetStateAction<string | null>>
     pendingPhotoIssue: string | undefined
-    setPersonalVerificationIssues: React.Dispatch<React.SetStateAction<any[] | null>>
+    setPersonalInfoVerificationIssues: (data: any[] | null) => void
 
 }
 
-export default function PendingPhotoBottomSheet({ setShowPendingPhotoBottomSheet, pendingDriverImgUrl, setShowPhotoBottomSheet, setShowLoadingSpinner, setShowErrorAlert, setPendingDriverImgUrl, pendingPhotoIssue, setPersonalVerificationIssues, setPendingDriverImgKey }: PendingPhotoBottomSheetProps) {
+export default function PendingPhotoBottomSheet({ setShowPendingPhotoBottomSheet, pendingDriverImgUrl, setShowPhotoBottomSheet, setShowLoadingSpinner, setShowErrorAlert, setPendingDriverImgUrl, pendingPhotoIssue, setPersonalInfoVerificationIssues, setPendingDriverImgKey }: PendingPhotoBottomSheetProps) {
     const session = useAuthStore((store) => store.session);
     const snapPoints = useMemo(() => ['90%'], []);
 
@@ -47,7 +47,7 @@ export default function PendingPhotoBottomSheet({ setShowPendingPhotoBottomSheet
 
 
             if (pendingPhotoIssue) {
-                setPersonalVerificationIssues(data.verification_issues);
+                setPersonalInfoVerificationIssues(data.verification_issues);
             }
 
             setPendingDriverImgKey(null);
