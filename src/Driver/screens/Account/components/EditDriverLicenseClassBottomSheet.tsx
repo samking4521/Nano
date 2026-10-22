@@ -5,7 +5,7 @@ import { AntDesign, Ionicons } from '@expo/vector-icons'
 import { BORDER_RADIUS, FONT_SIZES, FONTS } from '../../../../constants/theme/font'
 import React, { useCallback, useMemo, useState } from 'react'
 import { supabase } from '../../../../lib/supabase'
-import { identityInfoVerificationType } from '../screens/Profile'
+import { VERIFICATION_STATUS } from '../../../../constants/shared_user'
 
 export type licenseClassType = 'CLASS A' | 'CLASS B' | 'CLASS C' | 'CLASS D' | 'CLASS E' | 'CLASS F' | 'CLASS G' | 'CLASS H' | 'CLASS I' | 'CLASS J' | 'CLASS V'
 const license_class_arr: licenseClassType[] = [
@@ -28,8 +28,8 @@ type EditDriverLicenseBottomSheetProps = {
   setShowLoadingSpinner: React.Dispatch<React.SetStateAction<boolean>>
   setShowErrorAlert: React.Dispatch<React.SetStateAction<boolean>>
   driverLicenseClass: string
-  setIdentityInfoVerificationIssues: React.Dispatch<React.SetStateAction<any[] | null>>
-  setDriverLicenseVerificationStatus: React.Dispatch<React.SetStateAction<identityInfoVerificationType>>
+  setIdentityInfoVerificationIssues: (data: any[] | null) => void
+  setDriverLicenseVerificationStatus: (status: VERIFICATION_STATUS) => void
 }
 
 
