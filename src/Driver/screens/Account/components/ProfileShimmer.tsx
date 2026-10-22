@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { useEffect } from 'react'
 import { BORDER_RADIUS } from '../../../../constants/theme/font'
 import { Colors } from '../../../../constants/theme/colors'
