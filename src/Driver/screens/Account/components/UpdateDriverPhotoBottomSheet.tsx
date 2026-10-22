@@ -11,31 +11,30 @@ import { useAuthStore } from '../../../../Authentication/store/authStore';
 import { VERIFICATION_ISSUES_FIELD } from '../../../../constants/driver';
 import { supabase } from '../../../../lib/supabase';
 import { VERIFICATION_STATUS } from '../../../../constants/shared_user';
-import { driverVerificationStatusType } from '../screens/PersonalInfo';
 
 
 type photoBottomSheetProps = {
-    setDriverImgUrl: React.Dispatch<React.SetStateAction<string>>
+    setDriverImgUrl: React.Dispatch<React.SetStateAction<string | null>>
     showPhotoBottomSheet: boolean
     setShowPhotoBottomSheet: React.Dispatch<React.SetStateAction<boolean>>
     setShowLoadingSpinner: React.Dispatch<React.SetStateAction<boolean>>
     setShowErrorAlert: React.Dispatch<React.SetStateAction<boolean>>
-    personalVerificationIssues: any[] | null
-    setPersonalVerificationIssues: React.Dispatch<React.SetStateAction<any[] | null>>
-    setDriverVerificationStatus: React.Dispatch<React.SetStateAction<driverVerificationStatusType | null>>
-    driverVerificationStatus: driverVerificationStatusType | null
+    personalInfoVerificationIssues: any[] | null
+    setPersonalInfoVerificationIssues: (data: any[] | null) => void
+    setDriverVerificationStatus: (status: VERIFICATION_STATUS) => void
+    driverVerificationStatus: VERIFICATION_STATUS | undefined
     setPendingDriverImgUrl: React.Dispatch<React.SetStateAction<string | null>>
-        setPendingDriverImgKey: React.Dispatch<React.SetStateAction<string | null>>
+    setPendingDriverImgKey: React.Dispatch<React.SetStateAction<string | null>>
     pendingPhotoIssue: string | undefined;
 }
 
 
-function UpdateDriverPhotoBottomSheet({ setDriverImgUrl, showPhotoBottomSheet, setShowPhotoBottomSheet, setShowLoadingSpinner, setShowErrorAlert, personalVerificationIssues, setPersonalVerificationIssues, setDriverVerificationStatus, driverVerificationStatus, setPendingDriverImgUrl, setPendingDriverImgKey, pendingPhotoIssue }: photoBottomSheetProps) {
+function UpdateDriverPhotoBottomSheet({ setDriverImgUrl, showPhotoBottomSheet, setShowPhotoBottomSheet, setShowLoadingSpinner, setShowErrorAlert, personalInfoVerificationIssues, setPersonalInfoVerificationIssues, setDriverVerificationStatus, driverVerificationStatus, setPendingDriverImgUrl, setPendingDriverImgKey, pendingPhotoIssue }: photoBottomSheetProps) {
     const session = useAuthStore((store) => store.session);
 
     const snapPoints = useMemo(() => ['90%'], []);
 
-    const driverPhotoIssue = personalVerificationIssues?.find(item => item.field == VERIFICATION_ISSUES_FIELD.DRIVER_PHOTO);
+    const driverPhotoIssue = personalInfoVerificationIssues?.find(item => item.field == VERIFICATION_ISSUES_FIELD.DRIVER_PHOTO);
 
 
     async function pickImageFromGallery() {
@@ -139,7 +138,7 @@ function UpdateDriverPhotoBottomSheet({ setDriverImgUrl, showPhotoBottomSheet, s
         }
 
         if (pendingPhotoIssue) {
-            setPersonalVerificationIssues(data.verification_issues);
+            setPersonalInfoVerificationIssues(data.verification_issues);
         }
 
         setPendingDriverImgKey(key);
@@ -171,7 +170,7 @@ function UpdateDriverPhotoBottomSheet({ setDriverImgUrl, showPhotoBottomSheet, s
                 throw new Error(`Error resolving verification issue: ${error.message}`);
             }
 
-            setPersonalVerificationIssues(data.verification_issues);
+            setPersonalInfoVerificationIssues(data.verification_issues);
             setDriverVerificationStatus(data.verification_status);
         }
 
