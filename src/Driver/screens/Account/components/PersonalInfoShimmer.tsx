@@ -1,5 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native'
-import React, { useEffect } from 'react'
+import { StyleSheet, View } from 'react-native'
+import { useEffect } from 'react'
 import { Colors } from '../../../../constants/theme/colors'
 import { BORDER_RADIUS } from '../../../../constants/theme/font'
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
