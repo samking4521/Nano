@@ -5,11 +5,11 @@
     "scheme": "nano",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "",
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -19,7 +19,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "",
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
@@ -27,10 +27,9 @@
       "package": "com.samabidoye.Nano"
     },
     "web": {
-      "favicon": ""
+      "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-font",
       "expo-web-browser",
       "@react-native-google-signin/google-signin",
       [
@@ -46,6 +45,51 @@
               "cropToolbarColor": "#000000"
             }
           }
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location to find nearby drivers and keep your deliveries updated in real time.",
+          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location to keep your deliveries updated in real time, even when the app is in the background."
+        }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Allow $(PRODUCT_NAME) to access your contacts."
+        }
+      ],
+      [
+        "react-native-maps",
+        {
+          "androidGoogleMapsApiKey": "AIzaSyAwr7sF6ZCOU450ixbggHrR-20_jDJsgQU",
+          "iosGoogleMapsApiKey": "AIzaSyBs2fKnDNF-P8QIRwwCmXERGVqeV_eQ0Fo"
+        }
+      ],
+     [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/Inter_100Thin.ttf",
+            "./assets/fonts/Inter_100Thin_Italic.ttf",
+            "./assets/fonts/Inter_200ExtraLight.ttf",
+            "./assets/fonts/Inter_200ExtraLight_Italic.ttf",
+            "./assets/fonts/Inter_300Light.ttf",
+            "./assets/fonts/Inter_300Light_Italic.ttf",
+            "./assets/fonts/Inter_400Regular.ttf",
+            "./assets/fonts/Inter_400Regular_Italic.ttf",
+            "./assets/fonts/Inter_500Medium.ttf",
+            "./assets/fonts/Inter_500Medium_Italic.ttf",
+            "./assets/fonts/Inter_600SemiBold.ttf",
+            "./assets/fonts/Inter_600SemiBold_Italic.ttf",
+            "./assets/fonts/Inter_700Bold.ttf",
+            "./assets/fonts/Inter_700Bold_Italic.ttf",
+            "./assets/fonts/Inter_800ExtraBold.ttf",
+            "./assets/fonts/Inter_800ExtraBold_Italic.ttf",
+            "./assets/fonts/Inter_900Black.ttf",
+            "./assets/fonts/Inter_900Black_Italic.ttf"
+          ]
         }
       ]
     ]

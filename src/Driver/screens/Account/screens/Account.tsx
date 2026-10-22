@@ -11,7 +11,9 @@ import { useDriverStore } from '../../../store/DriverStore'
 const movingTruck = require("../../../../../assets/move_truck.png")
 
 export default function Account() {
-  const driver_store = useDriverStore((store)=> store)
+  const driverVerificationStatus = useDriverStore((store)=> store.driverVerificationStatus)
+    const isOwnerAllVehiclesApproved = useDriverStore((store)=> store.isOwnerAllVehiclesApproved)
+
   const navigation = useNavigation<DriverNavigationProp>();
 
   const navigateToDriverProfile = ()=>{
@@ -22,8 +24,7 @@ export default function Account() {
     navigation.navigate("Vehicle");
   }
 
-  const isDriverProfileVerified = driver_store.driverVerificationStatus == "APPROVED"
-  const isVehicleStatusVerified = driver_store.vehicleVerificationStatus == "APPROVED"
+  const isDriverProfileVerified = driverVerificationStatus == "APPROVED"
 
   return (
     <SafeAreaView edges={["top"]} style={styles.container}>
@@ -56,7 +57,7 @@ export default function Account() {
               <Ionicons name="car-outline" size={24} color={Colors.text.gray} />
               <Text style={styles.labelText}>Vehicle</Text>
             </View>
-            { !isVehicleStatusVerified && <Ionicons name="alert-circle" size={20} color={Colors.error} style={{marginRight: 15}}/>}
+            { !isOwnerAllVehiclesApproved && <Ionicons name="alert-circle" size={20} color={Colors.error} style={{marginRight: 15}}/>}
             <Ionicons name="chevron-forward" size={20} color={Colors.text.gray} />
           </Pressable>
 

@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Colors } from '../../../../constants/theme/colors'
 import { AntDesign, Feather, Ionicons } from '@expo/vector-icons'
@@ -12,38 +12,45 @@ import { useAuthStore } from '../../../../Authentication/store/authStore'
 import { VERIFICATION_STATUS } from '../../../../constants/shared_user'
 import { DRIVER_DOCUMENT_TYPE, VERIFICATION_ISSUES_SECTION } from '../../../../constants/driver'
 import { useNetworkStore } from '../../../../Providers/Network/NetworkStore'
-
-export type personalInfoVerificationType = "APPROVED" | "PENDING" | "REJECTED";
-export type identityInfoVerificationType = "APPROVED" | "PENDING" | "REJECTED";
+import { useDriverStore } from '../../../store/DriverStore'
 
 
 export default function Profile() {
     const session = useAuthStore((store) => store.session);
     const isOnline = useNetworkStore((store) => store.isOnline);
+    const driverVerificationStatus = useDriverStore((store) => store.driverVerificationStatus);
+    const setDriverVerificationStatus = useDriverStore((store) => store.setDriverVerificationStatus);
+    const ninVerificationStatus = useDriverStore((store) => store.ninVerificationStatus);
+    const setNinVerificationStatus = useDriverStore((store) => store.setNinVerificationStatus);
+    const personalInfoVerificationIssues = useDriverStore(((store) => store.personalInfoVerificationIssues));
+    const setPersonalInfoVerificationIssues = useDriverStore((store) => store.setPersonalInfoVerificationIssues);
+    const driverLicenseVerificationStatus = useDriverStore((store) => store.driverLicenseVerificationStatus);
+    const setDriverLicenseVerificationStatus = useDriverStore((store) => store.setDriverLicenseVerificationStatus);
+    const identityInfoVerificationIssues = useDriverStore((store) => store.identityInfoVerificationIssues);
+    const setIdentityInfoVerificationIssues = useDriverStore((store) => store.setIdentityInfoVerificationIssues);
 
     const navigation = useNavigation<DriverNavigationProp>();
-    const [personalInfoVerified, setPersonalInfoVerified] = useState<personalInfoVerificationType>("PENDING");
-    const [ninInfoVerified, setNinInfoVerified] = useState<identityInfoVerificationType>("PENDING");
-    const [driverLicenseInfoVerified, setDriverLicenseInfoVerified] = useState<identityInfoVerificationType>("PENDING");
-    const [personalInfoVerificationIssues, setPersonalInfoVerificationIssues] = useState<number | null>(null);
 
-    const [identityVerificationIssues, setIdentityVerificationIssues] = useState<number | null>(null);
+
+    const isPersonalIssuesMoreThanOne = (personalInfoVerificationIssues?.length ?? 0) > 1 ? true : false;
+    const isIdentityIssuesMoreThanOne = (identityInfoVerificationIssues?.length ?? 0) > 1 ? true : false;
+
 
     const [loadingStatus, setLoadingStatus] = useState(true);
 
-    const identityInfoVerified = (ninInfoVerified == VERIFICATION_STATUS.APPROVED && driverLicenseInfoVerified == VERIFICATION_STATUS.APPROVED) ? VERIFICATION_STATUS.APPROVED : identityVerificationIssues ? VERIFICATION_STATUS.REJECTED : VERIFICATION_STATUS.PENDING;
+    const identityInfoVerified = (ninVerificationStatus == VERIFICATION_STATUS.APPROVED && driverLicenseVerificationStatus == VERIFICATION_STATUS.APPROVED) ? VERIFICATION_STATUS.APPROVED : (identityInfoVerificationIssues?.length ?? 0) >= 1 ? VERIFICATION_STATUS.REJECTED : VERIFICATION_STATUS.PENDING;
 
-    const showTopInfoStatusCont = personalInfoVerified == VERIFICATION_STATUS.APPROVED && identityInfoVerified == VERIFICATION_STATUS.APPROVED;
-    const personalInfoIconName = personalInfoVerified == VERIFICATION_STATUS.APPROVED ? "checkmark-circle" : personalInfoVerified == VERIFICATION_STATUS.PENDING ? "time-outline" : "alert-circle";
+    const showTopInfoStatusCont = driverVerificationStatus == VERIFICATION_STATUS.APPROVED && identityInfoVerified == VERIFICATION_STATUS.APPROVED;
+    const personalInfoIconName = driverVerificationStatus == VERIFICATION_STATUS.APPROVED ? "checkmark-circle" : driverVerificationStatus == VERIFICATION_STATUS.PENDING ? "time-outline" : "alert-circle";
     const identityInfoIconName = identityInfoVerified == VERIFICATION_STATUS.APPROVED ? "checkmark-circle" : identityInfoVerified == VERIFICATION_STATUS.PENDING ? "time-outline" : "alert-circle";
 
-    const personalInfoStatusText = personalInfoVerified == VERIFICATION_STATUS.APPROVED ? "Verified" : personalInfoVerified == VERIFICATION_STATUS.PENDING ? "Pending" : `${personalInfoVerificationIssues} issues`;
-    const identityInfoStatusText = identityInfoVerified == VERIFICATION_STATUS.APPROVED ? "Verified" : identityInfoVerified == VERIFICATION_STATUS.PENDING ? "Pending" : `${identityVerificationIssues} issues`;
+    const personalInfoStatusText = driverVerificationStatus == VERIFICATION_STATUS.APPROVED ? "Verified" : driverVerificationStatus == VERIFICATION_STATUS.PENDING ? "Pending" : `${personalInfoVerificationIssues?.length} ${isPersonalIssuesMoreThanOne? 'issues' : 'issue'}`;
+    const identityInfoStatusText = identityInfoVerified == VERIFICATION_STATUS.APPROVED ? "Verified" : identityInfoVerified == VERIFICATION_STATUS.PENDING ? "Pending" : `${identityInfoVerificationIssues?.length} ${isIdentityIssuesMoreThanOne? 'issues' : 'issue'}`;
 
-    const personalInfoStatusTextColor = personalInfoVerified == VERIFICATION_STATUS.APPROVED ? Colors.green : personalInfoVerified == VERIFICATION_STATUS.PENDING ? Colors.primary : Colors.error;
+    const personalInfoStatusTextColor = driverVerificationStatus == VERIFICATION_STATUS.APPROVED ? Colors.green : driverVerificationStatus == VERIFICATION_STATUS.PENDING ? Colors.primary : Colors.error;
     const identityInfoStatusTextColor = identityInfoVerified == VERIFICATION_STATUS.APPROVED ? Colors.green : identityInfoVerified == VERIFICATION_STATUS.PENDING ? Colors.primary : Colors.error;
 
-    const personalInfoStatusBgColor = personalInfoVerified == VERIFICATION_STATUS.APPROVED ? Colors.transparentGreen : personalInfoVerified == VERIFICATION_STATUS.PENDING ? Colors.primaryTransparent : Colors.errorBackground;
+    const personalInfoStatusBgColor = driverVerificationStatus == VERIFICATION_STATUS.APPROVED ? Colors.transparentGreen : driverVerificationStatus == VERIFICATION_STATUS.PENDING ? Colors.primaryTransparent : Colors.errorBackground;
     const identityInfoStatusBgColor = identityInfoVerified == VERIFICATION_STATUS.APPROVED ? Colors.transparentGreen : identityInfoVerified == VERIFICATION_STATUS.PENDING ? Colors.primaryTransparent : Colors.errorBackground;
 
 
@@ -74,38 +81,46 @@ export default function Profile() {
         }
 
         if (select_driver_verification_data.verification_status !== VERIFICATION_STATUS.REJECTED) {
-            setPersonalInfoVerified(select_driver_verification_data.verification_status)
+            setDriverVerificationStatus(select_driver_verification_data.verification_status)
         } else {
-            const { count: verification_issues_count, error: select_verification_issues_err } = await supabase
-                .from("Verification_Issues")
-                .select("*", { count: "exact", head: true })
-                .eq("driver_id", session?.user.id)
-                .eq("section", VERIFICATION_ISSUES_SECTION.PERSONAL_INFO);
-
-            if (select_verification_issues_err) {
-                throw new Error(`Error querying Verification Issues: ${select_verification_issues_err.message}`);
-            }
-
-            console.log("verification issues count: ", verification_issues_count)
-            setPersonalInfoVerificationIssues(verification_issues_count)
-            setPersonalInfoVerified(VERIFICATION_STATUS.REJECTED)
+            await getPersonalInfoVerificationIssues()
+            setDriverVerificationStatus(VERIFICATION_STATUS.REJECTED)
 
         }
     }
 
-    const getIdentityVerificationIssues = async () => {
-        const { count: verification_issues_count, error: select_verification_issues_err } = await supabase
+    const getPersonalInfoVerificationIssues = async () => {
+        const { data: verification_issues_data, error: select_verification_issues_err } = await supabase
             .from("Verification_Issues")
-            .select("*", { count: "exact", head: true })
+            .select("*")
             .eq("driver_id", session?.user.id)
-            .eq("section", VERIFICATION_ISSUES_SECTION.IDENTITY_INFO);
+            .eq("section", VERIFICATION_ISSUES_SECTION.PERSONAL_INFO);
 
         if (select_verification_issues_err) {
             throw new Error(`Error querying Verification Issues: ${select_verification_issues_err.message}`);
         }
 
-        setIdentityVerificationIssues(verification_issues_count);
+        setPersonalInfoVerificationIssues(verification_issues_data);
     }
+
+    const getIdentityInfoVerificationIssues = async () => {
+        const { data: verification_issues_data, error: verification_issues_data_err } = await supabase
+            .from("Verification_Issues")
+            .select("*")
+            .eq("driver_id", session?.user.id)
+            .eq("section", VERIFICATION_ISSUES_SECTION.IDENTITY_INFO);
+
+        if (verification_issues_data_err) {
+            throw new Error(`Error querying Verification Issues: ${verification_issues_data_err.message}`);
+        }
+
+        setIdentityInfoVerificationIssues(verification_issues_data);
+    }
+
+
+
+
+
 
 
     const getNinInfoVerificationStatus = async () => {
@@ -120,7 +135,7 @@ export default function Profile() {
             throw new Error(`Error querying Driver NIN status: ${select_driver_nin_document_err.message}`);
         }
 
-        setNinInfoVerified(select_driver_nin_document.status);
+        setNinVerificationStatus(select_driver_nin_document.status);
 
     }
 
@@ -136,33 +151,28 @@ export default function Profile() {
             throw new Error(`Error querying Driver License status: ${select_driver_license_document_err.message}`);
         }
 
-        setDriverLicenseInfoVerified(select_driver_license_document.status);
+        setDriverLicenseVerificationStatus(select_driver_license_document.status);
     }
 
 
-    const getIdentityInfoVerificationStatus = async () => {
-        await Promise.all([
-            getNinInfoVerificationStatus(),
-            getDriverLicenseVerificationStatus(),
-            getIdentityVerificationIssues()
-        ])
-    }
 
     const fetchProfileData = async () => {
-             try {
-                    await Promise.all([
-                        getPersonalInfoVerificationStatus(),
-                        getIdentityInfoVerificationStatus()
-                    ])
-                    setLoadingStatus(false);
-                } catch (e) {
-                    console.log("Error: ", e)
-                }
+        try {
+            await Promise.all([
+                getPersonalInfoVerificationStatus(),
+                getNinInfoVerificationStatus(),
+                getDriverLicenseVerificationStatus(),
+                getIdentityInfoVerificationIssues()
+            ])
+            setLoadingStatus(false);
+        } catch (e) {
+            console.log("Error: ", e)
+        }
     }
 
 
-    useEffect(()=>{
-        if(!isOnline || !loadingStatus) return;
+    useEffect(() => {
+        if (!isOnline || !loadingStatus) return;
         fetchProfileData();
 
     }, [isOnline, loadingStatus])
@@ -184,7 +194,7 @@ export default function Profile() {
                     {loadingStatus ? <ProfileShimmer />
                         :
                         <>
-                            {!showTopInfoStatusCont && ((personalInfoVerified == VERIFICATION_STATUS.REJECTED || identityInfoVerified == VERIFICATION_STATUS.REJECTED) ?
+                            {!showTopInfoStatusCont && ((driverVerificationStatus == VERIFICATION_STATUS.REJECTED || identityInfoVerified == VERIFICATION_STATUS.REJECTED) ?
 
                                 <View style={[styles.infoCont, { backgroundColor: Colors.errorBackground, marginTop: 20 }]}>
                                     <View style={[styles.iconCont, { borderRadius: 40, backgroundColor: "#F9D3D3" }]}>

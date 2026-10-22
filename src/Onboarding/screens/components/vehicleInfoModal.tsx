@@ -67,6 +67,7 @@ export default function VehicleInfoModal({ setOpenVehicleModal, setOwnershipStat
         setVehicleType(truck);
     }
 
+
     const selectVehiclePhotos = () => {
         setPhotoType("VehiclePhotos");
         bottomSheetRef.current?.expand();
@@ -123,7 +124,7 @@ export default function VehicleInfoModal({ setOpenVehicleModal, setOwnershipStat
         driverStorage.set("vehicleLicensePhoto", vehicleLicensePhoto);
         driverStorage.set("isVehicleInfoComplete", true);
         driverStorage.set("ownershipStatus", "OWNER");
-        driverStorage.set("vehicleRegExpiryDate", vehicleRegExpiryDate.toISOString());
+        driverStorage.set("vehicleRegExpiryDate", vehicleRegExpiryDate.toISOString().slice(0, 10));
 
 
         setOwnershipStatus("OWNER");
@@ -402,7 +403,12 @@ export default function VehicleInfoModal({ setOpenVehicleModal, setOwnershipStat
 
                     </KeyboardAvoidingView>
 
-                    <VehicleInfoBottomSheet vehicleTypeBottomSheetRef={vehicleTypeBottomSheetRef} isVehicleBottomSheetOpen={isVehicleBottomSheetOpen} setIsVehicleBottomSheetOpen={setIsVehicleBottomSheetOpen} selectVehicleType={selectVehicleType} parentVehicleType={vehicleType} />
+                   { isVehicleBottomSheetOpen && <VehicleInfoBottomSheet
+                        isVehicleBottomSheetOpen={isVehicleBottomSheetOpen}
+                        setIsVehicleBottomSheetOpen={setIsVehicleBottomSheetOpen}
+                        selectVehicleType={selectVehicleType}
+                        parentVehicleType={vehicleType}
+                    />}
                     <PhotoBottomSheet bottomSheetRef={bottomSheetRef} photoType={photoType} setPhotoType={setPhotoType} setVehiclePhotos={setVehiclePhotos} setVehicleLicensePhoto={setVehicleLicensePhoto} />
 
                 </SafeAreaView>

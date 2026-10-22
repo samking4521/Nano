@@ -1,31 +1,35 @@
 import { Image, StyleSheet, Text, View } from 'react-native'
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { BORDER_RADIUS, FONT_SIZES, FONTS } from '../../../../constants/theme/font'
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import { Colors } from '../../../../constants/theme/colors'
 import { useDriverStore } from '../../../store/DriverStore'
 import { supabase } from '../../../../lib/supabase'
+import ProfilePhotoPlaceholder from '../../../../utils/profilePhotoPlaceholder'
 
 
-// const driverBadge = require("../../../../../assets/driverLevelBadge/gold_badge.png")
 
 export default function UserDisplay() {
-    const driverStore = useDriverStore((store) => store);
+    const driverImgKey = useDriverStore((store) => store.driverImgKey);
+    const driverVerificationStatus = useDriverStore((store) => store.driverVerificationStatus)
+    const driverFirstName = useDriverStore((store) => store.driverFirstName)
+    const driverLastName = useDriverStore((store) => store.driverLastName)
     const [driverImgUrl, setDriverImgUrl] = useState("");
-    const driver_verification_status_text = driverStore.driverVerificationStatus == "APPROVED" ? "Verified" : driverStore.driverVerificationStatus == "PENDING" ? "Pending verification" : "Not verified";
-    const driver_verification_status_bg_color = driverStore.driverVerificationStatus == "APPROVED" ? Colors.transparentGreen : driverStore.driverVerificationStatus == "PENDING" ? Colors.primaryTransparent : Colors.backBtnGray;
-    const driver_verification_status_text_color = driverStore.driverVerificationStatus == "APPROVED" ? Colors.green : driverStore.driverVerificationStatus == "PENDING" ? Colors.primary : Colors.text.gray;
+    const driver_verification_status_text = driverVerificationStatus == "APPROVED" ? "Verified" : driverVerificationStatus == "PENDING" ? "Pending" : "Not verified";
+    const driver_verification_status_bg_color = driverVerificationStatus == "APPROVED" ? Colors.transparentGreen : driverVerificationStatus == "PENDING" ? Colors.primaryTransparent : Colors.backBtnGray;
+    const driver_verification_status_text_color = driverVerificationStatus == "APPROVED" ? Colors.green : driverVerificationStatus == "PENDING" ? Colors.primary : Colors.text.gray;
+    const [imageLoading, setImageLoading] = useState(true);
 
-    useEffect(()=>{
-      getDriverImage();
+    useEffect(() => {
+        getDriverImage();
     }, [])
 
     const getDriverImage = async () => {
-        if(!driverStore.driverImgKey) return
+        if (!driverImgKey) return
         const { data: signedImage, error: signedImageError } =
             await supabase.storage
                 .from("driver-photos")
-                .createSignedUrl(driverStore.driverImgKey, 60 * 60);
+                .createSignedUrl(driverImgKey, 60 * 60);
 
         if (signedImageError) {
             throw new Error(
@@ -37,28 +41,31 @@ export default function UserDisplay() {
         setDriverImgUrl(imageUrl);
     }
 
+    
+
+
 
     return (
         <View style={styles.container}>
             <View style={styles.imgCont}>
-                { driverImgUrl? 
-                    <Image source={{ uri: driverImgUrl }} style={styles.driverImage} />
-                   : 
-                    <View style={styles.placeholderImage}/>
-                }
+
+                <Image onLoad={() => setImageLoading(false)} source={{ uri: driverImgUrl }} style={styles.driverImage} />
+
+                {imageLoading && <ProfilePhotoPlaceholder/>}
+
             </View>
             <View>
-                <Text style={styles.userName}>{driverStore.driverFirstName} {driverStore.driverLastName}</Text>
+                <Text style={styles.userName}>{driverFirstName} {driverLastName}</Text>
                 <View style={styles.badgeCont}>
                     <View style={[styles.badgeIconCont, { backgroundColor: driver_verification_status_bg_color }]}>
-                        {driverStore.driverVerificationStatus == "REJECTED" ?
+                        {driverVerificationStatus == "REJECTED" ?
                             <MaterialCommunityIcons
                                 name={"shield-off"}
                                 size={20}
                                 color={driver_verification_status_text_color}
                             />
                             :
-                            driverStore.driverVerificationStatus == "PENDING" ?
+                            driverVerificationStatus == "PENDING" ?
                                 <Ionicons
                                     name="time-outline"
                                     size={20}
@@ -71,7 +78,6 @@ export default function UserDisplay() {
                                     color={driver_verification_status_text_color}
                                 />
                         }
-                        {/* <Image source={driverBadge} style={styles.badgeImg}/> */}
                     </View>
 
                     <Text style={[styles.badgeText, { color: driver_verification_status_text_color, backgroundColor: driver_verification_status_bg_color }]}>{driver_verification_status_text}</Text>
@@ -133,11 +139,5 @@ const styles = StyleSheet.create({
         alignItems: "center",
         marginRight: -8,
         zIndex: 2
-    },
-    placeholderImage: {
-        width: "100%",
-        height: "100%",
-        borderRadius: BORDER_RADIUS.round,
-        backgroundColor: Colors.backBtnGray
     }
 })

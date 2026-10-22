@@ -45,7 +45,7 @@ function LicenseClassModal({ showLicenseClassModal, setShowLicenseClassModal, se
     }
 
     return (
-        <Modal visible={showLicenseClassModal} onRequestClose={() => setShowLicenseClassModal(false)} animationType="slide" transparent={true} presentationStyle="fullScreen" >
+        <Modal visible={showLicenseClassModal} onRequestClose={() => setShowLicenseClassModal(false)} animationType="slide" transparent={true} presentationStyle="overFullScreen" >
             <SafeAreaProvider>
                 <SafeAreaView style={styles.container}>
 

@@ -4,8 +4,9 @@ import BottomSheet, { BottomSheetTextInput, BottomSheetView } from '@gorhom/bott
 import { Colors } from '../../../../constants/theme/colors'
 import { AntDesign } from '@expo/vector-icons'
 import { BORDER_RADIUS, FONT_SIZES, FONTS } from '../../../../constants/theme/font'
-import { driverVerificationStatusType, fieldType } from '../screens/PersonalInfo'
+import { fieldType } from '../screens/PersonalInfo'
 import { supabase } from '../../../../lib/supabase'
+import { VERIFICATION_STATUS } from '../../../../constants/shared_user'
 
 type UpdateBottomSheetProps = {
     openEditBottomSheet: fieldType | null
@@ -22,11 +23,11 @@ type UpdateBottomSheetProps = {
     phone: string
     email: string
     setShowErrorAlert: React.Dispatch<React.SetStateAction<boolean>>
-    setPersonalVerificationIssues: React.Dispatch<React.SetStateAction<any[] | null>>
-    setDriverVerificationStatus: React.Dispatch<React.SetStateAction<driverVerificationStatusType | null>>
+    setPersonalInfoVerificationIssues: (data: any[] | null) => void
+    setDriverVerificationStatus: (status: VERIFICATION_STATUS) => void
 }
 
-export default function UpdateProfileBottomSheet({ openEditBottomSheet, setOpenEditBottomSheet, setFirstName: setParentFirstName, setLastName: setParentLastName, setBirthday: setParentBirthday, setPhone: setParentPhone, setEmail: setParentEmail, setShowLoadingSpinner, firstname: parentFirstName, lastname: parentLastName, birthday: parentBirthday, email: parentEmail, phone: parentPhone, setShowErrorAlert, setPersonalVerificationIssues, setDriverVerificationStatus }: UpdateBottomSheetProps) {
+export default function UpdateProfileBottomSheet({ openEditBottomSheet, setOpenEditBottomSheet, setFirstName: setParentFirstName, setLastName: setParentLastName, setBirthday: setParentBirthday, setPhone: setParentPhone, setEmail: setParentEmail, setShowLoadingSpinner, firstname: parentFirstName, lastname: parentLastName, birthday: parentBirthday, email: parentEmail, phone: parentPhone, setShowErrorAlert, setPersonalInfoVerificationIssues, setDriverVerificationStatus }: UpdateBottomSheetProps) {
     const [firstname, setFirstname] = useState(() => (parentFirstName) ?? "");
     const [lastname, setLastname] = useState(() => (parentLastName) ?? "");
     const [phone, setPhone] = useState(() => (parentPhone) ?? "");
@@ -112,7 +113,7 @@ export default function UpdateProfileBottomSheet({ openEditBottomSheet, setOpenE
             else if (field === 'lastname') setParentLastName(updated.lastname);
             else if (field === 'birthday') setParentBirthday(updated.birthday);
 
-            setPersonalVerificationIssues(verification_issues);
+            setPersonalInfoVerificationIssues(verification_issues);
             setDriverVerificationStatus(verification_status);
 
             setShowLoadingSpinner(false);

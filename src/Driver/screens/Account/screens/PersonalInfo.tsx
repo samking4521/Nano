@@ -17,9 +17,7 @@ import { DRIVER_PHOTO_ISSUES_CODE, FIRST_NAME_ISSUES_CODE, LAST_NAME_ISSUES_CODE
 import UpdateDriverPhotoBottomSheet from '../components/UpdateDriverPhotoBottomSheet'
 import PendingPhotoBottomSheet from '../components/PendingPhotoBottomSheet'
 import { useNetworkStore } from '../../../../Providers/Network/NetworkStore'
-
-
-export type driverVerificationStatusType = "APPROVED" | "PENDING" | "REJECTED";
+import ProfilePhotoPlaceholder from '../../../../utils/profilePhotoPlaceholder'
 
 
 export type fieldType = "firstname" | "lastname" | "email" | "phone" | "birthday";
@@ -28,10 +26,14 @@ type signInType = "phone" | "email";
 export default function PersonalInfo() {
     const session = useAuthStore((store) => store.session);
     const isOnline = useNetworkStore((store) => store.isOnline);
+    const driverVerificationStatus = useDriverStore((store) => store.driverVerificationStatus);
+    const setDriverVerificationStatus = useDriverStore((store) => store.setDriverVerificationStatus);
+    const personalInfoVerificationIssues = useDriverStore(((store) => store.personalInfoVerificationIssues));
+    const setPersonalInfoVerificationIssues = useDriverStore((store) => store.setPersonalInfoVerificationIssues);
     const navigation = useNavigation<DriverNavigationProp>();
     const driverImgKey = useDriverStore((store) => store.driverImgKey)
-    const [driverVerificationStatus, setDriverVerificationStatus] = useState<driverVerificationStatusType | null>(null);
-    const [driverImgUrl, setDriverImgUrl] = useState("");
+    const [driverImgUrl, setDriverImgUrl] = useState<string | null>(null);
+    const [imageLoading, setImageLoading] = useState(true);
     const [pendingDriverImgUrl, setPendingDriverImgUrl] = useState<string | null>(null);
     const [pendingDriverImgKey, setPendingDriverImgKey] = useState<string | null>(null);
     const [loadingStatus, setLoadingStatus] = useState(true);
@@ -45,7 +47,6 @@ export default function PersonalInfo() {
     const [showLoadingSpinner, setShowLoadingSpinner] = useState(false);
     const [showErrorAlert, setShowErrorAlert] = useState(false);
     const [showPhotoBottomSheet, setShowPhotoBottomSheet] = useState<boolean>(false);
-    const [personalVerificationIssues, setPersonalVerificationIssues] = useState<any[] | null>(null);
     const [showPendingPhotoBottomSheet, setShowPendingPhotoBottomSheet] = useState(false);
 
 
@@ -60,18 +61,18 @@ export default function PersonalInfo() {
 
     const driverVerificationStatusBgColor = driverVerificationStatus == VERIFICATION_STATUS.APPROVED ? Colors.transparentGreen : driverVerificationStatus == VERIFICATION_STATUS.PENDING ? Colors.primaryTransparent : Colors.backBtnGray;
 
-    const driver_photo_issue = personalVerificationIssues?.find((item) => item.field == VERIFICATION_ISSUES_FIELD.DRIVER_PHOTO);
+    const driver_photo_issue = personalInfoVerificationIssues?.find((item) => item.field == VERIFICATION_ISSUES_FIELD.DRIVER_PHOTO);
 
     const driver_photo_issue_code = driver_photo_issue ? driver_photo_issue.ISSUES_CODE == DRIVER_PHOTO_ISSUES_CODE.PROFILE_PHOTO_BLURRY ? VERIFICATION_ISSUES_CODE.PROFILE_PHOTO_BLURRY :
         driver_photo_issue.ISSUES_CODE == DRIVER_PHOTO_ISSUES_CODE.PROFILE_PHOTO_INVALID ? VERIFICATION_ISSUES_CODE.PROFILE_PHOTO_INVALID : VERIFICATION_ISSUES_CODE.PROFILE_PHOTO_MULTIPLE_PEOPLE : undefined;
 
-    const pending_driver_photo_issue = personalVerificationIssues?.find((item) => item.field == VERIFICATION_ISSUES_FIELD.PENDING_DRIVER_PHOTO);
+    const pending_driver_photo_issue = personalInfoVerificationIssues?.find((item) => item.field == VERIFICATION_ISSUES_FIELD.PENDING_DRIVER_PHOTO);
 
     const pending_driver_photo_issue_code = pending_driver_photo_issue ? pending_driver_photo_issue.ISSUES_CODE == PENDING_DRIVER_PHOTO_ISSUES_CODE.PENDING_PROFILE_PHOTO_BLURRY ? VERIFICATION_ISSUES_CODE.PENDING_PROFILE_PHOTO_BLURRY :
         pending_driver_photo_issue.ISSUES_CODE == PENDING_DRIVER_PHOTO_ISSUES_CODE.PENDING_PROFILE_PHOTO_INVALID ? VERIFICATION_ISSUES_CODE.PENDING_PROFILE_PHOTO_INVALID : VERIFICATION_ISSUES_CODE.PENDING_PROFILE_PHOTO_MULTIPLE_PEOPLE : undefined;
 
 
-    const firstname_issue = personalVerificationIssues?.find((item) => item.field == VERIFICATION_ISSUES_FIELD.FIRST_NAME);
+    const firstname_issue = personalInfoVerificationIssues?.find((item) => item.field == VERIFICATION_ISSUES_FIELD.FIRST_NAME);
 
     const firstname_issue_code = firstname_issue ?
         firstname_issue.ISSUES_CODE == FIRST_NAME_ISSUES_CODE.FIRST_NAME_MISMATCH_NIN ? VERIFICATION_ISSUES_CODE.FIRST_NAME_MISMATCH_NIN
@@ -79,7 +80,7 @@ export default function PersonalInfo() {
                 : VERIFICATION_ISSUES_CODE.FIRST_NAME_MISMATCH_IDENTITY_DOCUMENTS
         : undefined;
 
-    const lastname_issue = personalVerificationIssues?.find((item) => item.field == VERIFICATION_ISSUES_FIELD.LAST_NAME);
+    const lastname_issue = personalInfoVerificationIssues?.find((item) => item.field == VERIFICATION_ISSUES_FIELD.LAST_NAME);
 
     const lastname_issue_code = lastname_issue ?
         lastname_issue.ISSUES_CODE == LAST_NAME_ISSUES_CODE.LAST_NAME_MISMATCH_NIN ? VERIFICATION_ISSUES_CODE.LAST_NAME_MISMATCH_NIN
@@ -87,7 +88,7 @@ export default function PersonalInfo() {
                 : VERIFICATION_ISSUES_CODE.LAST_NAME_MISMATCH_IDENTITY_DOCUMENTS
         : undefined;
 
-    const birthday_issue = personalVerificationIssues?.find((item) => item.field == VERIFICATION_ISSUES_FIELD.BIRTH_DAY);
+    const birthday_issue = personalInfoVerificationIssues?.find((item) => item.field == VERIFICATION_ISSUES_FIELD.BIRTH_DAY);
 
     const birthday_issue_code = birthday_issue ? VERIFICATION_ISSUES_CODE.DATE_OF_BIRTH_MISMATCH_DRIVER_LICENSE : undefined;
 
@@ -191,13 +192,13 @@ export default function PersonalInfo() {
     const getDriverProfile = async () => {
         try {
             await Promise.all([
-                await getUserData(),
-                await getDriverImage(),
-                await getPendingDriverImage(),
-                await getDriverData(),
-                await getDriverVerificationStatus(),
-                await getUserSignInMethod(),
-                await getPersonalInfoVerificationIssues()
+                getUserData(),
+                getDriverImage(),
+                getPendingDriverImage(),
+                getDriverData(),
+                getDriverVerificationStatus(),
+                getUserSignInMethod(),
+                getPersonalInfoVerificationIssues()
             ])
             setLoadingStatus(false);
         } catch (e) {
@@ -263,7 +264,7 @@ export default function PersonalInfo() {
             throw new Error(`Error querying Verification Issues: ${select_verification_issues_err.message}`);
         }
 
-        setPersonalVerificationIssues(verification_issues_data);
+        setPersonalInfoVerificationIssues(verification_issues_data);
     }
 
     const openPendingPhotoUI = () => {
@@ -288,12 +289,13 @@ export default function PersonalInfo() {
 
                             <View style={styles.driverHeaderLabelCont}>
                                 <View style={styles.driverImageCont}>
-                                    <Image source={{ uri: driverImgUrl }} style={styles.driverImage} />
-                                    <Pressable onPress={updateProfilePhoto} style={styles.editIconCont}>
+                                    {driverImgUrl && <Image source={{ uri: driverImgUrl }} onLoad={()=> setImageLoading(false)} style={styles.driverImage} />}
+                                    { !imageLoading && <Pressable onPress={updateProfilePhoto} style={styles.editIconCont}>
                                         <View style={styles.editInnerIcon}>
                                             <Ionicons name="camera" size={18} color={Colors.text.white} />
                                         </View>
-                                    </Pressable>
+                                    </Pressable>}
+                                    {imageLoading && <ProfilePhotoPlaceholder/>}
                                 </View>
                                 <View style={styles.driverLabelCont}>
                                     <Text style={styles.driverName}>{`${firstName} ${lastName}`}</Text>
@@ -430,12 +432,56 @@ export default function PersonalInfo() {
 
             </View>
             {(openEditBottomSheet || showPendingPhotoBottomSheet) && <View style={styles.bottomSheetCoverContainer} />}
-            {openEditBottomSheet && <UpdateProfileBottomSheet openEditBottomSheet={openEditBottomSheet} setOpenEditBottomSheet={setOpenEditBottomSheet} setFirstName={setFirstName} setLastName={setLastName} setBirthday={setBirthday} setEmail={setEmail} setPhone={setPhone} firstname={firstName} lastname={lastName} birthday={birthday} email={email} phone={phone} setShowLoadingSpinner={setShowLoadingSpinner} setShowErrorAlert={setShowErrorAlert} setPersonalVerificationIssues={setPersonalVerificationIssues} setDriverVerificationStatus={setDriverVerificationStatus} />}
+            {
+                openEditBottomSheet && <UpdateProfileBottomSheet
+                    openEditBottomSheet={openEditBottomSheet}
+                    setOpenEditBottomSheet={setOpenEditBottomSheet}
+                    setFirstName={setFirstName}
+                    setLastName={setLastName}
+                    setBirthday={setBirthday}
+                    setEmail={setEmail}
+                    setPhone={setPhone}
+                    firstname={firstName}
+                    lastname={lastName}
+                    birthday={birthday}
+                    email={email}
+                    phone={phone}
+                    setShowLoadingSpinner={setShowLoadingSpinner}
+                    setShowErrorAlert={setShowErrorAlert}
+                    setPersonalInfoVerificationIssues={setPersonalInfoVerificationIssues}
+                    setDriverVerificationStatus={setDriverVerificationStatus}
+                />
+            }
 
 
-            {showPendingPhotoBottomSheet && <PendingPhotoBottomSheet setShowLoadingSpinner={setShowLoadingSpinner} setShowErrorAlert={setShowErrorAlert} pendingDriverImgUrl={pendingDriverImgUrl as string} setShowPendingPhotoBottomSheet={setShowPendingPhotoBottomSheet} setShowPhotoBottomSheet={setShowPhotoBottomSheet} setPendingDriverImgUrl={setPendingDriverImgUrl} pendingPhotoIssue={pending_driver_photo_issue_code} setPersonalVerificationIssues={setPersonalVerificationIssues} setPendingDriverImgKey={setPendingDriverImgKey} />}
+            {showPendingPhotoBottomSheet && <PendingPhotoBottomSheet
+                setShowLoadingSpinner={setShowLoadingSpinner}
+                setShowErrorAlert={setShowErrorAlert}
+                pendingDriverImgUrl={pendingDriverImgUrl as string}
+                setShowPendingPhotoBottomSheet={setShowPendingPhotoBottomSheet}
+                setShowPhotoBottomSheet={setShowPhotoBottomSheet}
+                setPendingDriverImgUrl={setPendingDriverImgUrl}
+                pendingPhotoIssue={pending_driver_photo_issue_code}
+                setPersonalInfoVerificationIssues={setPersonalInfoVerificationIssues}
+                setPendingDriverImgKey={setPendingDriverImgKey}
+            />
+            }
 
-            {showPhotoBottomSheet && <UpdateDriverPhotoBottomSheet setDriverImgUrl={setDriverImgUrl} showPhotoBottomSheet={showPhotoBottomSheet} setShowPhotoBottomSheet={setShowPhotoBottomSheet} setShowLoadingSpinner={setShowLoadingSpinner} setShowErrorAlert={setShowErrorAlert} personalVerificationIssues={personalVerificationIssues} setPersonalVerificationIssues={setPersonalVerificationIssues} setDriverVerificationStatus={setDriverVerificationStatus} driverVerificationStatus={driverVerificationStatus} setPendingDriverImgUrl={setPendingDriverImgUrl} setPendingDriverImgKey={setPendingDriverImgKey} pendingPhotoIssue={pending_driver_photo_issue_code} />}
+            {showPhotoBottomSheet && <UpdateDriverPhotoBottomSheet
+                setDriverImgUrl={setDriverImgUrl}
+                showPhotoBottomSheet={showPhotoBottomSheet}
+                setShowPhotoBottomSheet={setShowPhotoBottomSheet}
+                setShowLoadingSpinner={setShowLoadingSpinner}
+                setShowErrorAlert={setShowErrorAlert}
+                personalInfoVerificationIssues={personalInfoVerificationIssues}
+                setPersonalInfoVerificationIssues={setPersonalInfoVerificationIssues}
+                setDriverVerificationStatus={setDriverVerificationStatus}
+                driverVerificationStatus={driverVerificationStatus}
+                setPendingDriverImgUrl={setPendingDriverImgUrl}
+                setPendingDriverImgKey={setPendingDriverImgKey}
+                pendingPhotoIssue={pending_driver_photo_issue_code}
+            />
+            }
             {showLoadingSpinner && <Pressable onPress={() => { return }} style={styles.fillScreen}>
                 <NanoLoadingSpinner />
             </Pressable>}

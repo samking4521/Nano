@@ -12,18 +12,23 @@ import { USER_ROLES } from "../constants/shared_user";
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const setSession = useAuthStore((store) => store.setSession);
-  const driver_store = useDriverStore((store) => store)
   const setInitialRouteName = useAuthStore((store) => store.setInitialRouteName);
+  const setDriverVerificationStatus = useDriverStore((store) => store.setDriverVerificationStatus)
+  const setDriverFirstName = useDriverStore((store) => store.setDriverFirstName)
+  const setDriverLastName = useDriverStore((store) => store.setDriverLastName)
+  const setDriverImgKey = useDriverStore((store) => store.setDriverImgKey)
+  const setCanGoLive = useDriverStore((store) => store.setCanGoLive)
+  const setIsOwnerAllVehiclesApproved = useDriverStore((store) => store.setIsOwnerAllVehiclesApproved)
 
-  
+
 
 
   useEffect(() => {
     // 1. Get initial session
     const getSession = async () => {
-      
+
       try {
-      
+
         const { data, error } = await supabase.auth.getSession();
 
         if (error) {
@@ -48,7 +53,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             if (select_user_data?.active_role === USER_ROLES.SHIPPER && select_user_data.has_shipper_profile) {
               setInitialRouteName("Shipper");
             } else if (select_user_data?.active_role === USER_ROLES.DRIVER && select_user_data.has_driver_profile) {
-              await getDriverVerificationDetails(data.session, driver_store);
+              await getDriverVerificationDetails(data.session, setDriverFirstName, setDriverLastName, setDriverImgKey, setDriverVerificationStatus, setCanGoLive, setIsOwnerAllVehiclesApproved);
+
               console.log("Verification retrieved")
               setInitialRouteName("Driver");
             } else {

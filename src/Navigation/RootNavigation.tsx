@@ -5,7 +5,7 @@ import { RootNavigationStackParamList } from "./RootNav";
 import { RouteProp } from "@react-navigation/native";
 import { useAuthStore } from "../Authentication/store/authStore";
 import { ShipperNavigation } from "./ShipperNavigation";
-import { DriverNavigation } from "./DriverNavigation";
+import DriverNavigation from "./DriverNavigation";
 
 const Stack = createNativeStackNavigator<RootNavigationStackParamList>();
 

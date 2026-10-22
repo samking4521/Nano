@@ -9,10 +9,9 @@ import { CompressionResult, CompressToLimit } from '../../../../utils/imageCompr
 import { uploadToStorage } from '../../../../utils/imageUploader'
 import NinDesc from '../../../../Onboarding/screens/components/ninDesc'
 import LicenseDesc from '../../../../Onboarding/screens/components/licenseDesc'
-import { identityInfoVerificationType } from '../screens/Profile'
 import { VERIFICATION_ISSUES_FIELD } from '../../../../constants/driver'
 import { supabase } from '../../../../lib/supabase'
-import { useAuthStore } from '../../../../Authentication/store/authStore'
+import { VERIFICATION_STATUS } from '../../../../constants/shared_user'
 
 
 
@@ -22,13 +21,13 @@ type IdentityPhotoBottomSheetProps = {
   setShowLoadingSpinner: React.Dispatch<React.SetStateAction<boolean>>
   driverLicenseImgPath: React.RefObject<string | null>
   ninImgPath: React.RefObject<string | null>
-  setNinImage: React.Dispatch<React.SetStateAction<string>>
-  setDriverLicenseImage: React.Dispatch<React.SetStateAction<string>>
+  setNinImage: React.Dispatch<React.SetStateAction<string | null>>
+  setDriverLicenseImage: React.Dispatch<React.SetStateAction<string | null>>
   setShowErrorAlert: React.Dispatch<React.SetStateAction<boolean>>
   identityInfoVerificationIssues: any[] | null
-  setIdentityInfoVerificationIssues: React.Dispatch<React.SetStateAction<any[] | null>>
-  setNinVerificationStatus: React.Dispatch<React.SetStateAction<identityInfoVerificationType>>
-  setDriverLicenseVerificationStatus: React.Dispatch<React.SetStateAction<identityInfoVerificationType>>
+  setIdentityInfoVerificationIssues:  (data: any[] | null) => void
+  setNinVerificationStatus:  (status: VERIFICATION_STATUS) => void
+  setDriverLicenseVerificationStatus:  (status: VERIFICATION_STATUS) => void
 
 
 }

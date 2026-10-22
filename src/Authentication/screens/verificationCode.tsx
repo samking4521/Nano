@@ -11,6 +11,8 @@ import { VerificationCodeNavigationProp, VerificationCodeRouteProp } from '../..
 import { AuthNavigationProp } from '../../Navigation/RootNavigation'
 import { USER_ROLES } from '../../constants/shared_user'
 import { BORDER_RADIUS, FONT_SIZES, FONTS, ICON_SIZES, SPACING } from '../../constants/theme/font'
+import { getDriverVerificationDetails } from '../../utils/getDriverVerificationDetails'
+import { useDriverStore } from '../../Driver/store/DriverStore'
 
 
 type Props = {
@@ -25,6 +27,12 @@ type otpErrorType = "emptyOtp" | "invalidOtpLength";
 export default function VerificationCode({ route }: Props) {
     const { mobileNo, country, countryCode, callingCode } = route.params;
     const setSession = useAuthStore((store) => store.setSession);
+    const setDriverVerificationStatus = useDriverStore((store) => store.setDriverVerificationStatus)
+    const setDriverFirstName = useDriverStore((store) => store.setDriverFirstName)
+    const setDriverLastName = useDriverStore((store) => store.setDriverLastName)
+    const setDriverImgKey = useDriverStore((store) => store.setDriverImgKey)
+    const setCanGoLive = useDriverStore((store) => store.setCanGoLive)
+    const setIsOwnerAllVehiclesApproved = useDriverStore((store) => store.setIsOwnerAllVehiclesApproved)
     const [otp, setOtp] = useState("");
     const [resendCode, setResendCode] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -134,6 +142,7 @@ export default function VerificationCode({ route }: Props) {
                 replaceNavigation.replace("Shipper");
 
             } else if (select_user_data.active_role === USER_ROLES.DRIVER && select_user_data.has_driver_profile) {
+                await getDriverVerificationDetails(session, setDriverFirstName, setDriverLastName, setDriverImgKey, setDriverVerificationStatus, setCanGoLive, setIsOwnerAllVehiclesApproved);
                 setSession(session);
                 setLoading(false);
                 replaceNavigation.replace("Driver");
@@ -389,8 +398,8 @@ const styles = StyleSheet.create({
         color: Colors.text.gray
     },
     resendText: {
-         fontSize: FONT_SIZES.sm,
-         fontFamily: FONTS.semiBold,
+        fontSize: FONT_SIZES.sm,
+        fontFamily: FONTS.semiBold,
         color: Colors.text.gray,
         marginLeft: 5
     },
@@ -401,7 +410,7 @@ const styles = StyleSheet.create({
         marginTop: 30
     },
     errorBox: {
-         marginTop: 10,
+        marginTop: 10,
         width: "100%",
         padding: 10,
         backgroundColor: Colors.errorBackground,
@@ -409,7 +418,7 @@ const styles = StyleSheet.create({
 
     },
     errorText: {
-         color: Colors.error,
+        color: Colors.error,
         fontSize: FONT_SIZES.xs,
         fontFamily: FONTS.medium
     },
@@ -419,8 +428,8 @@ const styles = StyleSheet.create({
         marginRight: 5
     },
     timerText: {
-        color: Colors.primary,  
-        fontFamily: FONTS.semiBold, 
+        color: Colors.primary,
+        fontFamily: FONTS.semiBold,
         letterSpacing: 0.5
     }
 

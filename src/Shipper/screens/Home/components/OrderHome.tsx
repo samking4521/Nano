@@ -10,6 +10,14 @@ import { VehicleTypeObj } from './SelectVehicleType';
 import Map from './Map';
 import EnterRoutesModal, { locationObj } from './EnterRoutesModal';
 import { FONT_SIZES, FONTS } from '../../../../constants/theme/font';
+import SearchingTrucks from './SearchingTrucks';
+import HandleComponent from './HandleComponent';
+import ProcessingOrderDetails from './ProcessingOrderDetails';
+
+export type DriverViewedRequestType = {
+    id: string,
+    img: string
+}
 
 
 export type orderDetailsObjType = {
@@ -40,6 +48,8 @@ export type completedRouteType = {
     location_obj: locationObj
 }
 
+export type OrderStateType = "Creating" | "Searching";
+
 export default function OrderHome() {
     const snapPoints = useMemo(() => ["25%"], []);
     const [showEnterRoutesModal, setShowEnterRoutesModal] = useState(false);
@@ -49,6 +59,8 @@ export default function OrderHome() {
     const [orderDetailsData, setOrderDetailsData] = useState<orderDetailsObjType | null>(null)
     const [orderPrice, setOrderPrice] = useState("");
     const [shipperLocation, setShipperLocation] = useState<Location.LocationObject | null>(null);
+    const [findTruck, setFindTruck] = useState<OrderStateType | null>(null);
+    const [driversViewedRequest, setDriversViewedRequest] = useState<DriverViewedRequestType[]>([])
 
     useEffect(() => {
         getCurrentLocation();
@@ -130,6 +142,17 @@ export default function OrderHome() {
         setShowOrderDetailsModal(true);
     }
 
+    const searchTrucks = () => {
+         if(orderRoutesData.length == 0){
+             showRoutesUI();
+         }else if(!orderDetailsData){
+               showOrderDetailsUI();
+         }else if(!orderPrice){
+             showOfferPriceUI();
+         }else{
+             setFindTruck("Creating");
+         }
+    }
 
 
 
@@ -144,13 +167,18 @@ export default function OrderHome() {
             <BottomSheet
                 handleIndicatorStyle={styles.handleIndicatorStyle}
                 enableOverDrag={false}
-                handleStyle={styles.handleStyle}
+                handleStyle={[styles.handleStyle, {backgroundColor: driversViewedRequest.length >=1? Colors.boxBackground : Colors.background}]}
+                handleComponent={driversViewedRequest.length >=1 ? ()=> <HandleComponent driversViewedRequest={driversViewedRequest} /> : undefined}
                 enableDynamicSizing={true}
                 index={1}
                 snapPoints={snapPoints}
             >
                 <BottomSheetView style={styles.orderBottomSheetBody}>
-                    <View>
+                    { findTruck == "Creating" ? 
+                    <ProcessingOrderDetails setFindTruck={setFindTruck}/>
+                    : findTruck == "Searching"?
+                    <SearchingTrucks orderPrice={orderPrice} setOrderPrice={setOrderPrice} setFindTruck={setFindTruck}/>
+                     : <View>
                         <View>
                             <Text style={styles.headerText}>Book a truck</Text>
                         </View>
@@ -229,12 +257,12 @@ export default function OrderHome() {
                                 </Pressable>}
                         </View>
                         <View style={styles.footerCont}>
-                            <Pressable style={styles.findTruckBtn}>
+                            <Pressable onPress={searchTrucks} style={styles.findTruckBtn}>
                                 <Text style={styles.findTruckText}>Find a Truck</Text>
                             </Pressable>
                         </View>
                     </View>
-
+}
                 </BottomSheetView>
             </BottomSheet>
             {showEnterRoutesModal && <EnterRoutesModal getRoutesData={getRoutesData} orderRoutesData={orderRoutesData} setShowEnterRoutesModal={setShowEnterRoutesModal} />}

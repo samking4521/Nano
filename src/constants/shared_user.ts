@@ -1,15 +1,15 @@
-export const USER_ROLES = {
-  SHIPPER: 'SHIPPER',
-  DRIVER: 'DRIVER',
-} as const;
+export enum USER_ROLES {
+  SHIPPER = 'SHIPPER',
+  DRIVER = 'DRIVER',
+}
 
-export const ACCOUNT_STATUS = {
-  ACTIVE: 'ACTIVE',
-  SUSPENDED: 'SUSPENDED',
-} as const;
+export enum ACCOUNT_STATUS {
+  ACTIVE = 'ACTIVE',
+  SUSPENDED = 'SUSPENDED',
+}
 
-export const VERIFICATION_STATUS = {
-  APPROVED: 'APPROVED',
-  PENDING: 'PENDING',
-  REJECTED: 'REJECTED'
-} as const;
+export enum VERIFICATION_STATUS {
+  APPROVED = 'APPROVED',
+  PENDING = 'PENDING',
+  REJECTED = 'REJECTED'
+}

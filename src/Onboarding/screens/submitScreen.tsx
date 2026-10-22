@@ -27,6 +27,8 @@ import { uploadUser } from '../../utils/uploadUser'
 import { DriverAppNavigationProp } from '../../Navigation/RootNavigation'
 import { signUpDataStorage } from '../../localStorage/signUpDataStorage'
 import { FONT_SIZES, FONTS, SPACING } from '../../constants/theme/font'
+import { useDriverStore } from '../../Driver/store/DriverStore'
+import { getDriverVerificationDetails } from '../../utils/getDriverVerificationDetails'
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle)
 const AnimatedTextInput = Animated.createAnimatedComponent(TextInput)
@@ -49,6 +51,12 @@ type animationType = "personal" | "identity" | "vehicle";
 
 export default function SubmitScreen() {
   const session = useAuthStore((store) => store.session);
+  const setDriverVerificationStatus = useDriverStore((store) => store.setDriverVerificationStatus)
+  const setDriverFirstName = useDriverStore((store) => store.setDriverFirstName)
+  const setDriverLastName = useDriverStore((store) => store.setDriverLastName)
+  const setDriverImgKey = useDriverStore((store) => store.setDriverImgKey)
+  const setCanGoLive = useDriverStore((store) => store.setCanGoLive)
+  const setIsOwnerAllVehiclesApproved = useDriverStore((store) => store.setIsOwnerAllVehiclesApproved)
   const [personalInfoUploading, setPersonalInfoUploading] = useState<loadingState | null>("loading");
   const [vehicleInfoUploading, setVehicleInfoUploading] = useState<loadingState | null>("initial");
   const [identityInfoUploading, setIdentityInfoUploading] = useState<loadingState | null>("initial");
@@ -66,6 +74,7 @@ export default function SubmitScreen() {
 
   const ownershipStatus = driverStorage.getString("ownershipStatus");
   console.log("ownership Status is : ", ownershipStatus);
+
 
   const uploadDriverPhoto = async (signal: AbortSignal) => {
     const driverImage = driverStorage.getString("driverImage");
@@ -186,7 +195,7 @@ export default function SubmitScreen() {
           vehicle_capacity: vehicle_capacity,
           vehicle_year: vehicle_year
         })
-        .eq("vehicle_id", select_vehicle_data.id).abortSignal(signal);
+        .eq("id", select_vehicle_data.id).abortSignal(signal);
 
       if (err_update_vehicle) {
         throw new Error(`Error updating vehicle info: ${err_update_vehicle.message}`)
@@ -347,7 +356,7 @@ export default function SubmitScreen() {
       .abortSignal(signal);
 
     if (err_update_vehicle_documents) {
-      throw new Error(`Error updating document_img_key in Vehicle_Documents: ${err_update_vehicle_documents}`)
+      throw new Error(`Error updating document_img_key in Vehicle_Documents: ${err_update_vehicle_documents.message}`)
     }
 
 
@@ -729,13 +738,15 @@ export default function SubmitScreen() {
       if (controller.signal.aborted) return;
       await uploadIdentityInfo(controller.signal);
       if (controller.signal.aborted) return;
-      animateTo(ownershipStatus === "OWNER" ? 55 : 100);
-      setIdentityInfoUploading("done");
-      stopAnimation("identity");
+
 
       if (driverStorage.getString("ownershipStatus") === "HIRED") {
-        console.log("Success onboarding hired driver");
+        await getDriverVerificationDetails(session, setDriverFirstName, setDriverLastName, setDriverImgKey, setDriverVerificationStatus, setCanGoLive, setIsOwnerAllVehiclesApproved);
 
+        animateTo(100);
+        setIdentityInfoUploading("done");
+        stopAnimation("identity");
+        console.log("Success onboarding hired driver");
         signUpDataStorage.clearAll();
         setIsSubmitting(false);
         requestAnimationFrame(() => {
@@ -744,11 +755,15 @@ export default function SubmitScreen() {
         });
         return;
       }
+      animateTo(55);
+      setIdentityInfoUploading("done");
+      stopAnimation("identity");
       startAnimation("vehicle");
       setVehicleInfoUploading("loading");
       if (controller.signal.aborted) return;
       await uploadDriverVehicle(controller.signal);
       if (controller.signal.aborted) return;
+      await getDriverVerificationDetails(session, setDriverFirstName, setDriverLastName, setDriverImgKey, setDriverVerificationStatus, setCanGoLive, setIsOwnerAllVehiclesApproved);
       animateTo(100);
       setVehicleInfoUploading("done");
       stopAnimation("vehicle");
@@ -756,7 +771,9 @@ export default function SubmitScreen() {
 
       signUpDataStorage.clearAll();
       setIsSubmitting(false);
+
       requestAnimationFrame(() => {
+        if (controller.signal.aborted) return;
         driver_navigation.replace("Driver");
         driverStorage.clearAll();
       });

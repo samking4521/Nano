@@ -136,18 +136,21 @@ export default function DriverInfo({ route }: Props) {
     };
 
     const isValidEmail = (email: string): boolean => {
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     };
 
+    const isNameValid = (name: string): boolean => {
+        return /^\s*\S+\s*$/.test(name)
+    }
 
 
     const phone = phone_number || mobileNo;
     const mail = emailVal || email;
     const isMailValid = isValidEmail(mail);
     const isAgeValid = isAtLeast18YearsOld(dob);
-    const firstname_err = clickedContinue && firstname.trim() === "";
-    const lastname_err = clickedContinue && lastname.trim() === "";
-    const mobile_no_err = clickedContinue && phone.trim() === "";
+    const firstname_err = clickedContinue && !isNameValid(firstname);
+    const lastname_err = clickedContinue && !isNameValid(lastname);
+    const mobile_no_err = clickedContinue && (phone.trim() === "" || phone.length < 11);
     const email_length_err = clickedContinue && mail.trim() === "";
     const email_valid_err = clickedContinue && mail.length > 0 && !isMailValid;
 
@@ -166,9 +169,9 @@ export default function DriverInfo({ route }: Props) {
         const isAgeValid = isAtLeast18YearsOld(dob);
 
         const hasErrors = [
-            firstname.trim() === "",
-            lastname.trim() === "",
-            phone.trim() === "",
+            !isNameValid(firstname),
+            !isNameValid(lastname),
+           ( phone.trim() === "" || phone.length < 11),
             mail.trim() === "",
             mail.length > 0 && !isMailValid,
             (!datePicked && !driverLocalStorageDob),
@@ -183,8 +186,8 @@ export default function DriverInfo({ route }: Props) {
             countryName: countryNameVal ?? country?.name
         }
         const countryObj = JSON.stringify(country_obj);
-        driverStorage.set("firstname", firstname);
-        driverStorage.set("lastname", lastname);
+        driverStorage.set("firstname", firstname.trim());
+        driverStorage.set("lastname", lastname.trim());
         driverStorage.set("mobileNo", phone);
         driverStorage.set("email", mail);
         driverStorage.set("dob", dob.toISOString().slice(0, 10));
@@ -251,8 +254,6 @@ export default function DriverInfo({ route }: Props) {
                                 </Pressable>
                             </View>
                         </View>
-
-
                     </View>
 
                     <View style={styles.nameBoxContainer}>

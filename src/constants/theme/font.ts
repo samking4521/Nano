@@ -130,6 +130,7 @@ export const FONT_WEIGHTS = {
 export const BORDER_RADIUS = {
   sm: 4,
   md: 8,
+  xmd: 10,
   lg: 12,
   xl: 20,
   round: 50,

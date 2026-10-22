@@ -1,5 +1,5 @@
 import { Image, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import React, { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Colors } from '../../../../constants/theme/colors'
 import { AntDesign, Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
@@ -7,7 +7,6 @@ import { useNavigation } from '@react-navigation/native'
 import { DriverNavigationProp } from '../../../../Navigation/DriverNavigation'
 import { BORDER_RADIUS, FONT_SIZES, FONTS, ICON_SIZES } from '../../../../constants/theme/font'
 import IdentityInfoShimmer from '../components/IdentityInfoShimmer'
-import { identityInfoVerificationType } from './Profile'
 import { useAuthStore } from '../../../../Authentication/store/authStore'
 import { DRIVER_DOCUMENT_TYPE, DRIVER_LICENSE_ISSUES_CODE, NIN_ISSUES_CODE, PENDING_DRIVER_LICENSE_PHOTO_ISSUES_CODE, VERIFICATION_ISSUES_CODE, VERIFICATION_ISSUES_FIELD, VERIFICATION_ISSUES_SECTION } from '../../../../constants/driver'
 import { supabase } from '../../../../lib/supabase'
@@ -18,12 +17,13 @@ import NanoLoadingSpinner from '../../../../utils/nanoLoadingSpinner'
 import EditDriverLicenseBottomSheet from '../components/EditDriverLicenseClassBottomSheet'
 import UpdateLicenseInfoBottomSheet from '../components/UpdateLicenseInfoBottomSheet'
 import { useNetworkStore } from '../../../../Providers/Network/NetworkStore'
-import { driverVerificationStatusType } from './PersonalInfo'
+import { useDriverStore } from '../../../store/DriverStore'
+import ImageLoadingPlaceHolder from '../../../../utils/ImageLoadingPlaceHolder'
 
 export type identityFieldType = "nin_no" | "license_no" | "license_expiry_date";
 export type identityPhotoType = "nin" | "driver_license";
 
-type ninDataType = {
+interface ninDataType {
   document_number: string
   document_owner_name: string
   birthday: string
@@ -31,7 +31,7 @@ type ninDataType = {
 
 }
 
-type driverLicenseDataType = {
+interface driverLicenseDataType {
   document_number: string
   document_owner_name: string
   birthday: string
@@ -45,27 +45,32 @@ export type licenseUpdateType = "license_class" | "license_expiry_date";
 export default function IdentityInfo() {
   const session = useAuthStore((store) => store.session);
   const isOnline = useNetworkStore((store) => store.isOnline);
-  const [ninVerificationStatus, setNinVerificationStatus] = useState<identityInfoVerificationType>("PENDING");
-  const [driverLicenseVerificationStatus, setDriverLicenseVerificationStatus] = useState<identityInfoVerificationType>("PENDING");
+  const driverVerificationStatus = useDriverStore((store) => store.driverVerificationStatus);
+  const ninVerificationStatus = useDriverStore((store) => store.ninVerificationStatus);
+  const driverLicenseVerificationStatus = useDriverStore((store) => store.driverLicenseVerificationStatus)
+  const identityInfoVerificationIssues = useDriverStore((store) => store.identityInfoVerificationIssues);
+  const setDriverVerificationStatus = useDriverStore((store) => store.setDriverVerificationStatus)
+  const setNinVerificationStatus = useDriverStore((store) => store.setNinVerificationStatus)
+  const setDriverLicenseVerificationStatus = useDriverStore((store) => store.setDriverLicenseVerificationStatus)
+  const setIdentityInfoVerificationIssues = useDriverStore((store) => store.setIdentityInfoVerificationIssues)
   const [ninNo, setNinNo] = useState("");
   const [ninData, setNinData] = useState<ninDataType | null>(null);
   const [driverLicenseData, setDriverLicenseData] = useState<driverLicenseDataType | null>(null);
-  const [ninImage, setNinImage] = useState("");
+  const [ninImage, setNinImage] = useState<string | null>(null);
+  const [driverLicenseImageLoading, setDriverLicenseImageLoading] = useState(true);
+  const [ninImageLoading, setNinImageLoading] = useState(true);
   const [driverLicenseNo, setDriverLicenseNo] = useState("");
   const [driverLicenseClass, setDriverLicenseClass] = useState("");
   const [driverLicenseExpiryDate, setDriverLicenseExpiryDate] = useState("");
-  const [driverLicenseImage, setDriverLicenseImage] = useState("");
+  const [driverLicenseImage, setDriverLicenseImage] = useState<string | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
   const [showLoadingSpinner, setShowLoadingSpinner] = useState(false);
   const [openEditBottomSheet, setOpenEditBottomSheet] = useState<identityFieldType | null>(null);
   const [showPhotoBottomSheet, setShowPhotoBottomSheet] = useState<identityPhotoType | null>(null);
-  const [driverVerificationStatus, setDriverVerificationStatus] = useState<driverVerificationStatusType | null>(null);
-
   const ninImgPath = useRef<string | null>(null)
   const driverLicenseImgPath = useRef<string | null>(null)
   const [showErrorAlert, setShowErrorAlert] = useState(false);
   const [openEditDriverLicenseClass, setOpenEditDriverLicenseClass] = useState(false);
-  const [identityInfoVerificationIssues, setIdentityInfoVerificationIssues] = useState<any[] | null>(null);
   const [showUpdateLicenseInfoBottomSheet, setShowUpdateLicenseInfoBottomSheet] = useState<licenseUpdateType | null>(null);
   const [pendingLicenseClass, setPendingLicenseClass] = useState<string | null>(null);
   const [pendingLicensePhoto, setPendingLicensePhoto] = useState<string | null>(null);
@@ -294,15 +299,15 @@ export default function IdentityInfo() {
   const getIdentityInfo = async () => {
     try {
       await Promise.all([
-        await getNinInfoVerificationStatus(),
-        await getDriverLicenseVerificationStatus(),
-        await getNinData(),
-        await getNinImage(),
-        await getDriverLicenseData(),
-        await getDriverLicenseImage(),
-        await getPendingDriverLicenseImage(),
-        await getIdentityInfoVerificationIssues(),
-        await getDriverVerificationStatus()
+        getNinInfoVerificationStatus(),
+        getDriverLicenseVerificationStatus(),
+        getNinData(),
+        getNinImage(),
+        getDriverLicenseData(),
+        getDriverLicenseImage(),
+        getPendingDriverLicenseImage(),
+        getIdentityInfoVerificationIssues(),
+        getDriverVerificationStatus()
       ])
       setLoadingStatus(false);
     } catch (e) {
@@ -535,10 +540,12 @@ export default function IdentityInfo() {
                 <View style={styles.identityLabelInfoCont}>
                   <Text style={styles.identityLabelText}>NIN Image</Text>
                   <View style={[styles.identityDocumentImageContainer, { borderColor: nin_photo_issue ? Colors.error : Colors.background }]}>
-                    <Image source={{ uri: ninImage }} style={styles.identityDocumentImage} />
-                    <TouchableOpacity onPress={() => setShowPhotoBottomSheet("nin")} style={styles.changePhotoCont}>
+                   { ninImage && <Image source={{ uri: ninImage }} onLoad={()=> setNinImageLoading(false)} style={styles.identityDocumentImage} />}
+                   {ninImageLoading && <ImageLoadingPlaceHolder/>}
+                   {!ninImageLoading && <TouchableOpacity onPress={() => setShowPhotoBottomSheet("nin")} style={styles.changePhotoCont}>
                       <Text style={styles.changePhotoText}>change photo</Text>
-                    </TouchableOpacity>
+                    </TouchableOpacity>}
+
                   </View>
                   {nin_photo_issue && <Text style={styles.issuesText}>{nin_photo_issues_code}</Text>}
                 </View>
@@ -607,10 +614,11 @@ export default function IdentityInfo() {
                 <View style={styles.identityLabelInfoCont}>
                   <Text style={styles.identityLabelText}>Driver License Image</Text>
                   <View style={[styles.identityDocumentImageContainer, { borderColor: driver_license_photo_issue ? Colors.errorBackground : Colors.background }]}>
-                    <Image source={{ uri: driverLicenseImage }} style={styles.identityDocumentImage} />
-                    <TouchableOpacity onPress={() => setShowPhotoBottomSheet("driver_license")} style={styles.changePhotoCont}>
+                    {driverLicenseImage && <Image source={{ uri: driverLicenseImage }} onLoad={()=> setDriverLicenseImageLoading(false)} style={styles.identityDocumentImage} />}
+                     {driverLicenseImageLoading && <ImageLoadingPlaceHolder/>}
+                   {!driverLicenseImageLoading && <TouchableOpacity onPress={() => setShowPhotoBottomSheet("driver_license")} style={styles.changePhotoCont}>
                       <Text style={styles.changePhotoText}>change photo</Text>
-                    </TouchableOpacity>
+                    </TouchableOpacity>}
                   </View>
                   {driver_license_photo_issue && <Text style={styles.issuesText}>{driver_license_photo_issues_code}</Text>}
 
@@ -626,9 +634,39 @@ export default function IdentityInfo() {
       </View>
       {(openEditBottomSheet || openEditDriverLicenseClass || showUpdateLicenseInfoBottomSheet) && <View style={styles.bottomSheetCoverContainer} />}
 
-      {openEditBottomSheet && <UpdateIdentityBottomSheet openEditBottomSheet={openEditBottomSheet} setOpenEditBottomSheet={setOpenEditBottomSheet} ninNo={ninNo} setNinNo={setNinNo} driverLicenseNo={driverLicenseNo} setDriverLicenseNo={setDriverLicenseNo} driverLicenseExpiryDate={driverLicenseExpiryDate} setDriverLicenseExpiryDate={setDriverLicenseExpiryDate} setShowLoadingSpinner={setShowLoadingSpinner} setShowErrorAlert={setShowErrorAlert} identityInfoVerificationIssues={identityInfoVerificationIssues} setIdentityInfoVerificationIssues={setIdentityInfoVerificationIssues} setNinVerificationStatus={setNinVerificationStatus} setDriverLicenseVerificationStatus={setDriverLicenseVerificationStatus} />}
+      {openEditBottomSheet && <UpdateIdentityBottomSheet
+        openEditBottomSheet={openEditBottomSheet}
+        setOpenEditBottomSheet={setOpenEditBottomSheet}
+        ninNo={ninNo}
+        setNinNo={setNinNo}
+        driverLicenseNo={driverLicenseNo}
+        setDriverLicenseNo={setDriverLicenseNo}
+        driverLicenseExpiryDate={driverLicenseExpiryDate}
+        setDriverLicenseExpiryDate={setDriverLicenseExpiryDate}
+        setShowLoadingSpinner={setShowLoadingSpinner}
+        setShowErrorAlert={setShowErrorAlert}
+        identityInfoVerificationIssues={identityInfoVerificationIssues}
+        setIdentityInfoVerificationIssues={setIdentityInfoVerificationIssues}
+        setNinVerificationStatus={setNinVerificationStatus}
+        setDriverLicenseVerificationStatus={setDriverLicenseVerificationStatus}
+      />
+      }
+
       {
-        showPhotoBottomSheet && <UpdateIdentityPhotoBottomSheet showPhotoBottomSheet={showPhotoBottomSheet} setShowPhotoBottomSheet={setShowPhotoBottomSheet} setShowLoadingSpinner={setShowLoadingSpinner} ninImgPath={ninImgPath} driverLicenseImgPath={driverLicenseImgPath} setNinImage={setNinImage} setDriverLicenseImage={setDriverLicenseImage} setShowErrorAlert={setShowErrorAlert} identityInfoVerificationIssues={identityInfoVerificationIssues} setIdentityInfoVerificationIssues={setIdentityInfoVerificationIssues} setNinVerificationStatus={setNinVerificationStatus} setDriverLicenseVerificationStatus={setDriverLicenseVerificationStatus} />
+        showPhotoBottomSheet && <UpdateIdentityPhotoBottomSheet
+          showPhotoBottomSheet={showPhotoBottomSheet}
+          setShowPhotoBottomSheet={setShowPhotoBottomSheet}
+          setShowLoadingSpinner={setShowLoadingSpinner}
+          ninImgPath={ninImgPath}
+          driverLicenseImgPath={driverLicenseImgPath}
+          setNinImage={setNinImage}
+          setDriverLicenseImage={setDriverLicenseImage}
+          setShowErrorAlert={setShowErrorAlert}
+          identityInfoVerificationIssues={identityInfoVerificationIssues}
+          setIdentityInfoVerificationIssues={setIdentityInfoVerificationIssues}
+          setNinVerificationStatus={setNinVerificationStatus}
+          setDriverLicenseVerificationStatus={setDriverLicenseVerificationStatus}
+        />
       }
       {showLoadingSpinner && <Pressable onPress={() => { return }} style={styles.fillScreen}>
         <NanoLoadingSpinner />
@@ -640,8 +678,34 @@ export default function IdentityInfo() {
         </View>
       </View>}
 
-      {openEditDriverLicenseClass && <EditDriverLicenseBottomSheet setOpenEditDriverLicenseClass={setOpenEditDriverLicenseClass} setDriverLicenseClass={setDriverLicenseClass} driverLicenseClass={driverLicenseClass} setShowLoadingSpinner={setShowLoadingSpinner} setShowErrorAlert={setShowErrorAlert} setIdentityInfoVerificationIssues={setIdentityInfoVerificationIssues} setDriverLicenseVerificationStatus={setDriverLicenseVerificationStatus} />}
-      {showUpdateLicenseInfoBottomSheet && <UpdateLicenseInfoBottomSheet setShowUpdateLicenseInfoBottomSheet={setShowUpdateLicenseInfoBottomSheet} showUpdateLicenseInfoBottomSheet={showUpdateLicenseInfoBottomSheet} setShowLoadingSpinner={setShowLoadingSpinner} setShowErrorAlert={setShowErrorAlert} pendingLicenseClass={pendingLicenseClass} setPendingLicenseClass={setPendingLicenseClass} pendingLicensePhoto={pendingLicensePhoto} setPendingLicensePhoto={setPendingLicensePhoto} pendingLicenseExpiryDate={pendingLicenseExpiryDate} setPendingLicenseExpiryDate={setPendingLicenseExpiryDate} pending_driver_license_photo_issues_code={pending_driver_license_photo_issues_code} pending_driver_license_class_issues_code={pending_driver_license_class_issues_code} pending_driver_license_expiry_date_issues_code={pending_driver_license_expiry_date_issues_code} setIdentityInfoVerificationIssues={setIdentityInfoVerificationIssues} />}
+      {openEditDriverLicenseClass && <EditDriverLicenseBottomSheet
+        setOpenEditDriverLicenseClass={setOpenEditDriverLicenseClass}
+        setDriverLicenseClass={setDriverLicenseClass}
+        driverLicenseClass={driverLicenseClass}
+        setShowLoadingSpinner={setShowLoadingSpinner}
+        setShowErrorAlert={setShowErrorAlert}
+        setIdentityInfoVerificationIssues={setIdentityInfoVerificationIssues}
+        setDriverLicenseVerificationStatus={setDriverLicenseVerificationStatus}
+      />
+      }
+
+      {showUpdateLicenseInfoBottomSheet && <UpdateLicenseInfoBottomSheet
+        setShowUpdateLicenseInfoBottomSheet={setShowUpdateLicenseInfoBottomSheet}
+        showUpdateLicenseInfoBottomSheet={showUpdateLicenseInfoBottomSheet}
+        setShowLoadingSpinner={setShowLoadingSpinner}
+        setShowErrorAlert={setShowErrorAlert}
+        pendingLicenseClass={pendingLicenseClass}
+        setPendingLicenseClass={setPendingLicenseClass}
+        pendingLicensePhoto={pendingLicensePhoto}
+        setPendingLicensePhoto={setPendingLicensePhoto}
+        pendingLicenseExpiryDate={pendingLicenseExpiryDate}
+        setPendingLicenseExpiryDate={setPendingLicenseExpiryDate}
+        pending_driver_license_photo_issues_code={pending_driver_license_photo_issues_code}
+        pending_driver_license_class_issues_code={pending_driver_license_class_issues_code}
+        pending_driver_license_expiry_date_issues_code={pending_driver_license_expiry_date_issues_code}
+        setIdentityInfoVerificationIssues={setIdentityInfoVerificationIssues}
+      />
+      }
 
     </SafeAreaView>
   )
@@ -869,8 +933,8 @@ const styles = StyleSheet.create({
   issuesText: {
     fontSize: FONT_SIZES.xs,
     color: Colors.error,
-    fontFamily: FONTS.medium,
-  },
+    fontFamily: FONTS.medium
+    },
   pendingLicenseUpdateIconCont: {
     width: 10,
     height: 10,

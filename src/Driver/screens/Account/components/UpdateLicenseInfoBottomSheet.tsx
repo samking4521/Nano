@@ -11,8 +11,8 @@ import DatePicker from 'react-native-date-picker';
 import { supabase } from '../../../../lib/supabase';
 import { useAuthStore } from '../../../../Authentication/store/authStore';
 import { uploadToStorage } from '../../../../utils/imageUploader';
-import ImagePlaceholder from '../../../../utils/imagePlaceholder';
 import { deleteFileIfExists } from '../../../../utils/deletePhoto';
+import ImageLoadingPlaceHolder from '../../../../utils/ImageLoadingPlaceHolder';
 
 type UpdateLicenseInfoBottomSheetProps = {
     showUpdateLicenseInfoBottomSheet: licenseUpdateType | null
@@ -24,7 +24,7 @@ type UpdateLicenseInfoBottomSheetProps = {
     pendingLicenseClass: string | null
     setPendingLicenseClass: React.Dispatch<React.SetStateAction<string | null>>
     setPendingLicenseExpiryDate: React.Dispatch<React.SetStateAction<string | null>>
-    setIdentityInfoVerificationIssues: React.Dispatch<React.SetStateAction<any[] | null>>
+    setIdentityInfoVerificationIssues: (data: any[] | null) => void
     pendingLicenseExpiryDate: string | null
     pending_driver_license_photo_issues_code: string | undefined
     pending_driver_license_class_issues_code: string | undefined
@@ -261,7 +261,7 @@ export default function UpdateLicenseInfoBottomSheet({ setShowUpdateLicenseInfoB
                                             </Pressable>
                                     }
 
-                                    {imageLoading && <ImagePlaceholder />}
+                                    {imageLoading && <ImageLoadingPlaceHolder />}
 
                                 </View>
                                 {pending_driver_license_photo_issues_code && <Text style={styles.issuesText}>{pending_driver_license_photo_issues_code}</Text>}

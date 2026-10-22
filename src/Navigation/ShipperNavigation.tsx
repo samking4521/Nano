@@ -52,7 +52,6 @@ export function ShipperNavigation() {
 
         tabBarIcon: ({ focused, color, size }) => {
           const config = TAB_CONFIG[route.name as keyof typeof TAB_CONFIG];
-
           return (
             <Ionicons
               name={focused ? config.activeIcon : config.icon}

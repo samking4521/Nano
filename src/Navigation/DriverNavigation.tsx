@@ -22,13 +22,19 @@ import { RouteProp } from '@react-navigation/native';
 import { useNetworkStore } from '../Providers/Network/NetworkStore';
 import { useEffect, useRef, useState } from 'react';
 import NetworkBanner from '../Providers/Network/NetworkBanner';
+import RealtimeProvider from '../Providers/RealtimeProvider';
+import { VERIFICATION_STATUS } from '../constants/shared_user';
+import VehicleDetails from '../Driver/screens/Account/screens/VehicleDetails';
 
 const Tab = createBottomTabNavigator<RootDriverTabsParamList>();
 const Stack = createNativeStackNavigator<RootDriverStackParamList>();
 
 
 export type DriverNavigationProp = NativeStackNavigationProp<RootDriverStackParamList>;
-export type DriverNavigationRouteProp = RouteProp<RootDriverStackParamList>;
+export type VehicleDetailsDriverNavigationRouteProp = RouteProp<RootDriverStackParamList, "VehicleDetails">;
+export type VehicleInfoDriverNavigationRouteProp = RouteProp<RootDriverStackParamList, "VehicleInfo">;
+export type VehicleRegistrationNavigationRouteProp = RouteProp<RootDriverStackParamList, "VehicleRegistration">;
+export type VehicleDriverNavigationRouteProp = RouteProp<RootDriverStackParamList, "VehicleDriver">;
 
 
 
@@ -63,7 +69,7 @@ export default function DriverNavigation() {
 
 
     return (
-        <>
+        <RealtimeProvider>
             {showNetworkBanner && <NetworkBanner setShowNetworkBanner={setShowNetworkBanner} />}
             <Stack.Navigator initialRouteName="HomeScreen" screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="HomeScreen" component={DriverTabNavigation} />
@@ -74,17 +80,18 @@ export default function DriverNavigation() {
                 <Stack.Screen name="VehicleInfo" component={VehicleInfo} />
                 <Stack.Screen name="VehicleDriver" component={VehicleDriver} />
                 <Stack.Screen name="VehicleRegistration" component={VehicleRegistration} />
+                <Stack.Screen name="VehicleDetails" component={VehicleDetails} />
             </Stack.Navigator>
-        </>
-
+        </RealtimeProvider>
     )
 }
 
 export function DriverTabNavigation() {
-    const driver_store = useDriverStore((store) => store);
+    const driverVerificationStatus = useDriverStore((store) => store.driverVerificationStatus);
+    const isOwnerAllVehiclesApproved = useDriverStore((store) => store.isOwnerAllVehiclesApproved);
 
-    const isDriverProfileVerified = driver_store.driverVerificationStatus == "APPROVED"
-    const isVehicleStatusVerified = driver_store.vehicleVerificationStatus == "APPROVED"
+
+    const isDriverApproved = driverVerificationStatus == VERIFICATION_STATUS.APPROVED
 
 
     const TAB_CONFIG = {
@@ -126,7 +133,7 @@ export function DriverTabNavigation() {
                                 size={size}
                                 color={color}
                             />
-                            {(route.name == "Account" && (!isDriverProfileVerified || !isVehicleStatusVerified)) && <View style={styles.dotIcon} />}
+                            {(route.name == "Account" && (!isDriverApproved || !isOwnerAllVehiclesApproved)) && <View style={styles.dotIcon} />}
                         </View>
 
                     );

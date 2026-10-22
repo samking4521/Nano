@@ -1,10 +1,11 @@
 import { Dimensions, StyleSheet, View } from 'react-native'
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps'
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps'
 import React, { useEffect, useRef, useState } from 'react'
 import { Colors } from '../../../../constants/theme/colors'
 import * as Location from 'expo-location';
 import { completedRouteType } from './OrderHome';
 import { RouteTypeIcon } from './EnterRoutesModal';
+import { getRoute } from '../../../../utils/routesAPI';
 
 
 const HEIGHT = Dimensions.get("screen").height;
@@ -29,6 +30,11 @@ const initialRegion = {
 function Map({ orderRoutesData, shipperLocation }: MapProps) {
     const mapRef = useRef<MapView>(null);
     const [mapReady, setMapReady] = useState(false);
+
+    const routeCoordinates = orderRoutesData.map((item) => ({
+        latitude: item.location_obj.lat,
+        longitude: item.location_obj.long
+    }))
 
     const AnimateMapToLocationRegion = (coords: coordsType) => {
         const offset = 0.02
@@ -91,6 +97,47 @@ function Map({ orderRoutesData, shipperLocation }: MapProps) {
         AnimateMapToLocationRegion(coordinates)
     }
 
+    useEffect(() => {
+        if (orderRoutesData.length == 0) return;
+        const pickup = orderRoutesData.filter((item) => item.type == "pickup").map((item) => ({
+            latitude: item.location_obj.lat,
+            longitude: item.location_obj.long
+        }))
+        const stops = orderRoutesData.filter((item) => (item.type !== "pickup" && item.type !== "destination")).map((item) => ({
+            latitude: item.location_obj.lat,
+            longitude: item.location_obj.long
+        }))
+        const destination = orderRoutesData.filter((item) => item.type == "destination").map((item) => ({
+            latitude: item.location_obj.lat,
+            longitude: item.location_obj.long
+        }))
+        console.log("pickup, stops, destination", pickup, stops, destination);
+
+        // (
+        //     async () => {
+        //         try {
+        //             const result = await getRoute({
+        //                 pickup: pickup[0],
+        //                 stops: stops.length >= 1 ? stops : undefined,
+        //                 destination: destination[0]
+        //             })
+        //             console.log("result : ", result)
+        //         } catch (error) {
+        //             console.log("error: ", error)
+        //         }
+
+
+        //     }
+
+        // )()
+
+
+    }, [orderRoutesData])
+
+
+
+
+
 
     return (
         <View style={styles.container}>
@@ -105,7 +152,7 @@ function Map({ orderRoutesData, shipperLocation }: MapProps) {
             >
                 {
                     orderRoutesData.map((route) => {
-                         console.log("rendering marker for", route.type, route.location_obj.lat, route.location_obj.long)
+                        console.log("rendering marker for", route.type, route.location_obj.lat, route.location_obj.long)
                         const routeCoords = {
                             latitude: route.location_obj.lat,
                             longitude: route.location_obj.long
@@ -113,12 +160,12 @@ function Map({ orderRoutesData, shipperLocation }: MapProps) {
                         return (
                             <Marker
                                 onPress={() => animateToRouteRegion(route)}
-                                 key={`${route.type}-${route.location_obj.lat}-${route.location_obj.long}`}
+                                key={`${route.type}-${route.location_obj.lat}-${route.location_obj.long}`}
                                 coordinate={routeCoords}
                                 title={route.type == "pickup" ? "Pickup" : route.type == "destination" ? "Drop-off" : route.type == "stop_1" ? "Stop 1" : route.type == "stop_2" ? "Stop 2" : "Stop 3"}
                             >
-                                
-                                         {
+
+                                {
                                     route.type == "pickup" ?
                                         <RouteTypeIcon inner_color={Colors.routeTypeIcons.inner_pickup} outer_color={Colors.routeTypeIcons.outer_pickup} />
                                         :
@@ -127,11 +174,12 @@ function Map({ orderRoutesData, shipperLocation }: MapProps) {
                                             :
                                             <RouteTypeIcon inner_color={Colors.routeTypeIcons.inner_stop} outer_color={Colors.routeTypeIcons.outer_stop} />
                                 }
-                               
+
                             </Marker>
                         )
                     })
                 }
+
 
             </MapView>
         </View>

@@ -109,7 +109,7 @@ export default function IdentityVerification() {
         driverStorage.set("driverLicenseNo", driverLicenseNumber);
         driverStorage.set("driverLicenseClass", driverLicenseClass);
         driverStorage.set("driverLicensePhoto", driverLicenseImage);
-        driverStorage.set("licenseExpiryDate", licenseExpiryDate.toISOString());
+        driverStorage.set("licenseExpiryDate", licenseExpiryDate.toISOString().slice(0, 10));
 
         navigation.navigate("OwnershipStatus");
     }

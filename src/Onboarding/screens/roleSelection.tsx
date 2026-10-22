@@ -240,7 +240,8 @@ export default function RoleSelection({ route }: Props) {
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1
+        flex: 1,
+        backgroundColor: Colors.background
     },
     body: {
         padding: 15,

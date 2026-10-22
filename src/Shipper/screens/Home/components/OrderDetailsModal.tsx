@@ -307,7 +307,6 @@ function OrderDetailsModal({ setShowOrderDetailsModal, getOrderDetailsData, orde
                                                                         <Image source={{ uri: imgObj.uri }} resizeMode="cover" style={styles.orderPhotosImage} />
                                                                         <Pressable onPress={() => removeOrderPhotos(imgObj.id)} style={styles.removeImgBtn}>
                                                                             <AntDesign name="close" size={14} color={Colors.text.white} />
-
                                                                         </Pressable>
                                                                     </View>
                                                             )
@@ -668,7 +667,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         position: "absolute",
         top: 10,
-        left: 85,
+        right: 0,
         backgroundColor: "rgba(0,0,0,0.6)"
     },
     errorBox: {

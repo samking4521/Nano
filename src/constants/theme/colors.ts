@@ -8,6 +8,8 @@ export const Colors = {
   primaryTransparent: "#FFF4EB",
   blackBackground: "#030303",
   semiBlackBackground: "#03030380",
+  disabledBtn: "#DCDCDC",
+  
   text: {
     white: "#FFFFFF",
     black: "#111827",
@@ -25,8 +27,19 @@ export const Colors = {
     inner_destination: "#EF4444",
     search: "#5F6368"
   },
+  badges: {
+    light_bronze: "#F1E1D0",
+    light_silver: "#E5E7EB",
+    light_gold: "#F8E9B0"
+  },
 
   error: "#E53935",
-  errorBackground: "#FDECEC"
+  errorBackground: "#FDECEC",
+  green: "#16A34A",
+  transparentGreen: "#DCFCE7",
+  blue: "#2563EB",
+  transparentBlue: "#DBEAFE",
+  purple: "#7C3AED",
+  transparentPurple: "#EDE9FE"
 
 };

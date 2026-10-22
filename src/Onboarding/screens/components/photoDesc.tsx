@@ -5,6 +5,7 @@ import { AntDesign } from '@expo/vector-icons';
 import { FONT_SIZES, FONTS, ICON_SIZES, SPACING } from '../../../constants/theme/font';
 
 const photo_desc_img = require("../../../../assets/onboarding/photoDesc.png");
+
 export default function PhotoDesc() {
     return (
         <View>

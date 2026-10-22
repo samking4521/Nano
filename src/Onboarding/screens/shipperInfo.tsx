@@ -14,8 +14,8 @@ import { USER_ROLES } from '../../constants/shared_user'
 import { uploadUser } from '../../utils/uploadUser'
 import { ShipperAppNavigationProp } from '../../Navigation/RootNavigation'
 import { signUpDataStorage } from '../../localStorage/signUpDataStorage'
-import LoadingSpinner from '../../utils/loadingSpinner'
 import { BORDER_RADIUS, FONT_SIZES, FONTS, ICON_SIZES, SPACING } from '../../constants/theme/font'
+import NanoLoadingSpinner from '../../utils/nanoLoadingSpinner'
 
 
 
@@ -534,7 +534,9 @@ export default function ShipperInfo({ route }: Props) {
             <Text style={styles.footerText}>By signing up, you agree to Nano's Terms and Privacy Policy.</Text>
 
             {
-                loading && <LoadingSpinner text={"Creating your profile"} />
+                loading &&  <Pressable style={styles.loadingViewCont}>
+                       <NanoLoadingSpinner/>
+                </Pressable>
             }
 
         </SafeAreaView>
@@ -544,6 +546,7 @@ export default function ShipperInfo({ route }: Props) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+         backgroundColor: Colors.background
     },
     body: {
         flex: 1,
@@ -688,6 +691,11 @@ const styles = StyleSheet.create({
         paddingHorizontal: 15,
         paddingTop: 0,
         padding: 10
+    },
+    loadingViewCont: {
+        ...StyleSheet.absoluteFillObject,
+        justifyContent: "center",
+        alignItems: "center"
     }
 
 })

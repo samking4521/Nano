@@ -6,10 +6,7 @@ import { AntDesign } from '@expo/vector-icons'
 import { BORDER_RADIUS, FONT_SIZES, FONTS } from '../../../../constants/theme/font'
 import { identityFieldType } from '../screens/IdentityInfo'
 import { supabase } from '../../../../lib/supabase'
-import { useAuthStore } from '../../../../Authentication/store/authStore'
-import { DRIVER_DOCUMENT_TYPE, VERIFICATION_ISSUES_FIELD, VERIFICATION_ISSUES_SECTION } from '../../../../constants/driver'
 import { VERIFICATION_STATUS } from '../../../../constants/shared_user'
-import { identityInfoVerificationType } from '../screens/Profile'
 
 type UpdateIdentityProps = {
     openEditBottomSheet: identityFieldType
@@ -23,14 +20,13 @@ type UpdateIdentityProps = {
     setShowLoadingSpinner: React.Dispatch<React.SetStateAction<boolean>>
     setShowErrorAlert: React.Dispatch<React.SetStateAction<boolean>>
     identityInfoVerificationIssues: any[] | null
-    setIdentityInfoVerificationIssues: React.Dispatch<React.SetStateAction<any[] | null>>
-    setNinVerificationStatus: React.Dispatch<React.SetStateAction<identityInfoVerificationType>>
-    setDriverLicenseVerificationStatus: React.Dispatch<React.SetStateAction<identityInfoVerificationType>>
+    setIdentityInfoVerificationIssues:  (data: any[] | null) => void
+    setNinVerificationStatus:  (status: VERIFICATION_STATUS) => void
+    setDriverLicenseVerificationStatus:  (status: VERIFICATION_STATUS) => void
 
 }
 
 export default function UpdateIdentityBottomSheet({ openEditBottomSheet, setOpenEditBottomSheet, ninNo: parentNinNo, setNinNo: setParentNinNo, driverLicenseNo: parentDriverLicenseNo, setDriverLicenseNo: setParentDriverLicenseNo, driverLicenseExpiryDate: parentDriverLicenseExpiryDate, setDriverLicenseExpiryDate: setParentDriverLicenseExpiryDate, setShowLoadingSpinner, setShowErrorAlert, identityInfoVerificationIssues, setIdentityInfoVerificationIssues, setNinVerificationStatus, setDriverLicenseVerificationStatus }: UpdateIdentityProps) {
-    const session = useAuthStore((store) => store.session);
     const [ninNo, setNinNo] = useState(() => parentNinNo ?? "");
     const [driverLicenseNo, setDriverLicenseNo] = useState(() => parentDriverLicenseNo ?? "");
     const [driverLicenseExpiryDate, setDriverLicenseExpiryDate] = useState(() => parentDriverLicenseExpiryDate ?? "");
