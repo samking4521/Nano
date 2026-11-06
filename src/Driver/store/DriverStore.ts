@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { VERIFICATION_STATUS } from "../../constants/shared_user";
+import { ONLINE_STATUS } from "../../constants/driver";
+import { notificationDataType } from "../screens/Home/screens/Notifications";
 
 interface pendingVehicleObj {
     vehicleId: string
@@ -24,8 +26,17 @@ export type DriverStore = {
     personalInfoVerificationIssues: any[] | null
     identityInfoVerificationIssues: any[] | null
     isOwnerAllVehiclesApproved: boolean
-    canGoLive: boolean,
+    isDriverAssignedToAVehicle: boolean,
     pendingVehicleUpdate: pendingVehicleObj | undefined,
+    driverOnlineStatus: ONLINE_STATUS,
+    notifications: notificationDataType[],
+    hasUnreadNotifications: boolean,
+    setHasUnreadNotifications: (status: boolean) => void,
+    setNotifications: (
+        updater: notificationDataType[] |
+            ((prev: notificationDataType[]) => notificationDataType[])
+    ) => void;
+    setDriverOnlineStatus: (status: ONLINE_STATUS) => void,
     setPendingVehicleUpdate: (obj: pendingVehicleObj | undefined) => void,
     setDriverImgKey: (key: string) => void
     setDriverFirstName: (first_name: string) => void
@@ -36,7 +47,7 @@ export type DriverStore = {
     setIsOwnerAllVehiclesApproved: (state: boolean) => void
     setPersonalInfoVerificationIssues: (data: any[] | null) => void
     setIdentityInfoVerificationIssues: (data: any[] | null) => void
-    setCanGoLive: (state: boolean) => void
+    setIsDriverAssignedToAVehicle: (state: boolean) => void
 
 };
 
@@ -50,10 +61,21 @@ export const useDriverStore = create<DriverStore>((set) => (
         ninVerificationStatus: undefined,
         driverLicenseVerificationStatus: undefined,
         isOwnerAllVehiclesApproved: false,
-        canGoLive: false,
+        isDriverAssignedToAVehicle: false,
         pendingVehicleUpdate: undefined,
         personalInfoVerificationIssues: null,
         identityInfoVerificationIssues: null,
+        driverOnlineStatus: ONLINE_STATUS.OFFLINE,
+        notifications: [],
+        setNotifications: (updater) =>
+            set(state => ({
+                notifications: typeof updater === 'function'
+                    ? updater(state.notifications)
+                    : updater,
+            })),
+        hasUnreadNotifications: false,
+        setHasUnreadNotifications: (status: boolean) => set({hasUnreadNotifications: status}),
+        setDriverOnlineStatus: (status: ONLINE_STATUS) => set({ driverOnlineStatus: status }),
         setDriverImgKey: (key: string) => set({ driverImgKey: key }),
         setDriverFirstName: (first_name: string) => set({ driverFirstName: first_name }),
         setDriverLastName: (last_name: string) => set({ driverLastName: last_name }),
@@ -64,6 +86,7 @@ export const useDriverStore = create<DriverStore>((set) => (
         setIsOwnerAllVehiclesApproved: (state: boolean) => set({ isOwnerAllVehiclesApproved: state }),
         setPersonalInfoVerificationIssues: (data: any[] | null) => set({ personalInfoVerificationIssues: data }),
         setIdentityInfoVerificationIssues: (data: any[] | null) => set({ identityInfoVerificationIssues: data }),
-        setCanGoLive: (state: boolean) => set({ canGoLive: state })
+        setIsDriverAssignedToAVehicle: (state: boolean) => set({ isDriverAssignedToAVehicle: state })
+
     }
 ));
