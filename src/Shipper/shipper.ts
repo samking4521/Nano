@@ -1,4 +1,4 @@
-export type RootShipperStackParamList = {
+export type RootShipperTabParamList = {
   Home: undefined;
   Orders: undefined;
   Payments: undefined;
