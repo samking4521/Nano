@@ -13,11 +13,7 @@ export default function RealtimeProvider({ children }: { children: React.ReactNo
     const setDriverLicenseVerificationStatus = useDriverStore((store) => store.setDriverLicenseVerificationStatus)
     const setPersonalInfoVerificationIssues = useDriverStore((store) => store.setPersonalInfoVerificationIssues)
     const setIdentityInfoVerificationIssues = useDriverStore((store) => store.setIdentityInfoVerificationIssues)
-    const setDriverFirstName = useDriverStore((store) => store.setDriverFirstName)
-    const setDriverLastName = useDriverStore((store) => store.setDriverLastName)
-    const setDriverImgKey = useDriverStore((store) => store.setDriverImgKey)
-    const setCanGoLive = useDriverStore((store) => store.setCanGoLive)
-    const setIsOwnerAllVehiclesApproved = useDriverStore((store) => store.setIsOwnerAllVehiclesApproved)
+    
 
     const getPersonalInfoVerificationIssues = async () => {
         const { data: verification_issues_data, error: select_verification_issues_err } = await supabase
@@ -84,7 +80,7 @@ export default function RealtimeProvider({ children }: { children: React.ReactNo
                 documentsRes.data.forEach((doc) =>
                     applyDocumentStatus(doc.document_type, doc.status)
                 );
-                getDriverVerificationDetails(session, setDriverFirstName, setDriverLastName, setDriverImgKey, setDriverVerificationStatus, setCanGoLive, setIsOwnerAllVehiclesApproved);
+                getDriverVerificationDetails(session);
             } catch (e) {
                 console.log('Status sync failed:', e);
             }
@@ -116,15 +112,7 @@ export default function RealtimeProvider({ children }: { children: React.ReactNo
                         const status = payload.new.verification_status;
                         setDriverVerificationStatus(status);
                         if (status === VERIFICATION_STATUS.REJECTED) refetchIssues();
-                        getDriverVerificationDetails(
-                            session,
-                            setDriverFirstName,
-                            setDriverLastName,
-                            setDriverImgKey,
-                            setDriverVerificationStatus,
-                            setCanGoLive,
-                            setIsOwnerAllVehiclesApproved
-                        )
+                        getDriverVerificationDetails(session)
                     } catch (e) {
                         console.log('Driver_Verification handler error:', e);
                     }
