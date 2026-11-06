@@ -37,7 +37,7 @@ export type RoleSelectionNavigationProp = NativeStackNavigationProp<OnboardingSt
 
 
 export function OnboardingNavigation({ route }: Props) {
-  console.log("route: ", route.params)
+  
   return (
     <Stack.Navigator initialRouteName="RoleSelection" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="RoleSelection" component={RoleSelection} initialParams={route.params} />

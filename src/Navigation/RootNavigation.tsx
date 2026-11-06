@@ -2,10 +2,13 @@ import { createNativeStackNavigator, NativeStackNavigationProp } from "@react-na
 import { AuthUserNavigation } from "./AuthUserNavigation";
 import { OnboardingNavigation } from "./OnboardingNavigation";
 import { RootNavigationStackParamList } from "./RootNav";
-import { RouteProp } from "@react-navigation/native";
+import { createNavigationContainerRef, RouteProp } from "@react-navigation/native";
 import { useAuthStore } from "../Authentication/store/authStore";
 import { ShipperNavigation } from "./ShipperNavigation";
 import DriverNavigation from "./DriverNavigation";
+
+export const navigationRef =
+    createNavigationContainerRef<RootNavigationStackParamList>();
 
 const Stack = createNativeStackNavigator<RootNavigationStackParamList>();
 
