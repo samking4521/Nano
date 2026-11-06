@@ -1,3 +1,5 @@
+import { USER_ROLES } from "../constants/shared_user";
+
 export type OnboardingStackParamList = {
   RoleSelection: {
     mobileNo: string | null,
@@ -5,6 +7,7 @@ export type OnboardingStackParamList = {
     country: string | null,
     countryCode: string | null,
     callingCode: string | null,
+    user_role?: USER_ROLES | null
   };
   ShipperInfo: {
      mobileNo: string | null,
