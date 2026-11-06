@@ -352,11 +352,10 @@ const styles = StyleSheet.create({
         borderRadius: BORDER_RADIUS.md,
         padding: 10,
         backgroundColor: Colors.text.white
-
     },
     textInput: {
         width: "100%",
-        height: "100%",
+        height: 45,
         flexShrink: 1,
         marginHorizontal: 10
 
