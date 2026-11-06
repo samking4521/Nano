@@ -59,6 +59,14 @@ CREATE TYPE "public"."DRIVER_LICENSE_CLASS" AS ENUM (
 ALTER TYPE "public"."DRIVER_LICENSE_CLASS" OWNER TO "postgres";
 
 
+CREATE TYPE "public"."DRIVER_NOTIFICATION_CATEGORY" AS ENUM (
+    'VERIFICATION'
+);
+
+
+ALTER TYPE "public"."DRIVER_NOTIFICATION_CATEGORY" OWNER TO "postgres";
+
+
 CREATE TYPE "public"."DRIVER_VERIFICATION_AUDIT_TYPE" AS ENUM (
     'NIN',
     'DRIVER_LICENSE',
@@ -85,6 +93,36 @@ CREATE TYPE "public"."GENDER_ROLES" AS ENUM (
 
 
 ALTER TYPE "public"."GENDER_ROLES" OWNER TO "postgres";
+
+
+CREATE TYPE "public"."NOTIFICATION_DELIVERY_STATUS" AS ENUM (
+    'PENDING',
+    'IN_PROGRESS',
+    'SENT',
+    'DELIVERED',
+    'FAILED',
+    'DEAD'
+);
+
+
+ALTER TYPE "public"."NOTIFICATION_DELIVERY_STATUS" OWNER TO "postgres";
+
+
+CREATE TYPE "public"."NOTIFICATION_TYPE" AS ENUM (
+    'DRIVER_VERIFICATION_APPROVED',
+    'VEHICLE_VERIFICATION_APPROVED',
+    'DRIVER_VERIFICATION_ISSUE',
+    'VEHICLE_VERIFICATION_ISSUE',
+    'DRIVER_LICENSE_EXPIRY',
+    'VEHICLE_LICENSE_EXPIRY',
+    'DRIVER_LICENSE_RENEWAL_APPROVED',
+    'VEHICLE_LICENSE_RENEWAL_APPROVED',
+    'DRIVER_LICENSE_RENEWAL_ISSUE',
+    'VEHICLE_LICENSE_RENEWAL_ISSUE'
+);
+
+
+ALTER TYPE "public"."NOTIFICATION_TYPE" OWNER TO "postgres";
 
 
 CREATE TYPE "public"."ONLINE_STATUS" AS ENUM (
@@ -144,6 +182,15 @@ CREATE TYPE "public"."ORDER_STATUS" AS ENUM (
 
 
 ALTER TYPE "public"."ORDER_STATUS" OWNER TO "postgres";
+
+
+CREATE TYPE "public"."PLATFORM" AS ENUM (
+    'ios',
+    'android'
+);
+
+
+ALTER TYPE "public"."PLATFORM" OWNER TO "postgres";
 
 
 CREATE TYPE "public"."STAFF_ROLES" AS ENUM (
@@ -241,7 +288,10 @@ CREATE TYPE "public"."VERIFICATION_ISSUES_CODE" AS ENUM (
     'PENDING_VEHICLE_FRONT_PHOTO_INVALID',
     'PENDING_VEHICLE_SIDE_PHOTO_BLURRY',
     'PENDING_VEHICLE_SIDE_PHOTO_INVALID',
-    'PENDING_VEHICLE_REGISTRATION_EXPIRY_DATE_MISMATCH'
+    'PENDING_VEHICLE_REGISTRATION_EXPIRY_DATE_MISMATCH',
+    'VEHICLE_REGISTRATION_EXPIRY',
+    'VEHICLE_REGISTRATION_EXPIRED',
+    'DRIVER_LICENSE_EXPIRY'
 );
 
 
@@ -302,6 +352,149 @@ CREATE TYPE "public"."VERIFICATION_STATUS" AS ENUM (
 
 
 ALTER TYPE "public"."VERIFICATION_STATUS" OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."claim_notification_deliveries"("p_batch_size" integer DEFAULT 100, "p_lease_seconds" integer DEFAULT 120, "p_max_attempts" integer DEFAULT 4) RETURNS TABLE("delivery_id" "uuid", "notification_id" "uuid", "device_token_id" "uuid", "expo_push_token" "text", "notification_type" "text", "title" "text", "body" "text", "notification_data" "jsonb", "app_role" "text", "attempt" integer, "claim_updated_at" timestamp with time zone)
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'pg_catalog', 'public'
+    AS $$
+DECLARE
+  v_now timestamptz := date_trunc('milliseconds', clock_timestamp());
+  v_batch_size integer := LEAST(GREATEST(COALESCE(p_batch_size, 100), 1), 100);
+  v_lease_seconds integer := GREATEST(COALESCE(p_lease_seconds, 120), 30);
+  v_max_attempts integer := GREATEST(COALESCE(p_max_attempts, 4), 1);
+BEGIN
+  -- Do not leave queued jobs stuck forever if their device token was
+  -- deactivated after the delivery row was created.
+  UPDATE public."Delivery_Rows" dr
+  SET status = 'DEAD'::public."NOTIFICATION_DELIVERY_STATUS",
+      error = 'Device token is inactive',
+      locked_until = NULL,
+      updated_at = v_now
+  FROM public."Device_Tokens" dt
+  WHERE dr.device_token_id = dt.id
+    AND dt.is_active = false
+   AND (
+  dr.status = 'PENDING'::public."NOTIFICATION_DELIVERY_STATUS"
+  OR (
+    dr.status = 'IN_PROGRESS'::public."NOTIFICATION_DELIVERY_STATUS"
+    AND dr.locked_until IS NOT NULL
+    AND dr.locked_until <= v_now
+  )
+);
+  
+  -- Mark exhausted delivery rows as DEAD rather than allowing them
+UPDATE public."Delivery_Rows" dr
+SET status = 'DEAD'::public."NOTIFICATION_DELIVERY_STATUS",
+    error = COALESCE(
+      dr.error,
+      'Maximum delivery attempts exceeded'
+    ),
+    locked_until = NULL,
+    updated_at = v_now
+WHERE COALESCE(dr.attempts, 0) >= v_max_attempts
+ AND (
+  dr.status = 'PENDING'::public."NOTIFICATION_DELIVERY_STATUS"
+  OR (
+      dr.status = 'IN_PROGRESS'::public."NOTIFICATION_DELIVERY_STATUS"
+      AND dr.locked_until IS NOT NULL
+      AND dr.locked_until <= v_now
+    )
+);
+
+  RETURN QUERY
+  WITH candidates AS (
+    SELECT dr.id
+    FROM public."Delivery_Rows" dr
+    JOIN public."Device_Tokens" dt ON dt.id = dr.device_token_id
+    JOIN public."Notifications" n ON n.id = dr.notification_id
+    WHERE n.user_id = dt.user_id
+     AND n.app_role = dt.app_role
+      AND dt.is_active = true
+      AND COALESCE(dr.attempts, 0) < v_max_attempts
+      AND (
+        (dr.status = 'PENDING'::public."NOTIFICATION_DELIVERY_STATUS"
+          AND (dr.next_attempt_at IS NULL OR dr.next_attempt_at <= v_now))
+       OR (
+  dr.status = 'IN_PROGRESS'::public."NOTIFICATION_DELIVERY_STATUS"
+  AND dr.locked_until IS NOT NULL
+  AND dr.locked_until <= v_now
+)
+      )
+    ORDER BY COALESCE(dr.next_attempt_at, dr.created_at), dr.created_at
+    LIMIT v_batch_size
+    FOR UPDATE OF dr SKIP LOCKED
+  ), claimed AS (
+    UPDATE public."Delivery_Rows" dr
+    SET status = 'IN_PROGRESS'::public."NOTIFICATION_DELIVERY_STATUS",
+        attempts = COALESCE(dr.attempts, 0) + 1,
+        locked_until = v_now + make_interval(secs => v_lease_seconds),
+        updated_at = v_now,
+        error = NULL
+    FROM candidates c
+    WHERE dr.id = c.id
+    RETURNING dr.id, dr.notification_id, dr.device_token_id,
+              dr.attempts, dr.updated_at
+  )
+  SELECT c.id,
+         c.notification_id,
+         c.device_token_id,
+         dt.expo_push_token,
+         n.type::text,
+         n.title,
+         n.body,
+         n.data,
+         n.app_role::text,
+         c.attempts,
+         c.updated_at
+  FROM claimed c
+  JOIN public."Notifications" n ON n.id = c.notification_id
+  JOIN public."Device_Tokens" dt ON dt.id = c.device_token_id
+  WHERE n.user_id = dt.user_id
+    AND n.app_role = dt.app_role
+    AND dt.is_active = true;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."claim_notification_deliveries"("p_batch_size" integer, "p_lease_seconds" integer, "p_max_attempts" integer) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."claim_notification_receipts"("p_batch_size" integer DEFAULT 100, "p_lease_seconds" integer DEFAULT 120) RETURNS TABLE("delivery_id" "uuid", "expo_ticket_id" "text", "device_token_id" "uuid", "claim_updated_at" timestamp with time zone)
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'pg_catalog', 'public'
+    AS $$
+DECLARE
+  v_now timestamptz := date_trunc('milliseconds', clock_timestamp());
+  v_batch_size integer := LEAST(GREATEST(COALESCE(p_batch_size, 100), 1), 100);
+  v_lease_seconds integer := GREATEST(COALESCE(p_lease_seconds, 120), 30);
+BEGIN
+  RETURN QUERY
+  WITH candidates AS (
+    SELECT dr.id
+    FROM public."Delivery_Rows" dr
+    WHERE dr.status = 'SENT'::public."NOTIFICATION_DELIVERY_STATUS"
+      AND dr.expo_ticket_id IS NOT NULL
+      AND COALESCE(dr.updated_at, dr.created_at) <= v_now - interval '15 minutes'
+      AND (dr.locked_until IS NULL OR dr.locked_until <= v_now)
+    ORDER BY COALESCE(dr.updated_at, dr.created_at), dr.created_at
+    LIMIT v_batch_size
+    FOR UPDATE OF dr SKIP LOCKED
+  ), claimed AS (
+    UPDATE public."Delivery_Rows" dr
+    SET locked_until = v_now + make_interval(secs => v_lease_seconds),
+        updated_at = v_now
+    FROM candidates c
+    WHERE dr.id = c.id
+    RETURNING dr.id, dr.expo_ticket_id, dr.device_token_id, dr.updated_at
+  )
+  SELECT c.id, c.expo_ticket_id, c.device_token_id, c.updated_at
+  FROM claimed c;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."claim_notification_receipts"("p_batch_size" integer, "p_lease_seconds" integer) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."clear_pending_driver_photo"() RETURNS "jsonb"
@@ -450,8 +643,7 @@ DECLARE
   v_allowed      text[];
 BEGIN
   -- ------------------------------------------------------------------------
-  -- DB owner / service role: full bypass, no restrictions of any kind.
-  -- Must be the very first thing checked, before any other logic.
+  -- DB owner / service role: full bypass.
   -- ------------------------------------------------------------------------
   IF current_user IN ('postgres', 'service_role') THEN
     NEW.updated_at := now();
@@ -459,7 +651,7 @@ BEGIN
   END IF;
 
   -- ------------------------------------------------------------------------
-  -- Columns nobody may ever change via a normal update
+  -- Immutable columns
   -- ------------------------------------------------------------------------
   IF NEW.id IS DISTINCT FROM OLD.id THEN
     RAISE EXCEPTION 'id cannot be updated';
@@ -470,14 +662,19 @@ BEGIN
   END IF;
 
   -- ------------------------------------------------------------------------
-  -- Determine actor (see assumption B3)
+  -- Determine actor
   -- ------------------------------------------------------------------------
   v_is_staff := EXISTS (
     SELECT 1
-    FROM "STAFF"
+    FROM public."STAFF"
     WHERE "STAFF".staff_id = v_uid
       AND "STAFF".active_status = true
-      AND "STAFF".role = ANY (ARRAY['STAFF'::"STAFF_ROLES", 'SUPER_ADMIN'::"STAFF_ROLES"])
+      AND "STAFF".role = ANY (
+        ARRAY[
+          'STAFF'::public."STAFF_ROLES",
+          'SUPER_ADMIN'::public."STAFF_ROLES"
+        ]
+      )
   );
 
   v_is_driver := (
@@ -485,11 +682,12 @@ BEGIN
     AND OLD.id = v_uid
     AND EXISTS (
       SELECT 1
-      FROM "User" u
-      JOIN "User_Account_Status" uas ON uas.user_id = u.id
+      FROM public."User" u
+      JOIN public."User_Account_Status" uas
+        ON uas.user_id = u.id
       WHERE u.id = v_uid
-        AND u.active_role = 'DRIVER'::"USER_ROLES"
-        AND uas.account_status = 'ACTIVE'::"ACCOUNT_STATUS"
+        AND u.active_role = 'DRIVER'::public."USER_ROLES"
+        AND uas.account_status = 'ACTIVE'::public."ACCOUNT_STATUS"
     )
   );
 
@@ -502,104 +700,159 @@ BEGIN
   END IF;
 
   -- ------------------------------------------------------------------------
-  -- Look up the driver's verification_status (1 row per driver, guaranteed
-  -- to exist)
+  -- Look up driver verification status
   -- ------------------------------------------------------------------------
   SELECT dv.verification_status
   INTO v_verification
-  FROM "Driver_Verification" dv
+  FROM public."Driver_Verification" dv
   WHERE dv.driver_id = OLD.id;
 
   -- ------------------------------------------------------------------------
-  -- Work out which columns are allowed to change
+  -- Determine allowed columns
   -- ------------------------------------------------------------------------
   IF v_actor = 'driver' THEN
 
-    IF v_verification = 'PENDING'::"VERIFICATION_STATUS" THEN
-      v_allowed := ARRAY['firstname', 'lastname', 'birthday', 'driver_img_key'];
+    IF v_verification = 'PENDING'::public."VERIFICATION_STATUS" THEN
+      v_allowed := ARRAY[
+        'firstname',
+        'lastname',
+        'birthday',
+        'driver_img_key',
+        'online_status'
+      ];
 
-    ELSIF v_verification = 'REJECTED'::"VERIFICATION_STATUS" THEN
-      v_allowed := ARRAY['firstname', 'lastname', 'birthday'];
+    ELSIF v_verification = 'REJECTED'::public."VERIFICATION_STATUS" THEN
+      v_allowed := ARRAY[
+        'firstname',
+        'lastname',
+        'birthday',
+        'online_status'
+      ];
 
-    ELSIF v_verification = 'APPROVED'::"VERIFICATION_STATUS" THEN
-      v_allowed := ARRAY['pending_driver_img_key', 'pending_driver_img_key_at', 'online_status'];
+    ELSIF v_verification = 'APPROVED'::public."VERIFICATION_STATUS" THEN
+      v_allowed := ARRAY[
+        'pending_driver_img_key',
+        'pending_driver_img_key_at',
+        'online_status'
+      ];
+    ELSE
+      v_allowed := ARRAY[]::text[];
     END IF;
 
   ELSIF v_actor = 'staff' THEN
 
-    IF v_verification = 'PENDING'::"VERIFICATION_STATUS" THEN
+    IF v_verification = 'PENDING'::public."VERIFICATION_STATUS" THEN
       v_allowed := ARRAY[]::text[];
 
-    ELSIF v_verification = 'REJECTED'::"VERIFICATION_STATUS" THEN
+    ELSIF v_verification = 'REJECTED'::public."VERIFICATION_STATUS" THEN
       v_allowed := ARRAY[]::text[];
 
-    ELSIF v_verification = 'APPROVED'::"VERIFICATION_STATUS" THEN
-      v_allowed := ARRAY['pending_driver_img_key', 'pending_driver_img_key_at'];
+    ELSIF v_verification = 'APPROVED'::public."VERIFICATION_STATUS" THEN
+      v_allowed := ARRAY[
+        'pending_driver_img_key',
+        'pending_driver_img_key_at'
+      ];
 
-      -- Staff may only CLEAR these to NULL, never set a new value
-      IF NEW.pending_driver_img_key IS DISTINCT FROM OLD.pending_driver_img_key
+      -- Staff may only clear these values to NULL.
+      IF NEW.pending_driver_img_key
+           IS DISTINCT FROM OLD.pending_driver_img_key
          AND NEW.pending_driver_img_key IS NOT NULL THEN
-        RAISE EXCEPTION 'pending_driver_img_key may only be updated to NULL by staff';
+        RAISE EXCEPTION
+          'pending_driver_img_key may only be updated to NULL by staff';
       END IF;
 
-      IF NEW.pending_driver_img_key_at IS DISTINCT FROM OLD.pending_driver_img_key_at
+      IF NEW.pending_driver_img_key_at
+           IS DISTINCT FROM OLD.pending_driver_img_key_at
          AND NEW.pending_driver_img_key_at IS NOT NULL THEN
-        RAISE EXCEPTION 'pending_driver_img_key_at may only be updated to NULL by staff';
+        RAISE EXCEPTION
+          'pending_driver_img_key_at may only be updated to NULL by staff';
       END IF;
     END IF;
 
   END IF;
 
   -- ------------------------------------------------------------------------
-  -- Generic lock-down: any column NOT in v_allowed must be unchanged.
-  -- Written out explicitly, one column at a time, for easy auditing.
+  -- Verification rule:
+  -- Drivers with PENDING or REJECTED verification may go OFFLINE,
+  -- but only APPROVED drivers may go ONLINE.
+  -- ------------------------------------------------------------------------
+  IF v_actor = 'driver'
+     AND NEW.online_status = 'ONLINE'::public."ONLINE_STATUS"
+     AND NEW.online_status IS DISTINCT FROM OLD.online_status
+     AND v_verification IS DISTINCT FROM
+         'APPROVED'::public."VERIFICATION_STATUS"
+  THEN
+    RAISE EXCEPTION
+      'Only drivers with approved verification can go online.';
+  END IF;
+
+  -- ------------------------------------------------------------------------
+  -- Generic column lockdown
   -- ------------------------------------------------------------------------
   IF NOT ('firstname' = ANY (v_allowed))
      AND NEW.firstname IS DISTINCT FROM OLD.firstname THEN
-    RAISE EXCEPTION 'firstname is not updatable (verification_status=%, actor=%)', v_verification, v_actor;
+    RAISE EXCEPTION
+      'firstname is not updatable (verification_status=%, actor=%)',
+      v_verification, v_actor;
   END IF;
 
   IF NOT ('lastname' = ANY (v_allowed))
      AND NEW.lastname IS DISTINCT FROM OLD.lastname THEN
-    RAISE EXCEPTION 'lastname is not updatable (verification_status=%, actor=%)', v_verification, v_actor;
+    RAISE EXCEPTION
+      'lastname is not updatable (verification_status=%, actor=%)',
+      v_verification, v_actor;
   END IF;
 
   IF NOT ('birthday' = ANY (v_allowed))
      AND NEW.birthday IS DISTINCT FROM OLD.birthday THEN
-    RAISE EXCEPTION 'birthday is not updatable (verification_status=%, actor=%)', v_verification, v_actor;
+    RAISE EXCEPTION
+      'birthday is not updatable (verification_status=%, actor=%)',
+      v_verification, v_actor;
   END IF;
 
-  -- driver_img_key: allowed while PENDING (per v_allowed above), but only
-  -- ever as a one-time NULL -> value bootstrap set, never an overwrite of
-  -- an already-set value. Locked entirely outside PENDING.
+  -- driver_img_key: one-time NULL -> value bootstrap while PENDING.
   IF NOT ('driver_img_key' = ANY (v_allowed))
      AND NEW.driver_img_key IS DISTINCT FROM OLD.driver_img_key THEN
-    RAISE EXCEPTION 'driver_img_key is not directly updatable (verification_status=%, actor=%)', v_verification, v_actor;
+    RAISE EXCEPTION
+      'driver_img_key is not directly updatable (verification_status=%, actor=%)',
+      v_verification, v_actor;
   END IF;
 
   IF ('driver_img_key' = ANY (v_allowed))
      AND NEW.driver_img_key IS DISTINCT FROM OLD.driver_img_key
-     AND NOT (OLD.driver_img_key IS NULL AND NEW.driver_img_key IS NOT NULL) THEN
-    RAISE EXCEPTION 'driver_img_key can only be set once, transitioning from NULL to a value';
+     AND NOT (
+       OLD.driver_img_key IS NULL
+       AND NEW.driver_img_key IS NOT NULL
+     ) THEN
+    RAISE EXCEPTION
+      'driver_img_key can only be set once, transitioning from NULL to a value';
   END IF;
 
   IF NOT ('online_status' = ANY (v_allowed))
      AND NEW.online_status IS DISTINCT FROM OLD.online_status THEN
-    RAISE EXCEPTION 'online_status is not updatable (verification_status=%, actor=%)', v_verification, v_actor;
+    RAISE EXCEPTION
+      'online_status is not updatable (verification_status=%, actor=%)',
+      v_verification, v_actor;
   END IF;
 
   IF NOT ('pending_driver_img_key' = ANY (v_allowed))
-     AND NEW.pending_driver_img_key IS DISTINCT FROM OLD.pending_driver_img_key THEN
-    RAISE EXCEPTION 'pending_driver_img_key is not updatable (verification_status=%, actor=%)', v_verification, v_actor;
+     AND NEW.pending_driver_img_key
+         IS DISTINCT FROM OLD.pending_driver_img_key THEN
+    RAISE EXCEPTION
+      'pending_driver_img_key is not updatable (verification_status=%, actor=%)',
+      v_verification, v_actor;
   END IF;
 
   IF NOT ('pending_driver_img_key_at' = ANY (v_allowed))
-     AND NEW.pending_driver_img_key_at IS DISTINCT FROM OLD.pending_driver_img_key_at THEN
-    RAISE EXCEPTION 'pending_driver_img_key_at is not updatable (verification_status=%, actor=%)', v_verification, v_actor;
+     AND NEW.pending_driver_img_key_at
+         IS DISTINCT FROM OLD.pending_driver_img_key_at THEN
+    RAISE EXCEPTION
+      'pending_driver_img_key_at is not updatable (verification_status=%, actor=%)',
+      v_verification, v_actor;
   END IF;
 
   -- ------------------------------------------------------------------------
-  -- Housekeeping (assumption B6) — remove if handled elsewhere
+  -- Housekeeping
   -- ------------------------------------------------------------------------
   NEW.updated_at := now();
 
@@ -1141,6 +1394,77 @@ $$;
 ALTER FUNCTION "public"."enforce_driver_documents_update_fields"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."enforce_driver_online_eligibility"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+DECLARE
+    v_jwt_claims text;
+    v_jwt_role text;
+BEGIN
+    -- Read the original request's JWT claims.
+    v_jwt_claims :=
+        NULLIF(
+            current_setting('request.jwt.claims', true),
+            ''
+        );
+
+    v_jwt_role := v_jwt_claims::jsonb ->> 'role';
+
+    -- Trusted service-role requests bypass eligibility checks.
+    IF v_jwt_role = 'service_role' THEN
+        RETURN NEW;
+    END IF;
+
+    -- Allow direct PostgreSQL administrative sessions.
+    IF session_user = 'postgres'
+       AND v_jwt_claims IS NULL
+    THEN
+        RETURN NEW;
+    END IF;
+
+    -- Always allow a driver to go OFFLINE.
+    IF NEW.online_status = 'OFFLINE' THEN
+        RETURN NEW;
+    END IF;
+
+    -- Validate eligibility before allowing ONLINE.
+    IF NEW.online_status IS DISTINCT FROM OLD.online_status THEN
+
+        IF NOT EXISTS (
+            SELECT 1
+            FROM public."Driver_Verification" AS dv
+            WHERE dv.driver_id = NEW.id
+              AND dv.verification_status =
+                  'APPROVED'::public."VERIFICATION_STATUS"
+        ) THEN
+            RAISE EXCEPTION
+                'Driver verification must be approved to go online.';
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1
+            FROM public."Vehicle" AS v
+            JOIN public."Vehicle_Verification" AS vv
+              ON vv.vehicle_id = v.id
+            WHERE v.current_driver_id = NEW.id
+              AND vv.verification_status =
+                  'APPROVED'::public."VERIFICATION_STATUS"
+        ) THEN
+            RAISE EXCEPTION
+                'You must be assigned to an approved vehicle to go online.';
+        END IF;
+
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."enforce_driver_online_eligibility"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."enforce_driver_update_fields"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     AS $$
@@ -1670,6 +1994,100 @@ $$;
 ALTER FUNCTION "public"."find_assigned_driver_by_id"("p_driver_id" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."finish_notification_delivery"("p_delivery_id" "uuid", "p_claim_updated_at" timestamp with time zone, "p_status" "public"."NOTIFICATION_DELIVERY_STATUS", "p_expo_ticket_id" "text" DEFAULT NULL::"text", "p_error" "text" DEFAULT NULL::"text", "p_next_attempt_at" timestamp with time zone DEFAULT NULL::timestamp with time zone, "p_deactivate_token" boolean DEFAULT false) RETURNS boolean
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'pg_catalog', 'public'
+    AS $$
+DECLARE
+  v_device_token_id uuid;
+  v_updated integer;
+BEGIN
+  IF p_status NOT IN (
+    'PENDING'::public."NOTIFICATION_DELIVERY_STATUS",
+    'SENT'::public."NOTIFICATION_DELIVERY_STATUS",
+    'DEAD'::public."NOTIFICATION_DELIVERY_STATUS"
+  ) THEN
+    RAISE EXCEPTION 'Unsupported delivery result status: %', p_status;
+  END IF;
+
+  UPDATE public."Delivery_Rows" dr
+  SET status = p_status,
+      expo_ticket_id = p_expo_ticket_id,
+      error = p_error,
+      next_attempt_at = CASE WHEN p_status = 'PENDING'::public."NOTIFICATION_DELIVERY_STATUS"
+                             THEN p_next_attempt_at ELSE NULL END,
+      locked_until = NULL,
+      updated_at = clock_timestamp()
+  WHERE dr.id = p_delivery_id
+    AND dr.status = 'IN_PROGRESS'::public."NOTIFICATION_DELIVERY_STATUS"
+    AND dr.updated_at = p_claim_updated_at
+  RETURNING dr.device_token_id INTO v_device_token_id;
+
+  GET DIAGNOSTICS v_updated = ROW_COUNT;
+
+  IF v_updated = 0 THEN
+    -- Claim expired/reclaimed or row already finalized. Treat as a safe no-op.
+    RETURN false;
+  END IF;
+
+  IF p_deactivate_token THEN
+    UPDATE public."Device_Tokens"
+    SET is_active = false
+    WHERE id = v_device_token_id;
+  END IF;
+
+  RETURN true;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."finish_notification_delivery"("p_delivery_id" "uuid", "p_claim_updated_at" timestamp with time zone, "p_status" "public"."NOTIFICATION_DELIVERY_STATUS", "p_expo_ticket_id" "text", "p_error" "text", "p_next_attempt_at" timestamp with time zone, "p_deactivate_token" boolean) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."finish_notification_receipt"("p_delivery_id" "uuid", "p_claim_updated_at" timestamp with time zone, "p_status" "public"."NOTIFICATION_DELIVERY_STATUS", "p_error" "text" DEFAULT NULL::"text", "p_deactivate_token" boolean DEFAULT false) RETURNS boolean
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'pg_catalog', 'public'
+    AS $$
+DECLARE
+  v_device_token_id uuid;
+  v_updated integer;
+BEGIN
+  IF p_status NOT IN (
+    'DELIVERED'::public."NOTIFICATION_DELIVERY_STATUS",
+    'DEAD'::public."NOTIFICATION_DELIVERY_STATUS"
+  ) THEN
+    RAISE EXCEPTION 'Unsupported receipt result status: %', p_status;
+  END IF;
+
+  UPDATE public."Delivery_Rows" dr
+  SET status = p_status,
+      error = p_error,
+      locked_until = NULL,
+      updated_at = clock_timestamp()
+  WHERE dr.id = p_delivery_id
+    AND dr.status = 'SENT'::public."NOTIFICATION_DELIVERY_STATUS"
+    AND dr.updated_at = p_claim_updated_at
+  RETURNING dr.device_token_id INTO v_device_token_id;
+
+  GET DIAGNOSTICS v_updated = ROW_COUNT;
+  IF v_updated = 0 THEN
+    RETURN false;
+  END IF;
+
+  IF p_deactivate_token THEN
+    UPDATE public."Device_Tokens"
+    SET is_active = false
+    WHERE id = v_device_token_id;
+  END IF;
+
+  RETURN true;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."finish_notification_receipt"("p_delivery_id" "uuid", "p_claim_updated_at" timestamp with time zone, "p_status" "public"."NOTIFICATION_DELIVERY_STATUS", "p_error" "text", "p_deactivate_token" boolean) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."is_eligible_assigned_driver"("p_driver_id" "uuid") RETURNS boolean
     LANGUAGE "sql" SECURITY DEFINER
     SET "search_path" TO 'pg_catalog'
@@ -1689,6 +2107,29 @@ $$;
 
 
 ALTER FUNCTION "public"."is_eligible_assigned_driver"("p_driver_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."release_notification_receipt_claim"("p_delivery_id" "uuid", "p_claim_updated_at" timestamp with time zone) RETURNS boolean
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'pg_catalog', 'public'
+    AS $$
+DECLARE
+  v_updated integer;
+BEGIN
+  UPDATE public."Delivery_Rows" dr
+  SET locked_until = NULL,
+      updated_at = clock_timestamp()
+  WHERE dr.id = p_delivery_id
+    AND dr.status = 'SENT'::public."NOTIFICATION_DELIVERY_STATUS"
+    AND dr.updated_at = p_claim_updated_at;
+
+  GET DIAGNOSTICS v_updated = ROW_COUNT;
+  RETURN v_updated > 0;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."release_notification_receipt_claim"("p_delivery_id" "uuid", "p_claim_updated_at" timestamp with time zone) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."resolve_driver_photo_issue"() RETURNS "jsonb"
@@ -1820,6 +2261,170 @@ $$;
 
 
 ALTER FUNCTION "public"."resolve_identity_photo_issue"("p_document_type" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."switch_to_driver"("p_expo_push_token" "text" DEFAULT NULL::"text") RETURNS "jsonb"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'pg_catalog', 'public'
+    AS $$
+DECLARE
+  v_user_id uuid := auth.uid();
+  v_user record;
+BEGIN
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Authentication required';
+  END IF;
+
+  SELECT
+    u.has_driver_profile,
+    u.phone,
+    u.email,
+    u.country_name,
+    u.country_code,
+    u.calling_code
+  INTO v_user
+  FROM public."User" u
+  WHERE u.id = v_user_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'User profile not found';
+  END IF;
+
+  IF v_user.has_driver_profile IS TRUE THEN
+
+    UPDATE public."User"
+    SET active_role = 'DRIVER'::public."USER_ROLES"
+    WHERE id = v_user_id;
+
+    IF p_expo_push_token IS NOT NULL
+       AND p_expo_push_token <> '' THEN
+
+      UPDATE public."Device_Tokens"
+      SET app_role = 'DRIVER'::public."USER_ROLES"
+      WHERE user_id = v_user_id
+        AND expo_push_token = p_expo_push_token;
+
+    END IF;
+
+    RETURN jsonb_build_object(
+      'has_driver_profile', true,
+      'active_role', 'DRIVER'
+    );
+
+  ELSE
+
+    UPDATE public."User"
+    SET active_role = NULL
+    WHERE id = v_user_id;
+
+    IF p_expo_push_token IS NOT NULL
+       AND p_expo_push_token <> '' THEN
+
+      UPDATE public."Device_Tokens"
+      SET app_role = NULL,
+          is_active = false
+      WHERE user_id = v_user_id
+        AND expo_push_token = p_expo_push_token;
+
+    END IF;
+
+    RETURN jsonb_build_object(
+      'has_driver_profile', false,
+      'phone', v_user.phone,
+      'email', v_user.email,
+      'country', v_user.country_name,
+      'countryCode', v_user.country_code,
+      'callingCode', v_user.calling_code
+    );
+
+  END IF;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."switch_to_driver"("p_expo_push_token" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."switch_to_shipper"("p_expo_push_token" "text" DEFAULT NULL::"text") RETURNS "jsonb"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'pg_catalog', 'public'
+    AS $$
+DECLARE
+  v_user_id uuid := auth.uid();
+  v_user record;
+BEGIN
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Authentication required';
+  END IF;
+
+  SELECT
+    u.has_shipper_profile,
+    u.phone,
+    u.email,
+    u.country_name,
+    u.country_code,
+    u.calling_code
+  INTO v_user
+  FROM public."User" u
+  WHERE u.id = v_user_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'User profile not found';
+  END IF;
+
+  IF v_user.has_shipper_profile IS TRUE THEN
+
+    UPDATE public."User"
+    SET active_role = 'SHIPPER'::public."USER_ROLES"
+    WHERE id = v_user_id;
+
+    IF p_expo_push_token IS NOT NULL
+       AND p_expo_push_token <> '' THEN
+
+      UPDATE public."Device_Tokens"
+      SET app_role = 'SHIPPER'::public."USER_ROLES"
+      WHERE user_id = v_user_id
+        AND expo_push_token = p_expo_push_token;
+
+    END IF;
+
+    RETURN jsonb_build_object(
+      'has_shipper_profile', true,
+      'active_role', 'SHIPPER'
+    );
+
+  ELSE
+
+    UPDATE public."User"
+    SET active_role = NULL
+    WHERE id = v_user_id;
+
+    IF p_expo_push_token IS NOT NULL
+       AND p_expo_push_token <> '' THEN
+
+      UPDATE public."Device_Tokens"
+      SET app_role = NULL,
+          is_active = false
+      WHERE user_id = v_user_id
+        AND expo_push_token = p_expo_push_token;
+
+    END IF;
+
+    RETURN jsonb_build_object(
+      'has_shipper_profile', false,
+      'phone', v_user.phone,
+      'email', v_user.email,
+      'country', v_user.country_name,
+      'countryCode', v_user.country_code,
+      'callingCode', v_user.calling_code
+    );
+
+  END IF;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."switch_to_shipper"("p_expo_push_token" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."unassign_vehicle_as_assigned_driver"("p_vehicle_id" "uuid") RETURNS "void"
@@ -2995,6 +3600,39 @@ SET default_tablespace = '';
 SET default_table_access_method = "heap";
 
 
+CREATE TABLE IF NOT EXISTS "public"."Delivery_Rows" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "notification_id" "uuid" NOT NULL,
+    "device_token_id" "uuid" NOT NULL,
+    "expo_ticket_id" "text",
+    "attempts" integer,
+    "error" "text",
+    "next_attempt_at" timestamp with time zone,
+    "updated_at" timestamp with time zone,
+    "status" "public"."NOTIFICATION_DELIVERY_STATUS" DEFAULT 'PENDING'::"public"."NOTIFICATION_DELIVERY_STATUS" NOT NULL,
+    "locked_until" timestamp with time zone
+);
+
+
+ALTER TABLE "public"."Delivery_Rows" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."Device_Tokens" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "expo_push_token" "text" NOT NULL,
+    "app_role" "public"."USER_ROLES",
+    "platform" "public"."PLATFORM" NOT NULL,
+    "is_active" boolean NOT NULL,
+    "last_seen_at" timestamp with time zone NOT NULL
+);
+
+
+ALTER TABLE "public"."Device_Tokens" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."Driver" (
     "id" "uuid" DEFAULT "auth"."uid"() NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
@@ -3086,6 +3724,25 @@ CREATE TABLE IF NOT EXISTS "public"."Driver_Verification_Audit" (
 
 
 ALTER TABLE "public"."Driver_Verification_Audit" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."Notifications" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "type" "public"."NOTIFICATION_TYPE" NOT NULL,
+    "title" "text" NOT NULL,
+    "body" "text" NOT NULL,
+    "data" "jsonb" NOT NULL,
+    "read_at" timestamp with time zone,
+    "app_role" "public"."USER_ROLES" NOT NULL,
+    "banner_title" "text" NOT NULL,
+    "banner_body" "text" NOT NULL,
+    "category" "public"."DRIVER_NOTIFICATION_CATEGORY"
+);
+
+
+ALTER TABLE "public"."Notifications" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."Order" (
@@ -3187,7 +3844,7 @@ ALTER TABLE "public"."Shipper" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."User" (
     "id" "uuid" DEFAULT "auth"."uid"() NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "active_role" "public"."USER_ROLES" NOT NULL,
+    "active_role" "public"."USER_ROLES",
     "has_shipper_profile" boolean,
     "has_driver_profile" boolean,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
@@ -3357,6 +4014,26 @@ ALTER TABLE "public"."Verification_Issues" ALTER COLUMN "id" ADD GENERATED BY DE
 
 
 
+ALTER TABLE ONLY "public"."Delivery_Rows"
+    ADD CONSTRAINT "Delivery_Rows_expo_ticket_id_key" UNIQUE ("expo_ticket_id");
+
+
+
+ALTER TABLE ONLY "public"."Delivery_Rows"
+    ADD CONSTRAINT "Delivery_Rows_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."Device_Tokens"
+    ADD CONSTRAINT "Device_Tokens_expo_push_token_key" UNIQUE ("expo_push_token");
+
+
+
+ALTER TABLE ONLY "public"."Device_Tokens"
+    ADD CONSTRAINT "Device_Tokens_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."Driver_Documents"
     ADD CONSTRAINT "Driver_Documents_document_img_key_key" UNIQUE ("document_img_key");
 
@@ -3414,6 +4091,11 @@ ALTER TABLE ONLY "public"."Driver"
 
 ALTER TABLE ONLY "public"."Driver"
     ADD CONSTRAINT "Driver_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."Notifications"
+    ADD CONSTRAINT "Notifications_pkey" PRIMARY KEY ("id");
 
 
 
@@ -3557,6 +4239,18 @@ ALTER TABLE ONLY "public"."Order_Offer_Views"
 
 
 
+CREATE INDEX "Delivery_Rows_expired_lease_idx" ON "public"."Delivery_Rows" USING "btree" ("locked_until") WHERE ("status" = 'IN_PROGRESS'::"public"."NOTIFICATION_DELIVERY_STATUS");
+
+
+
+CREATE INDEX "Delivery_Rows_pending_due_idx" ON "public"."Delivery_Rows" USING "btree" ("next_attempt_at", "created_at") WHERE ("status" = 'PENDING'::"public"."NOTIFICATION_DELIVERY_STATUS");
+
+
+
+CREATE INDEX "Delivery_Rows_receipt_due_idx" ON "public"."Delivery_Rows" USING "btree" ("updated_at", "created_at") WHERE (("status" = 'SENT'::"public"."NOTIFICATION_DELIVERY_STATUS") AND ("expo_ticket_id" IS NOT NULL));
+
+
+
 CREATE OR REPLACE TRIGGER "trg_driver_before_update" BEFORE UPDATE ON "public"."Driver" FOR EACH ROW EXECUTE FUNCTION "public"."driver_before_update"();
 
 
@@ -3566,6 +4260,10 @@ CREATE OR REPLACE TRIGGER "trg_driver_documents_before_update" BEFORE UPDATE ON 
 
 
 CREATE OR REPLACE TRIGGER "trg_driver_verification_before_update" BEFORE UPDATE ON "public"."Driver_Verification" FOR EACH ROW EXECUTE FUNCTION "public"."driver_verification_before_update"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_enforce_driver_online_eligibility" BEFORE UPDATE OF "online_status" ON "public"."Driver" FOR EACH ROW EXECUTE FUNCTION "public"."enforce_driver_online_eligibility"();
 
 
 
@@ -3582,6 +4280,21 @@ CREATE OR REPLACE TRIGGER "trg_vehicle_photos_before_update" BEFORE UPDATE ON "p
 
 
 CREATE OR REPLACE TRIGGER "trg_vehicle_verification_before_update" BEFORE UPDATE ON "public"."Vehicle_Verification" FOR EACH ROW EXECUTE FUNCTION "public"."vehicle_verification_before_update"();
+
+
+
+ALTER TABLE ONLY "public"."Delivery_Rows"
+    ADD CONSTRAINT "Delivery_Rows_device_token_id_fkey" FOREIGN KEY ("device_token_id") REFERENCES "public"."Device_Tokens"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."Delivery_Rows"
+    ADD CONSTRAINT "Delivery_Rows_notification_id_fkey" FOREIGN KEY ("notification_id") REFERENCES "public"."Notifications"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."Device_Tokens"
+    ADD CONSTRAINT "Device_Tokens_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."User"("id") ON DELETE CASCADE;
 
 
 
@@ -3622,6 +4335,11 @@ ALTER TABLE ONLY "public"."Driver_Verification"
 
 ALTER TABLE ONLY "public"."Driver"
     ADD CONSTRAINT "Driver_id_fkey" FOREIGN KEY ("id") REFERENCES "public"."User"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."Notifications"
+    ADD CONSTRAINT "Notifications_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."User"("id") ON DELETE CASCADE;
 
 
 
@@ -3740,6 +4458,18 @@ ALTER TABLE ONLY "public"."Verification_Issues"
 
 
 
+CREATE POLICY "Active staff can insert notifications" ON "public"."Notifications" FOR INSERT TO "authenticated" WITH CHECK ((EXISTS ( SELECT 1
+   FROM "public"."STAFF" "s"
+  WHERE (("s"."staff_id" = ( SELECT "auth"."uid"() AS "uid")) AND ("s"."active_status" = true) AND ("s"."role" = ANY (ARRAY['STAFF'::"public"."STAFF_ROLES", 'SUPER_ADMIN'::"public"."STAFF_ROLES"]))))));
+
+
+
+CREATE POLICY "Active staff can select notifications" ON "public"."Notifications" FOR SELECT TO "authenticated" USING ((EXISTS ( SELECT 1
+   FROM "public"."STAFF" "s"
+  WHERE (("s"."staff_id" = ( SELECT "auth"."uid"() AS "uid")) AND ("s"."active_status" = true) AND ("s"."role" = ANY (ARRAY['STAFF'::"public"."STAFF_ROLES", 'SUPER_ADMIN'::"public"."STAFF_ROLES"]))))));
+
+
+
 CREATE POLICY "Auth Driver can insert own Driver Documents" ON "public"."Driver_Documents" FOR INSERT TO "authenticated" WITH CHECK ((("driver_id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
    FROM (("public"."Driver" "d"
      JOIN "public"."User" "u" ON (("u"."id" = "d"."id")))
@@ -3836,37 +4566,7 @@ CREATE POLICY "Auth Vehicle owner can insert own Vehicle" ON "public"."Vehicle" 
 
 
 
-CREATE POLICY "Auth active user can update own User table" ON "public"."User" FOR UPDATE TO "authenticated" USING ((("id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
-   FROM "public"."User_Account_Status" "uas"
-  WHERE (("uas"."user_id" = "auth"."uid"()) AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS")))))) WITH CHECK ((("id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
-   FROM "public"."User_Account_Status" "uas"
-  WHERE (("uas"."user_id" = "auth"."uid"()) AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS"))))));
-
-
-
-CREATE POLICY "Auth driver can delete own vehicle documents" ON "public"."Vehicle_Documents" FOR DELETE TO "authenticated" USING ((EXISTS ( SELECT 1
-   FROM (("public"."User" "u"
-     JOIN "public"."User_Account_Status" "uas" ON (("uas"."user_id" = "u"."id")))
-     JOIN "public"."Vehicle" "v" ON (("v"."owner_driver_id" = "u"."id")))
-  WHERE (("u"."id" = "auth"."uid"()) AND ("u"."active_role" = 'DRIVER'::"public"."USER_ROLES") AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS") AND ("v"."id" = "Vehicle_Documents"."vehicle_id")))));
-
-
-
-CREATE POLICY "Auth driver can delete own vehicle photos" ON "public"."Vehicle_Photos" FOR DELETE TO "authenticated" USING ((EXISTS ( SELECT 1
-   FROM ((("public"."Vehicle" "v"
-     JOIN "public"."Driver" "d" ON (("d"."id" = "v"."owner_driver_id")))
-     JOIN "public"."User" "u" ON (("u"."id" = "d"."id")))
-     JOIN "public"."User_Account_Status" "uas" ON (("uas"."user_id" = "u"."id")))
-  WHERE (("v"."id" = "Vehicle_Photos"."vehicle_id") AND ("v"."owner_driver_id" = "auth"."uid"()) AND ("u"."active_role" = 'DRIVER'::"public"."USER_ROLES") AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS")))));
-
-
-
-CREATE POLICY "Auth driver can delete own vehicle verification" ON "public"."Vehicle_Verification" FOR DELETE TO "authenticated" USING ((EXISTS ( SELECT 1
-   FROM ((("public"."Vehicle" "v"
-     JOIN "public"."Driver" "d" ON (("d"."id" = "v"."owner_driver_id")))
-     JOIN "public"."User" "u" ON (("u"."id" = "d"."id")))
-     JOIN "public"."User_Account_Status" "uas" ON (("uas"."user_id" = "u"."id")))
-  WHERE (("v"."id" = "Vehicle_Verification"."vehicle_id") AND ("v"."owner_driver_id" = "auth"."uid"()) AND ("u"."active_role" = 'DRIVER'::"public"."USER_ROLES") AND ("uas"."account_status" = 'ACTIVE'::"public"."ACCOUNT_STATUS")))));
+CREATE POLICY "Auth active user can update own User table" ON "public"."User" FOR UPDATE TO "authenticated" USING (("id" = "auth"."uid"())) WITH CHECK (("id" = "auth"."uid"()));
 
 
 
@@ -4138,6 +4838,12 @@ CREATE POLICY "Auth user can select own User_Account_Status" ON "public"."User_A
 
 
 
+ALTER TABLE "public"."Delivery_Rows" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."Device_Tokens" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."Driver" ENABLE ROW LEVEL SECURITY;
 
 
@@ -4154,6 +4860,33 @@ ALTER TABLE "public"."Driver_Verification" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."Driver_Verification_Audit" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "Drivers can mark their own notifications as read" ON "public"."Notifications" FOR UPDATE TO "authenticated" USING ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) AND ("app_role" = 'DRIVER'::"public"."USER_ROLES"))) WITH CHECK ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) AND ("app_role" = 'DRIVER'::"public"."USER_ROLES")));
+
+
+
+CREATE POLICY "Eligible users can insert device tokens" ON "public"."Device_Tokens" FOR INSERT TO "authenticated" WITH CHECK ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) AND (EXISTS ( SELECT 1
+   FROM "public"."User" "u"
+  WHERE (("u"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("u"."active_role" = ANY (ARRAY['DRIVER'::"public"."USER_ROLES", 'SHIPPER'::"public"."USER_ROLES"])))))));
+
+
+
+CREATE POLICY "Eligible users can select device tokens" ON "public"."Device_Tokens" FOR SELECT TO "authenticated" USING ((EXISTS ( SELECT 1
+   FROM "public"."User" "u"
+  WHERE (("u"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("u"."active_role" = ANY (ARRAY['DRIVER'::"public"."USER_ROLES", 'SHIPPER'::"public"."USER_ROLES"]))))));
+
+
+
+CREATE POLICY "Eligible users can update device tokens" ON "public"."Device_Tokens" FOR UPDATE TO "authenticated" USING ((EXISTS ( SELECT 1
+   FROM "public"."User" "u"
+  WHERE (("u"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("u"."active_role" = ANY (ARRAY['DRIVER'::"public"."USER_ROLES", 'SHIPPER'::"public"."USER_ROLES"])))))) WITH CHECK ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) AND (EXISTS ( SELECT 1
+   FROM "public"."User" "u"
+  WHERE (("u"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("u"."active_role" = ANY (ARRAY['DRIVER'::"public"."USER_ROLES", 'SHIPPER'::"public"."USER_ROLES"])))))));
+
+
+
+ALTER TABLE "public"."Notifications" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."Order" ENABLE ROW LEVEL SECURITY;
@@ -4204,6 +4937,12 @@ ALTER TABLE "public"."User_Account_Status" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."User_Account_Status_Audit" ENABLE ROW LEVEL SECURITY;
 
 
+CREATE POLICY "Users can select their own notifications" ON "public"."Notifications" FOR SELECT TO "authenticated" USING ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) AND (EXISTS ( SELECT 1
+   FROM "public"."User" "u"
+  WHERE (("u"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("u"."active_role" = "Notifications"."app_role"))))));
+
+
+
 ALTER TABLE "public"."Vehicle" ENABLE ROW LEVEL SECURITY;
 
 
@@ -4229,6 +4968,16 @@ GRANT USAGE ON SCHEMA "public" TO "postgres";
 GRANT USAGE ON SCHEMA "public" TO "anon";
 GRANT USAGE ON SCHEMA "public" TO "authenticated";
 GRANT USAGE ON SCHEMA "public" TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."claim_notification_deliveries"("p_batch_size" integer, "p_lease_seconds" integer, "p_max_attempts" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."claim_notification_deliveries"("p_batch_size" integer, "p_lease_seconds" integer, "p_max_attempts" integer) TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."claim_notification_receipts"("p_batch_size" integer, "p_lease_seconds" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."claim_notification_receipts"("p_batch_size" integer, "p_lease_seconds" integer) TO "service_role";
 
 
 
@@ -4265,6 +5014,12 @@ GRANT ALL ON FUNCTION "public"."driver_verification_before_update"() TO "service
 GRANT ALL ON FUNCTION "public"."enforce_driver_documents_update_fields"() TO "anon";
 GRANT ALL ON FUNCTION "public"."enforce_driver_documents_update_fields"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."enforce_driver_documents_update_fields"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."enforce_driver_online_eligibility"() TO "anon";
+GRANT ALL ON FUNCTION "public"."enforce_driver_online_eligibility"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."enforce_driver_online_eligibility"() TO "service_role";
 
 
 
@@ -4310,9 +5065,24 @@ GRANT ALL ON FUNCTION "public"."find_assigned_driver_by_id"("p_driver_id" "uuid"
 
 
 
+REVOKE ALL ON FUNCTION "public"."finish_notification_delivery"("p_delivery_id" "uuid", "p_claim_updated_at" timestamp with time zone, "p_status" "public"."NOTIFICATION_DELIVERY_STATUS", "p_expo_ticket_id" "text", "p_error" "text", "p_next_attempt_at" timestamp with time zone, "p_deactivate_token" boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."finish_notification_delivery"("p_delivery_id" "uuid", "p_claim_updated_at" timestamp with time zone, "p_status" "public"."NOTIFICATION_DELIVERY_STATUS", "p_expo_ticket_id" "text", "p_error" "text", "p_next_attempt_at" timestamp with time zone, "p_deactivate_token" boolean) TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."finish_notification_receipt"("p_delivery_id" "uuid", "p_claim_updated_at" timestamp with time zone, "p_status" "public"."NOTIFICATION_DELIVERY_STATUS", "p_error" "text", "p_deactivate_token" boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."finish_notification_receipt"("p_delivery_id" "uuid", "p_claim_updated_at" timestamp with time zone, "p_status" "public"."NOTIFICATION_DELIVERY_STATUS", "p_error" "text", "p_deactivate_token" boolean) TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."is_eligible_assigned_driver"("p_driver_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."is_eligible_assigned_driver"("p_driver_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."is_eligible_assigned_driver"("p_driver_id" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."release_notification_receipt_claim"("p_delivery_id" "uuid", "p_claim_updated_at" timestamp with time zone) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."release_notification_receipt_claim"("p_delivery_id" "uuid", "p_claim_updated_at" timestamp with time zone) TO "service_role";
 
 
 
@@ -4325,6 +5095,20 @@ GRANT ALL ON FUNCTION "public"."resolve_driver_photo_issue"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."resolve_identity_photo_issue"("p_document_type" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."resolve_identity_photo_issue"("p_document_type" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."resolve_identity_photo_issue"("p_document_type" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."switch_to_driver"("p_expo_push_token" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."switch_to_driver"("p_expo_push_token" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."switch_to_driver"("p_expo_push_token" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."switch_to_driver"("p_expo_push_token" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."switch_to_shipper"("p_expo_push_token" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."switch_to_shipper"("p_expo_push_token" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."switch_to_shipper"("p_expo_push_token" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."switch_to_shipper"("p_expo_push_token" "text") TO "service_role";
 
 
 
@@ -4382,6 +5166,18 @@ GRANT ALL ON FUNCTION "public"."vehicle_verification_before_update"() TO "servic
 
 
 
+GRANT ALL ON TABLE "public"."Delivery_Rows" TO "anon";
+GRANT ALL ON TABLE "public"."Delivery_Rows" TO "authenticated";
+GRANT ALL ON TABLE "public"."Delivery_Rows" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."Device_Tokens" TO "anon";
+GRANT ALL ON TABLE "public"."Device_Tokens" TO "authenticated";
+GRANT ALL ON TABLE "public"."Device_Tokens" TO "service_role";
+
+
+
 GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,MAINTAIN,UPDATE ON TABLE "public"."Driver" TO "authenticated";
 GRANT ALL ON TABLE "public"."Driver" TO "service_role";
 
@@ -4412,6 +5208,16 @@ GRANT ALL ON TABLE "public"."Driver_Verification" TO "service_role";
 GRANT ALL ON TABLE "public"."Driver_Verification_Audit" TO "anon";
 GRANT ALL ON TABLE "public"."Driver_Verification_Audit" TO "authenticated";
 GRANT ALL ON TABLE "public"."Driver_Verification_Audit" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."Notifications" TO "anon";
+GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."Notifications" TO "authenticated";
+GRANT ALL ON TABLE "public"."Notifications" TO "service_role";
+
+
+
+GRANT UPDATE("read_at") ON TABLE "public"."Notifications" TO "authenticated";
 
 
 
