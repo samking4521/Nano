@@ -193,7 +193,6 @@ export default function Vehicle() {
       const isVehiclesPresent = vehicles.length > 0;
 
       if (isVehiclesPresent) {
-        console.log("vehicles: ", vehicles);
 
         const vehicles_data = await Promise.all(
           vehicles.map(async (item) => {
@@ -211,7 +210,6 @@ export default function Vehicle() {
         setVehicles(vehicles_data)
 
       } else {
-        console.log("no vehicles: ", vehicles);
         setVehicles(vehicles);
       }
 
