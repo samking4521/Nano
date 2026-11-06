@@ -16,6 +16,7 @@ import { ShipperAppNavigationProp } from '../../Navigation/RootNavigation'
 import { signUpDataStorage } from '../../localStorage/signUpDataStorage'
 import { BORDER_RADIUS, FONT_SIZES, FONTS, ICON_SIZES, SPACING } from '../../constants/theme/font'
 import NanoLoadingSpinner from '../../utils/nanoLoadingSpinner'
+import { getShipperGlobalDetails } from '../../utils/getShipperGlobalDetails'
 
 
 
@@ -278,7 +279,6 @@ export default function ShipperInfo({ route }: Props) {
             throw new Error(`Error updating User with key - has_shipper_profile: ${err_user.message}`)
         }
 
-
     }
 
 
@@ -293,6 +293,7 @@ export default function ShipperInfo({ route }: Props) {
             if (controller.signal.aborted) return;
 
             await uploadShipperInfo(controller.signal);
+            await getShipperGlobalDetails(session);
             if (controller.signal.aborted) return;
 
             console.log("Success onboarding");
