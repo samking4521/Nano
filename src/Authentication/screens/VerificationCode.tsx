@@ -13,6 +13,7 @@ import { USER_ROLES } from '../../constants/shared_user'
 import { BORDER_RADIUS, FONT_SIZES, FONTS, ICON_SIZES, SPACING } from '../../constants/theme/font'
 import { getDriverVerificationDetails } from '../../utils/getDriverVerificationDetails'
 import { useDriverStore } from '../../Driver/store/DriverStore'
+import { getShipperGlobalDetails } from '../../utils/getShipperGlobalDetails'
 
 
 type Props = {
@@ -27,12 +28,7 @@ type otpErrorType = "emptyOtp" | "invalidOtpLength";
 export default function VerificationCode({ route }: Props) {
     const { mobileNo, country, countryCode, callingCode } = route.params;
     const setSession = useAuthStore((store) => store.setSession);
-    const setDriverVerificationStatus = useDriverStore((store) => store.setDriverVerificationStatus)
-    const setDriverFirstName = useDriverStore((store) => store.setDriverFirstName)
-    const setDriverLastName = useDriverStore((store) => store.setDriverLastName)
-    const setDriverImgKey = useDriverStore((store) => store.setDriverImgKey)
-    const setCanGoLive = useDriverStore((store) => store.setCanGoLive)
-    const setIsOwnerAllVehiclesApproved = useDriverStore((store) => store.setIsOwnerAllVehiclesApproved)
+    const setAppRole = useAuthStore((store) => store.setAppRole);
     const [otp, setOtp] = useState("");
     const [resendCode, setResendCode] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -119,6 +115,7 @@ export default function VerificationCode({ route }: Props) {
         console.log("session", session?.user.id)
         console.log("user logged in successfully")
 
+
         const { data: select_user_data, error: select_user_data_err } = await supabase
             .from("User")
             .select("*")
@@ -137,36 +134,74 @@ export default function VerificationCode({ route }: Props) {
 
         if (select_user_data) {
             if (select_user_data.active_role === USER_ROLES.SHIPPER && select_user_data.has_shipper_profile) {
+                await getShipperGlobalDetails(session);
                 setSession(session);
                 setLoading(false);
+                setAppRole(USER_ROLES.SHIPPER)
                 replaceNavigation.replace("Shipper");
 
             } else if (select_user_data.active_role === USER_ROLES.DRIVER && select_user_data.has_driver_profile) {
-                await getDriverVerificationDetails(session, setDriverFirstName, setDriverLastName, setDriverImgKey, setDriverVerificationStatus, setCanGoLive, setIsOwnerAllVehiclesApproved);
+                await getDriverVerificationDetails(session);
                 setSession(session);
                 setLoading(false);
+                setAppRole(USER_ROLES.DRIVER)
                 replaceNavigation.replace("Driver");
             }
             else {
                 setSession(session);
                 setLoading(false);
+                setAppRole(undefined);
+
+
+                // handles navigation to roleSelection with continue as driver, only called when user logs in to a new device after switching app role in shipper mode
+                if (select_user_data.has_shipper_profile) {
+                    replaceNavigation.replace("Onboard", {
+                        mobileNo: select_user_data.phone,
+                        email: select_user_data.email,
+                        country: country,
+                        countryCode: countryCode,
+                        callingCode: callingCode,
+                        user_role: USER_ROLES.DRIVER
+                    })
+
+                    return;
+                }
+
+                // handles navigation to roleSelection with continue as shipper, only called when user logs in to a new device after switching app role in driver mode
+                if (select_user_data.has_driver_profile) {
+                    replaceNavigation.replace("Onboard", {
+                        mobileNo: select_user_data.phone,
+                        email: select_user_data.email,
+                        country: country,
+                        countryCode: countryCode,
+                        callingCode: callingCode,
+                        user_role: USER_ROLES.SHIPPER
+                    })
+
+                    return;
+                }
+
+
 
                 replaceNavigation.replace("Onboard", {
-                    mobileNo: mobileNo,
-                    email: null,
+                    mobileNo: select_user_data.phone,
+                    email: select_user_data.email,
                     country: country,
                     countryCode: countryCode,
                     callingCode: callingCode,
                 })
+
             }
 
         } else {
             setSession(session);
             setLoading(false);
+            setAppRole(undefined);
+
 
             replaceNavigation.replace("Onboard", {
-                mobileNo: mobileNo,
-                email: null,
+                mobileNo: select_user_data.phone,
+                email: select_user_data.email,
                 country: country,
                 countryCode: countryCode,
                 callingCode: callingCode,
