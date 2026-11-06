@@ -8,13 +8,12 @@ import { supabase } from '../../../../lib/supabase'
 import ProfilePhotoPlaceholder from '../../../../utils/profilePhotoPlaceholder'
 
 
-
 export default function UserDisplay() {
     const driverImgKey = useDriverStore((store) => store.driverImgKey);
     const driverVerificationStatus = useDriverStore((store) => store.driverVerificationStatus)
     const driverFirstName = useDriverStore((store) => store.driverFirstName)
     const driverLastName = useDriverStore((store) => store.driverLastName)
-    const [driverImgUrl, setDriverImgUrl] = useState("");
+    const [driverImgUrl, setDriverImgUrl] = useState<string | null>(null);
     const driver_verification_status_text = driverVerificationStatus == "APPROVED" ? "Verified" : driverVerificationStatus == "PENDING" ? "Pending" : "Not verified";
     const driver_verification_status_bg_color = driverVerificationStatus == "APPROVED" ? Colors.transparentGreen : driverVerificationStatus == "PENDING" ? Colors.primaryTransparent : Colors.backBtnGray;
     const driver_verification_status_text_color = driverVerificationStatus == "APPROVED" ? Colors.green : driverVerificationStatus == "PENDING" ? Colors.primary : Colors.text.gray;
@@ -49,8 +48,7 @@ export default function UserDisplay() {
         <View style={styles.container}>
             <View style={styles.imgCont}>
 
-                <Image onLoad={() => setImageLoading(false)} source={{ uri: driverImgUrl }} style={styles.driverImage} />
-
+                {driverImgUrl && <Image onLoad={() => setImageLoading(false)} source={{ uri: driverImgUrl }} style={styles.driverImage} />}
                 {imageLoading && <ProfilePhotoPlaceholder/>}
 
             </View>
