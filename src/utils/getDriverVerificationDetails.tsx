@@ -1,13 +1,17 @@
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
-import { VERIFICATION_STATUS } from "../constants/shared_user";
+import { USER_ROLES, VERIFICATION_STATUS } from "../constants/shared_user";
+import { ONLINE_STATUS } from "../constants/driver";
+import { useDriverStore } from "../Driver/store/DriverStore";
 
 
 
-const getDriverDetails = async (session: Session | null, setDriverFirstName: (first_name: string) => void, setDriverLastName: (last_name: string) => void, setDriverImgKey: (key: string) => void) => {
+
+
+const getDriverDetails = async (session: Session | null, setDriverFirstName: (first_name: string) => void, setDriverLastName: (last_name: string) => void, setDriverImgKey: (key: string) => void, setDriverOnlineStatus: (status: ONLINE_STATUS) => void) => {
   const { data: select_driver_data, error: select_driver_data_err } = await supabase
     .from("Driver")
-    .select("firstname, lastname, driver_img_key")
+    .select("firstname, lastname, driver_img_key, online_status")
     .eq("id", session?.user.id)
     .single();
 
@@ -22,11 +26,12 @@ const getDriverDetails = async (session: Session | null, setDriverFirstName: (fi
   setDriverFirstName(select_driver_data.firstname);
   setDriverLastName(select_driver_data.lastname);
   setDriverImgKey(select_driver_data.driver_img_key);
+  setDriverOnlineStatus(select_driver_data.online_status);
 
   console.log("getDriverVerificationDetails - driver details saved to zustand")
 }
 
-const getCanDriverGoLive = async (session: Session | null, setDriverVerificationStatus: (status: VERIFICATION_STATUS | undefined) => void, setCanGoLive: (state: boolean) => void) => {
+const getCanDriverGoLive = async (session: Session | null, setDriverVerificationStatus: (status: VERIFICATION_STATUS | undefined) => void, setIsDriverAssignedToAVehicle: (state: boolean) => void) => {
   const { data: select_driver_verification_data, error: select_driver_verification_data_err } = await supabase
     .from("Driver_Verification")
     .select("verification_status")
@@ -61,8 +66,8 @@ const getCanDriverGoLive = async (session: Session | null, setDriverVerification
 
   if (!select_current_driver) {
 
-    setCanGoLive(false);
-    console.log("getDriverVerificationDetails - driver cannot go live, saved to zustand")
+    setIsDriverAssignedToAVehicle(false);
+    console.log("getDriverVerificationDetails - driver is not assigned to a vehicle, saved to zustand")
 
   } else {
     const { data: vehicle_verification, error: vehicle_verification_err } = await supabase
@@ -75,9 +80,9 @@ const getCanDriverGoLive = async (session: Session | null, setDriverVerification
       throw new Error(`Error querying vehicle verification: ${vehicle_verification_err.message}`)
     }
 
-    const canGoLive = select_driver_verification_data.verification_status == VERIFICATION_STATUS.APPROVED && vehicle_verification.verification_status == VERIFICATION_STATUS.APPROVED
-    setCanGoLive(canGoLive);
-    console.log("getDriverVerificationDetails - driver can go or not go live, saved to zustand")
+    const isDriverAssigned = vehicle_verification.verification_status === VERIFICATION_STATUS.APPROVED
+    setIsDriverAssignedToAVehicle(isDriverAssigned);
+    console.log(isDriverAssigned ? "getDriverVerificationDetails - driver is assigned to a vehicle, saved to zustand" : "getDriverVerificationDetails - driver is not assigned to a vehicle, saved to zustand")
 
   }
 
@@ -159,11 +164,43 @@ const checkOwnersVehiclesAllApproved = async (session: Session | null, setIsOwne
 }
 
 
-export const getDriverVerificationDetails = async (session: Session | null, setDriverFirstName: (first_name: string) => void, setDriverLastName: (last_name: string) => void, setDriverImgKey: (key: string) => void, setDriverVerificationStatus: (status: VERIFICATION_STATUS | undefined) => void, setCanGoLive: (state: boolean) => void, setIsOwnerAllVehiclesApproved: (state: boolean) => void) => {
+const hasUnreadNotifications = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('Notifications')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('app_role', USER_ROLES.DRIVER)
+    .is('read_at', null)
+    .limit(1)
+    .maybeSingle();
+
+  const setHasUnreadNotifications =
+    useDriverStore.getState().setHasUnreadNotifications;
+
+  if (error) {
+    console.log('Failed to check unread notifications:', error);
+    setHasUnreadNotifications(false);
+    return;
+  }
+
+  setHasUnreadNotifications(!!data);
+};
+
+export const getDriverVerificationDetails = async (session: Session | null) => {
+
+  const setDriverVerificationStatus = useDriverStore.getState().setDriverVerificationStatus;
+  const setDriverFirstName = useDriverStore.getState().setDriverFirstName;
+  const setDriverOnlineStatus = useDriverStore.getState().setDriverOnlineStatus;
+  const setDriverLastName = useDriverStore.getState().setDriverLastName;
+  const setDriverImgKey = useDriverStore.getState().setDriverImgKey;
+  const setIsDriverAssignedToAVehicle = useDriverStore.getState().setIsDriverAssignedToAVehicle;
+  const setIsOwnerAllVehiclesApproved = useDriverStore.getState().setIsOwnerAllVehiclesApproved;
+
   await Promise.all([
-    getDriverDetails(session, setDriverFirstName, setDriverLastName, setDriverImgKey),
-    getCanDriverGoLive(session, setDriverVerificationStatus, setCanGoLive),
-    checkOwnersVehiclesAllApproved(session, setIsOwnerAllVehiclesApproved)
+    getDriverDetails(session, setDriverFirstName, setDriverLastName, setDriverImgKey, setDriverOnlineStatus),
+    getCanDriverGoLive(session, setDriverVerificationStatus, setIsDriverAssignedToAVehicle),
+    checkOwnersVehiclesAllApproved(session, setIsOwnerAllVehiclesApproved),
+    hasUnreadNotifications(session?.user.id as string)
   ])
 
 }
