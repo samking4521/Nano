@@ -13,6 +13,8 @@ import { AuthNavigationProp } from '../../Navigation/RootNavigation'
 import { USER_ROLES } from '../../constants/shared_user'
 import { StatusBar } from 'expo-status-bar'
 import { BORDER_RADIUS, FONT_SIZES, FONTS, ICON_SIZES, SPACING } from '../../constants/theme/font'
+import { getShipperGlobalDetails } from '../../utils/getShipperGlobalDetails'
+import { getDriverVerificationDetails } from '../../utils/getDriverVerificationDetails'
 
 const countryPickerProps = {
     withFilter: true,
@@ -30,6 +32,7 @@ const googleIcon = require("../../../assets/google_icon.png");
 
 export default function SignUp() {
     const setSession = useAuthStore((store) => store.setSession);
+    const setAppRole = useAuthStore((store) => store.setAppRole);
     const [mobileNo, setMobileNo] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<errorType | null>(null);
@@ -37,6 +40,7 @@ export default function SignUp() {
     const replaceNavigation = useNavigation<AuthNavigationProp>();
     const [country, setCountry] = useState<Country>();
     const [inputFocus, setInputFocus] = useState(false);
+
 
 
     const callingCode = country?.callingCode[0] ?? "234";
@@ -159,13 +163,15 @@ export default function SignUp() {
 
             if (sessionError) throw sessionError;
 
-            console.log("session", sessionData?.user.id)
+            console.log("session", sessionData.session.user.id);
+
             console.log("user logged in successfully")
+
 
             const { data: select_user_data, error: select_user_data_err } = await supabase
                 .from("User")
                 .select("*")
-                .eq("id", sessionData?.user.id)
+                .eq("id", sessionData.session.user.id)
                 .maybeSingle();
 
             if (select_user_data_err) {
@@ -179,14 +185,46 @@ export default function SignUp() {
 
             if (select_user_data) {
                 if (select_user_data.active_role === USER_ROLES.SHIPPER && select_user_data.has_shipper_profile) {
+                    await getShipperGlobalDetails(sessionData.session);
                     setSession(sessionData.session);
+                    setAppRole(USER_ROLES.SHIPPER);
                     replaceNavigation.replace("Shipper");
                 }
                 else if (select_user_data.active_role === USER_ROLES.DRIVER && select_user_data.has_driver_profile) {
+                    await getDriverVerificationDetails(sessionData.session)
                     setSession(sessionData.session);
+                    setAppRole(USER_ROLES.DRIVER);
                     replaceNavigation.replace("Driver");
                 } else {
                     setSession(sessionData.session);
+                    setAppRole(undefined);
+                    if (select_user_data.has_shipper_profile) {
+                        replaceNavigation.replace("Onboard", {
+                            mobileNo: select_user_data.phone,
+                            email: select_user_data.email,
+                            country: select_user_data.country,
+                            countryCode: countryCode,
+                            callingCode: callingCode,
+                            user_role: USER_ROLES.DRIVER
+                        })
+
+                        return;
+                    }
+
+                    // handles navigation to roleSelection with continue as shipper, only called when user logs in to a new device after switching app role in driver mode
+                    if (select_user_data.has_driver_profile) {
+                        replaceNavigation.replace("Onboard", {
+                            mobileNo: select_user_data.phone,
+                            email: select_user_data.email,
+                            country: select_user_data.country,
+                            countryCode: countryCode,
+                            callingCode: callingCode,
+                            user_role: USER_ROLES.SHIPPER
+                        })
+
+                        return;
+                    }
+
                     replaceNavigation.replace("Onboard", {
                         mobileNo: null,
                         email: sessionData.session?.user?.email || null,
@@ -197,6 +235,7 @@ export default function SignUp() {
                 }
             } else {
                 setSession(sessionData.session);
+                setAppRole(undefined);
                 replaceNavigation.replace("Onboard", {
                     mobileNo: null,
                     email: sessionData.session?.user?.email || null,
@@ -267,7 +306,7 @@ export default function SignUp() {
                                             placeholder='Enter number here'
                                             placeholderTextColor={Colors.text.placeholder}
                                             keyboardType="number-pad"
-                                            selectionColor={Colors.primary}           
+                                            selectionColor={Colors.primary}
                                             style={styles.mobileTextInput}
                                             onFocus={() => setInputFocus(true)}
                                             onBlur={() => setInputFocus(false)}
