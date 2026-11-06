@@ -4,24 +4,17 @@ import { Alert } from "react-native";
 import { supabase } from "../lib/supabase";
 import SplashLoadingScreen from "../Authentication/components/splashLoadingScreen";
 import { useAuthStore } from "../Authentication/store/authStore";
-import { useDriverStore } from "../Driver/store/DriverStore";
 import { getDriverVerificationDetails } from "../utils/getDriverVerificationDetails";
 import { USER_ROLES } from "../constants/shared_user";
+import { getShipperGlobalDetails } from "../utils/getShipperGlobalDetails";
 
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const setSession = useAuthStore((store) => store.setSession);
+  const setAuthReady = useAuthStore((store) => store.setAuthReady);
   const setInitialRouteName = useAuthStore((store) => store.setInitialRouteName);
-  const setDriverVerificationStatus = useDriverStore((store) => store.setDriverVerificationStatus)
-  const setDriverFirstName = useDriverStore((store) => store.setDriverFirstName)
-  const setDriverLastName = useDriverStore((store) => store.setDriverLastName)
-  const setDriverImgKey = useDriverStore((store) => store.setDriverImgKey)
-  const setCanGoLive = useDriverStore((store) => store.setCanGoLive)
-  const setIsOwnerAllVehiclesApproved = useDriverStore((store) => store.setIsOwnerAllVehiclesApproved)
-
-
-
+  const setAppRole = useAuthStore((store) => store.setAppRole);
 
   useEffect(() => {
     // 1. Get initial session
@@ -51,25 +44,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
           if (select_user_data) {
             if (select_user_data?.active_role === USER_ROLES.SHIPPER && select_user_data.has_shipper_profile) {
+              await getShipperGlobalDetails(data.session);
               setInitialRouteName("Shipper");
+              setAppRole(select_user_data.active_role);
             } else if (select_user_data?.active_role === USER_ROLES.DRIVER && select_user_data.has_driver_profile) {
-              await getDriverVerificationDetails(data.session, setDriverFirstName, setDriverLastName, setDriverImgKey, setDriverVerificationStatus, setCanGoLive, setIsOwnerAllVehiclesApproved);
-
-              console.log("Verification retrieved")
+              await getDriverVerificationDetails(data.session);
+              console.log("Verification retrieved");
               setInitialRouteName("Driver");
+              setAppRole(select_user_data.active_role);
             } else {
               setInitialRouteName("Onboard");
+              setAppRole(undefined);
             }
+
           } else {
-            setInitialRouteName("Onboard")
+            setInitialRouteName("Onboard");
+            setAppRole(undefined);
           }
 
         }
 
+        setAuthReady(true);
         setLoading(false);
 
       } catch (error) {
-        console.log(error);
+        console.log("Error: ", error);
 
         Alert.alert(
           "Connection Problem",
