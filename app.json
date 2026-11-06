@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Nano",
-    "slug": "Nano",
+    "slug": "nano",
     "scheme": "nano",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -24,7 +24,15 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.samabidoye.Nano"
+      "package": "com.samabidoye.Nano",
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.READ_CONTACTS",
+        "android.permission.WRITE_CONTACTS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -67,7 +75,18 @@
           "iosGoogleMapsApiKey": "AIzaSyBs2fKnDNF-P8QIRwwCmXERGVqeV_eQ0Fo"
         }
       ],
-     [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "largeIcon": "./assets/icon.png",
+          "color": "#ffffff",
+          "defaultChannel": "default",
+          "enableRemoteNotifications": false,
+          "enableBackgroundRemoteNotifications": false
+        }
+      ],
+      [
         "expo-font",
         {
           "fonts": [
@@ -92,6 +111,12 @@
           ]
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "8f27acf1-4733-4d2d-a93f-97388681900f"
+      }
+    },
+    "owner": "samabidoye"
   }
 }

@@ -1,0 +1,62 @@
+{
+  "DRIVER_VERIFICATION_APPROVED": {
+    "title": "Driver Verification Successful",
+    "body": "Your driver verification has been approved. You can now be assigned to a verified vehicle and start accepting orders.",
+    "banner_title": "Driver Verification Approved",
+    "banner_body": "Your driver verification is approved! You can now be assigned to a verified vehicle."
+  },
+  "VEHICLE_VERIFICATION_APPROVED": {
+    "title": "Vehicle Verification Successful",
+    "body": "Your vehicle verification has been approved. You can now assign a verified driver to this vehicle and accept orders.",
+    "banner_title": "Vehicle Verification Approved",
+    "banner_body": "Your vehicle is approved! Assign a verified driver to start accepting orders."
+  },
+  "DRIVER_VERIFICATION_ISSUE": {
+    "title": "Driver Verification Issue",
+    "body": "We found an issue with your driver verification. Open Profile information to review the feedback and submit the required corrections. You won't be able to go online or accept orders until your driver verification is approved.",
+    "banner_title": "Driver Verification Issue",
+    "banner_body": "Action required: Review your driver verification feedback and correct the issue."
+  },
+  "VEHICLE_VERIFICATION_ISSUE": {
+    "title": "Vehicle Verification Issue",
+    "body": "We found an issue with your vehicle verification. Open your vehicle details to review the feedback and submit the required corrections. This vehicle cannot run order operations until its verification is approved.",
+    "banner_title": "Vehicle Verification Issue",
+    "banner_body": "Action required: Review your vehicle verification feedback and correct the issue."
+  },
+  "DRIVER_LICENSE_EXPIRY": {
+    "title": "Driver's License Expiring Soon",
+    "body": "Your driver's license expires on {expiryDate}. Please renew it and submit your updated document before it expires to avoid interruptions to your driving activities on Nano.",
+    "banner_title": "Driver's License Expiring Soon",
+    "banner_body": "Your driver's license expires on {expiryDate}. Renew it before the expiry date."
+  },
+  "VEHICLE_LICENSE_EXPIRY": {
+    "title": "Vehicle License Expiring Soon",
+    "body": "Your vehicle's license expires on {expiryDate}. Please renew it and submit the updated document before it expires to keep your vehicle eligible for orders on Nano.",
+    "banner_title": "Vehicle License Expiring Soon",
+    "banner_body": "Your vehicle's license expires on {expiryDate}. Renew it before the expiry date."
+  },
+  "DRIVER_LICENSE_RENEWAL_APPROVED": {
+    "title": "Driver's License Renewal Approved",
+    "body": "Your renewed driver's license has been reviewed and approved. Your driver license verification is now up to date. You can go online or accept orders once you are assigned to a verified vehicle.",
+    "banner_title": "Driver's License Renewed",
+    "banner_body": "Your renewed driver's license has been approved! You're eligible to go online and accepts orders with an approved vehicle."
+  },
+  "VEHICLE_LICENSE_RENEWAL_APPROVED": {
+    "title": "Vehicle License Renewal Approved",
+    "body": "Your renewed vehicle license has been reviewed and approved. Your vehicle's license verification is now up to date. The vehicle is eligible for order operations once an approved driver is assigned.",
+    "banner_title": "Vehicle License Renewed",
+    "banner_body": "Your renewed vehicle license has been approved! Your vehicle is now eligible for order operations once its assigned to a verified driver."
+  },
+  "DRIVER_LICENSE_RENEWAL_ISSUE": {
+    "title": "Driver's License Renewal Issue",
+    "body": "We found an issue with your renewed driver's license document. Open Profile information to review the feedback and submit the required corrections. Your driver license verification must be approved before you can go online or accept orders.",
+    "banner_title": "Driver's License Renewal Issue",
+    "banner_body": "We couldn't approve your renewed driver's license. Review the feedback and correct the issue."
+  },
+  "VEHICLE_LICENSE_RENEWAL_ISSUE": {
+    "title": "Vehicle License Renewal Issue",
+    "body": "We found an issue with your renewed vehicle license document. Open your vehicle details to review the feedback and submit the required corrections. This vehicle must have an approved license before it is eligible for order operations.",
+    "banner_title": "Vehicle License Renewal Issue",
+    "banner_body": "We couldn't approve your renewed vehicle license. Review the feedback and correct the issue."
+  }
+}
