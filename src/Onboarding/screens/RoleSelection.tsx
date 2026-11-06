@@ -14,6 +14,7 @@ import { AuthNavigationProp } from '../../Navigation/RootNavigation'
 import { supabase } from '../../lib/supabase'
 import { shipperStorage } from '../../localStorage/shipperStorage'
 import { BORDER_RADIUS, FONT_SIZES, FONTS, ICON_SIZES, SPACING } from '../../constants/theme/font'
+import { USER_ROLES } from '../../constants/shared_user'
 
 type Props = NativeStackScreenProps<
     OnboardingStackParamList,
@@ -29,13 +30,14 @@ export default function RoleSelection({ route }: Props) {
     const userId = useAuthStore((store) => store.session?.user.id);
     const navigation = useNavigation<RoleSelectionNavigationProp>();
     const replaceNavigation = useNavigation<AuthNavigationProp>();
-    const setSession = useAuthStore((store) => store.setSession);
 
     const mobileNo = route.params?.mobileNo ?? signUpDataStorage.getString("mobileNo");
     const email = route.params?.email ?? signUpDataStorage.getString("email");
     const country = route.params?.country ?? signUpDataStorage.getString("country");
     const countryCode = route.params?.countryCode ?? signUpDataStorage.getString("countryCode");
     const callingCode = route.params?.callingCode ?? signUpDataStorage.getString("callingCode");
+    const user_role = route.params?.user_role ?? signUpDataStorage.getString("user_role");
+    console.log("user_role: ", user_role);
 
 
 
@@ -75,12 +77,18 @@ export default function RoleSelection({ route }: Props) {
     }, [userId])
 
     const signOut = async () => {
-        const { error } = await supabase.auth.signOut({ scope: "local" })
+        const { error } = await supabase.auth.signOut({ scope: "global" })
         if (error) {
             console.log("error signing out");
+            Alert.alert(
+                'Sign Out Failed',
+                'Unable to sign out due to a network error. Please check your internet connection and try again.',
+                [{ text: 'OK' }]
+            );
             return;
         }
-        console.log("Sign out successful")
+        console.log("Sign out successful");
+        replaceNavigation.replace("Auth");
 
     }
 
@@ -101,7 +109,6 @@ export default function RoleSelection({ route }: Props) {
                         driverStorage.clearAll();
                         signUpDataStorage.clearAll();
                         signOut();
-                        replaceNavigation.replace("Auth");
                     },
                 }
             ]
@@ -110,6 +117,30 @@ export default function RoleSelection({ route }: Props) {
 
     }
 
+
+    const navigateToProfileCreation = () => {
+        if (user_role) {
+            if (user_role === USER_ROLES.SHIPPER) {
+                navigation.navigate("ShipperInfo", {
+                    mobileNo: mobileNo ?? "",
+                    email: email ?? "",
+                    country: country ?? "",
+                    countryCode: countryCode ?? "",
+                    callingCode: callingCode ?? ""
+                })
+            } else {
+                navigation.navigate("DriverInfo", {
+                    mobileNo: mobileNo ?? "",
+                    email: email ?? "",
+                    country: country ?? "",
+                    countryCode: countryCode ?? "",
+                    callingCode: callingCode ?? ""
+                })
+            }
+        } else {
+            navigateToUserDetailsScreen()
+        }
+    }
 
 
     const navigateToUserDetailsScreen = () => {
@@ -154,6 +185,11 @@ export default function RoleSelection({ route }: Props) {
         }
     }
 
+    const headerTitleText = user_role ? user_role === USER_ROLES.SHIPPER ? `Continue as a\nShippper?` : `Continue as a\nDriver?` : `What are you using\nNano for?`;
+    const headerDescText = user_role ? user_role === USER_ROLES.SHIPPER ? `Proceed to create your shipper profile to start sending orders and tracking your deliveries with Nano` : `Proceed to create your Driver profile to start receiving order requests, managing deliveries, and earning with Nano.` : `Select your role to personalize your experience`;
+
+    const continueText = user_role ? user_role === USER_ROLES.SHIPPER ? "Create shipper profile" : "Create driver profile" : "Next";
+
     return (
         <SafeAreaView edges={["top", "bottom"]} style={styles.container}>
             <ScrollView contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false} style={styles.body}>
@@ -162,21 +198,21 @@ export default function RoleSelection({ route }: Props) {
                 </Pressable>
 
                 <View style={{ marginTop: 20 }}>
-                    <Text style={styles.headerText}>What are you using{"\n"}Nano for?</Text>
-                    <Text style={styles.headerDesc}>Select your role to personalize your experience</Text>
+                    <Text style={styles.headerText}>{headerTitleText}</Text>
+                    <Text style={styles.headerDesc}>{headerDescText}</Text>
                 </View>
 
                 <View style={styles.imageCont}>
                     <Image source={role_desc_img} style={styles.image} />
                 </View>
 
-                <View>
+                {!user_role && <View>
 
-                    <Pressable onPress={() => setRole("Shipper")} style={[styles.borderBox, {borderColor: role == "Shipper" ? Colors.primary : Colors.borderColor, borderWidth: role == "Shipper" ? 2 : 1 }]}>
+                    <Pressable onPress={() => setRole("Shipper")} style={[styles.borderBox, { borderColor: role == "Shipper" ? Colors.primary : Colors.borderColor, borderWidth: role == "Shipper" ? 2 : 1 }]}>
                         <View>
                             <View style={styles.roleContainer}>
-                                <View style={[styles.roleRadioButton, {backgroundColor: role == "Shipper" ? Colors.primary : undefined, borderColor: role == "Shipper" ? undefined : Colors.borderColor, borderWidth: role == "Shipper" ? 0 : 1 }]}>
-                                    <View style={[styles.roleButtonInnerCont, {backgroundColor: role == "Shipper" ? Colors.text.white : undefined }]}></View>
+                                <View style={[styles.roleRadioButton, { backgroundColor: role == "Shipper" ? Colors.primary : undefined, borderColor: role == "Shipper" ? undefined : Colors.borderColor, borderWidth: role == "Shipper" ? 0 : 1 }]}>
+                                    <View style={[styles.roleButtonInnerCont, { backgroundColor: role == "Shipper" ? Colors.text.white : undefined }]}></View>
                                 </View>
 
                                 <View style={styles.viewTextCont}>
@@ -199,11 +235,11 @@ export default function RoleSelection({ route }: Props) {
 
 
 
-                    <Pressable onPress={() => setRole("Driver")} style={[styles.borderBox, {borderColor: role == "Driver" ? Colors.primary : Colors.borderColor, borderWidth: role == "Driver" ? 2 : 1 }]}>
+                    <Pressable onPress={() => setRole("Driver")} style={[styles.borderBox, { borderColor: role == "Driver" ? Colors.primary : Colors.borderColor, borderWidth: role == "Driver" ? 2 : 1 }]}>
                         <View >
                             <View style={styles.roleContainer}>
-                                <View style={[styles.roleRadioButton, {backgroundColor: role == "Driver" ? Colors.primary : undefined, borderRadius: 20, marginRight: 10, borderColor: role == "Driver" ? undefined : Colors.borderColor, borderWidth: role == "Driver" ? 0 : 1 }]}>
-                                    <View style={[styles.roleButtonInnerCont, {backgroundColor: role == "Driver" ? Colors.text.white : undefined }]}></View>
+                                <View style={[styles.roleRadioButton, { backgroundColor: role == "Driver" ? Colors.primary : undefined, borderRadius: 20, marginRight: 10, borderColor: role == "Driver" ? undefined : Colors.borderColor, borderWidth: role == "Driver" ? 0 : 1 }]}>
+                                    <View style={[styles.roleButtonInnerCont, { backgroundColor: role == "Driver" ? Colors.text.white : undefined }]}></View>
                                 </View>
 
                                 <View style={styles.viewTextCont}>
@@ -226,11 +262,11 @@ export default function RoleSelection({ route }: Props) {
 
 
                 </View>
-
+                }
             </ScrollView>
             <View style={styles.footerCont}>
-                <Pressable onPress={navigateToUserDetailsScreen} style={styles.nextBtn}>
-                    <Text style={styles.nextText}>Next</Text>
+                <Pressable onPress={navigateToProfileCreation} style={styles.nextBtn}>
+                    <Text style={styles.nextText}>{continueText}</Text>
                 </Pressable>
             </View>
         </SafeAreaView>
@@ -285,25 +321,25 @@ const styles = StyleSheet.create({
         fontSize: FONT_SIZES.md
     },
     roleContainer: {
-        flexDirection: "row", 
+        flexDirection: "row",
         alignItems: "flex-start"
     },
     roleRadioButton: {
-        justifyContent: "center", 
-        alignItems: "center", 
-        width: 20, 
-        height: 20, 
-        borderRadius: 20, 
+        justifyContent: "center",
+        alignItems: "center",
+        width: 20,
+        height: 20,
+        borderRadius: 20,
         marginRight: 10,
     },
     roleButtonInnerCont: {
-        width: 10, 
-        height: 10, 
+        width: 10,
+        height: 10,
         borderRadius: 10,
     },
     roleText: {
-        fontFamily: FONTS.semiBold, 
-        color: Colors.text.black, 
+        fontFamily: FONTS.semiBold,
+        color: Colors.text.black,
         fontSize: FONT_SIZES.md
     },
     imageCont: {
@@ -319,12 +355,12 @@ const styles = StyleSheet.create({
         borderRadius: BORDER_RADIUS.lg
     },
     viewTextCont: {
-      
+
         flexShrink: 1
     },
     footerCont: {
-        paddingHorizontal: 15, 
-        paddingTop: 10, 
+        paddingHorizontal: 15,
+        paddingTop: 10,
         paddingBottom: 20
     }
 })
