@@ -51,12 +51,6 @@ type animationType = "personal" | "identity" | "vehicle";
 
 export default function SubmitScreen() {
   const session = useAuthStore((store) => store.session);
-  const setDriverVerificationStatus = useDriverStore((store) => store.setDriverVerificationStatus)
-  const setDriverFirstName = useDriverStore((store) => store.setDriverFirstName)
-  const setDriverLastName = useDriverStore((store) => store.setDriverLastName)
-  const setDriverImgKey = useDriverStore((store) => store.setDriverImgKey)
-  const setCanGoLive = useDriverStore((store) => store.setCanGoLive)
-  const setIsOwnerAllVehiclesApproved = useDriverStore((store) => store.setIsOwnerAllVehiclesApproved)
   const [personalInfoUploading, setPersonalInfoUploading] = useState<loadingState | null>("loading");
   const [vehicleInfoUploading, setVehicleInfoUploading] = useState<loadingState | null>("initial");
   const [identityInfoUploading, setIdentityInfoUploading] = useState<loadingState | null>("initial");
@@ -741,7 +735,7 @@ export default function SubmitScreen() {
 
 
       if (driverStorage.getString("ownershipStatus") === "HIRED") {
-        await getDriverVerificationDetails(session, setDriverFirstName, setDriverLastName, setDriverImgKey, setDriverVerificationStatus, setCanGoLive, setIsOwnerAllVehiclesApproved);
+        await getDriverVerificationDetails(session);
 
         animateTo(100);
         setIdentityInfoUploading("done");
@@ -763,7 +757,7 @@ export default function SubmitScreen() {
       if (controller.signal.aborted) return;
       await uploadDriverVehicle(controller.signal);
       if (controller.signal.aborted) return;
-      await getDriverVerificationDetails(session, setDriverFirstName, setDriverLastName, setDriverImgKey, setDriverVerificationStatus, setCanGoLive, setIsOwnerAllVehiclesApproved);
+      await getDriverVerificationDetails(session);
       animateTo(100);
       setVehicleInfoUploading("done");
       stopAnimation("vehicle");
